@@ -5,7 +5,7 @@ from datetime import date
 import time
 
 # --- CONFIGURACIÓN ---
-st.set_page_config(page_title="Figus 26 | Álbum Virtual", layout="wide", page_icon="⚽")
+st.set_page_config(page_title="Figus 26 | Álbum Pro", layout="wide", page_icon="⚽")
 
 # --- 🛠️ TUS DATOS DE ADMINISTRADOR ---
 ADMIN_PHONE = "2611234567"  # <--- TU NÚMERO
@@ -17,12 +17,10 @@ try:
     key = st.secrets["SUPABASE_KEY"]
     supabase: Client = create_client(url, key)
 except:
-    st.error("Error de conexión: Revisa tus 'Secrets' en Streamlit Cloud.")
+    st.error("Error de conexión: Revisa tus 'Secrets'.")
     st.stop()
 
-# --- DATOS DEL ÁLBUM (CONFIGURACIÓN DE PÁGINAS) ---
-# Aquí definimos qué números corresponden a cada país.
-# He puesto un ejemplo. ¡Tú deberás completar los rangos reales cuando salga el álbum!
+# --- DATOS DEL ÁLBUM ---
 ALBUM_PAGES = {
     "FW - Intro / Museos": (1, 19),
     "ARG - Argentina": (20, 39),
@@ -32,7 +30,6 @@ ALBUM_PAGES = {
     "MEX - México": (100, 119),
     "CAN - Canadá": (120, 139),
     "ESP - España": (140, 159),
-    # ... Puedes agregar más países aquí siguiendo el formato "Nombre": (Inicio, Fin)
     "Especiales Coca-Cola": (600, 608)
 }
 
@@ -54,51 +51,54 @@ def register_user(nick, phone, zone, password):
         return response.data[0], "OK"
     except Exception as e: return None, str(e)
 
-def get_inventory_range(user_id, start, end):
-    """Trae solo las figuritas de un rango específico (País)"""
-    # Traemos todo el inventario del usuario (es más rápido filtrar en Python que hacer muchas llamadas)
+def get_inventory_details(user_id, start, end):
+    """
+    Trae los detalles completos (Estado + Precio) para cargar el editor.
+    """
     response = supabase.table("inventory").select("*").eq("user_id", user_id).execute()
     df = pd.DataFrame(response.data)
     
-    faltantes_set = set()
-    repetidas_set = set()
+    # Datos por defecto vacíos
+    faltantes_ids = []
+    repetidas_data = {} # Diccionario {num: {'price': 0, 'status': 'repetida'}}
     
     if not df.empty:
-        # Filtramos por el rango del país seleccionado
         mask = (df['sticker_num'] >= start) & (df['sticker_num'] <= end)
         df_page = df[mask]
         
-        faltantes_set = set(df_page[df_page['status'] == 'faltante']['sticker_num'].tolist())
-        repetidas_set = set(df_page[df_page['status'] == 'repetida']['sticker_num'].tolist())
+        faltantes_ids = df_page[df_page['status'] == 'faltante']['sticker_num'].tolist()
         
-    return faltantes_set, repetidas_set
+        # Guardamos la info de precios de las repetidas existentes
+        repes_rows = df_page[df_page['status'] == 'repetida']
+        for _, row in repes_rows.iterrows():
+            repetidas_data[row['sticker_num']] = {'price': row['price']}
+            
+    return faltantes_ids, repetidas_data
 
-def save_album_page(user_id, start, end, selected_faltas, selected_repes):
-    """Guarda los cambios masivos de una página"""
-    # 1. Borrar todo lo anterior de este rango para este usuario (Limpieza)
-    #    Esto es necesario por si desmarcó una figurita.
-    #    Nota: En SQL puro sería un DELETE WHERE num BETWEEN start AND end.
-    #    Con Supabase-py es un poco más artesanal:
-    
-    # Obtenemos lista de todos los números posibles en esta página
+def save_album_page_advanced(user_id, start, end, selected_faltas, df_repetidas_config):
+    """
+    Guarda faltantes y la configuración detallada de precios.
+    """
+    # 1. Limpieza del rango (Borrar previo)
     page_numbers = list(range(start, end + 1))
-    
-    # Borramos los existentes en este rango (para sobrescribir con lo nuevo)
-    # Usamos filter 'in' (sticker_num está en la lista de la página)
     supabase.table("inventory").delete().eq("user_id", user_id).in_("sticker_num", page_numbers).execute()
     
-    # 2. Insertar las nuevas selecciones
     new_rows = []
     
-    # Faltantes
+    # 2. Guardar Faltantes (Simple)
     for num in selected_faltas:
         new_rows.append({"user_id": user_id, "sticker_num": num, "status": "faltante", "price": 0})
         
-    # Repetidas
-    for num in selected_repes:
-        # Por defecto precio 0 (Canje). Si quiere vender, que lo edite en detalles.
-        new_rows.append({"user_id": user_id, "sticker_num": num, "status": "repetida", "price": 0})
-        
+    # 3. Guardar Repetidas (Con datos del Editor)
+    # df_repetidas_config viene del st.data_editor
+    if not df_repetidas_config.empty:
+        for _, row in df_repetidas_config.iterrows():
+            num = row['Figurita']
+            modo = row['Modo']
+            precio = row['Precio'] if modo == "Venta" else 0 # Si es canje, forzamos 0
+            
+            new_rows.append({"user_id": user_id, "sticker_num": num, "status": "repetida", "price": int(precio)})
+            
     if new_rows:
         supabase.table("inventory").insert(new_rows).execute()
 
@@ -106,7 +106,15 @@ def fetch_all_market_data(mi_id):
     response = supabase.table("inventory").select("*, users(nick, zone, phone)").neq("user_id", mi_id).execute()
     return pd.DataFrame(response.data)
 
-def find_matches(mis_faltas_ids, mis_repes_ids, market_df):
+def find_matches(user_id, market_df):
+    # Traer TODO mi inventario para cruzar
+    response = supabase.table("inventory").select("*").eq("user_id", user_id).execute()
+    mi_df = pd.DataFrame(response.data)
+    if mi_df.empty: return [], []
+    
+    mis_f = mi_df[mi_df['status'] == 'faltante']['sticker_num'].tolist()
+    mis_r = mi_df[mi_df['status'] == 'repetida']['sticker_num'].tolist()
+    
     directos, ventas = [], []
     if market_df.empty: return [], []
     
@@ -114,17 +122,15 @@ def find_matches(mis_faltas_ids, mis_repes_ids, market_df):
     market_df['zone'] = market_df['users'].apply(lambda x: x['zone'])
     market_df['phone'] = market_df['users'].apply(lambda x: x['phone'])
     
-    # Buscamos quién tiene mis faltantes como repetidas
-    ofertas = market_df[(market_df['status'] == 'repetida') & (market_df['sticker_num'].isin(mis_faltas_ids))]
+    ofertas = market_df[(market_df['status'] == 'repetida') & (market_df['sticker_num'].isin(mis_f))]
     
     for _, row in ofertas.iterrows():
         match = {'nick': row['nick'], 'zone': row['zone'], 'phone': row['phone'], 'figu': row['sticker_num'], 'price': row['price']}
         if row['price'] > 0:
             ventas.append(match)
         else:
-            # Trueque: Verificar si yo tengo algo que él busca
             sus_faltas = market_df[(market_df['user_id'] == row['user_id']) & (market_df['status'] == 'faltante')]['sticker_num'].tolist()
-            cruce = set(mis_repes_ids).intersection(set(sus_faltas))
+            cruce = set(mis_r).intersection(set(sus_faltas))
             if cruce:
                 match['te_pide'] = list(cruce)[0]
                 directos.append(match)
@@ -143,15 +149,6 @@ def consume_contact_credit(user):
         nuevo = user['daily_contacts_count'] + 1
         supabase.table("users").update({"daily_contacts_count": nuevo}).eq("id", user['id']).execute()
         st.session_state.user['daily_contacts_count'] = nuevo
-
-def get_full_inventory_ids(user_id):
-    """Obtiene TODOS los IDs para el motor de búsqueda global"""
-    response = supabase.table("inventory").select("*").eq("user_id", user_id).execute()
-    df = pd.DataFrame(response.data)
-    if df.empty: return [], []
-    f = df[df['status'] == 'faltante']['sticker_num'].tolist()
-    r = df[df['status'] == 'repetida']['sticker_num'].tolist()
-    return f, r
 
 # --- INTERFAZ DE USUARIO ---
 
@@ -184,7 +181,7 @@ if not st.session_state.user:
 # 2. APP PRINCIPAL
 user = st.session_state.user
 
-# --- BARRA LATERAL (DATOS Y PREMIUM) ---
+# --- SIDEBAR ---
 with st.sidebar:
     st.title(f"Hola {user['nick']}")
     if user['is_premium']: st.success("💎 PREMIUM")
@@ -192,97 +189,104 @@ with st.sidebar:
         st.info("👤 GRATIS")
         st.progress(user['daily_contacts_count']/1, f"Contactos: {user['daily_contacts_count']}/1")
         st.link_button("👉 Hacerse Premium", MP_LINK)
-    
     if st.button("Cerrar Sesión"):
         st.session_state.user = None
         st.rerun()
 
-# --- PÁGINA PRINCIPAL ---
-st.header("📖 Mi Álbum Virtual")
+# --- PÁGINA ÁLBUM ---
+st.header("📖 Mi Álbum - Gestión Avanzada")
 
-# SELECTOR DE PAÍS
 paises = list(ALBUM_PAGES.keys())
-seleccion = st.selectbox("Selecciona un País / Sección:", paises)
+seleccion = st.selectbox("Selecciona Sección:", paises)
 
 start, end = ALBUM_PAGES[seleccion]
 numeros_posibles = list(range(start, end + 1))
 
-# Cargar lo que el usuario YA tiene marcado en este país
-mis_f_ids, mis_r_ids = get_inventory_range(user['id'], start, end)
+# Cargar datos existentes (IDs + Precios)
+mis_f_ids, repetidas_info_dict = get_inventory_details(user['id'], start, end)
 
-st.info(f"Mostrando figuritas del **{start}** al **{end}**")
-
-with st.form("album_form"):
+with st.form("album_advanced"):
     col1, col2 = st.columns(2)
     
     with col1:
         st.markdown("### 🔴 Faltantes")
-        st.caption("Selecciona las que buscas:")
-        # Widget visual de selección múltiple (Chips)
-        nuevas_faltas = st.pills(
-            "Faltantes",
-            options=numeros_posibles,
-            default=list(mis_f_ids),
-            selection_mode="multi",
-            key="pills_faltas"
-        )
+        nuevas_faltas = st.pills("Busco:", numeros_posibles, default=mis_f_ids, selection_mode="multi", key="pf")
 
     with col2:
-        st.markdown("### 🟢 Repetidas")
-        st.caption("Selecciona las que tienes para cambiar:")
-        nuevas_repes = st.pills(
-            "Repetidas",
-            options=numeros_posibles,
-            default=list(mis_r_ids),
-            selection_mode="multi",
-            key="pills_repes"
-        )
+        st.markdown("### 🟢 Repetidas (Selección)")
+        # 1. Seleccionar QUÉ tengo
+        mis_r_ids_actuales = list(repetidas_info_dict.keys())
+        seleccion_repes = st.pills("Tengo:", numeros_posibles, default=mis_r_ids_actuales, selection_mode="multi", key="pr")
         
-    guardar = st.form_submit_button("💾 Guardar Cambios en este País", use_container_width=True)
+    st.markdown("---")
+    
+    # --- ZONA DE CONFIGURACIÓN DE PRECIOS ---
+    # Convertimos la selección de 'pills' en una tabla editable
+    if seleccion_repes:
+        st.markdown("#### 💲 Configurar Repetidas (Precios)")
+        st.caption("Define si las cambias o las vendes.")
+        
+        # Preparamos los datos para el editor
+        editor_data = []
+        for num in seleccion_repes:
+            # Si ya existía, traemos su precio/modo. Si es nuevo, default Canje/$0
+            info = repetidas_info_dict.get(num, {'price': 0})
+            modo = "Venta" if info['price'] > 0 else "Canje"
+            precio = info['price']
+            
+            editor_data.append({"Figurita": num, "Modo": modo, "Precio": precio})
+            
+        df_editor = pd.DataFrame(editor_data)
+        
+        # Mostramos la tabla editable
+        edited_df = st.data_editor(
+            df_editor,
+            column_config={
+                "Figurita": st.column_config.NumberColumn(disabled=True),
+                "Modo": st.column_config.SelectboxColumn(options=["Canje", "Venta"], required=True),
+                "Precio": st.column_config.NumberColumn(min_value=0, step=100, format="$%d")
+            },
+            hide_index=True,
+            use_container_width=True
+        )
+    else:
+        edited_df = pd.DataFrame()
+        
+    guardar = st.form_submit_button("💾 Guardar Todo", use_container_width=True)
 
 if guardar:
-    # Validar que no haya marcado la misma como falta y repe
-    interseccion = set(nuevas_faltas).intersection(set(nuevas_repes))
-    if interseccion:
-        st.error(f"Error: No puedes tener la figurita {list(interseccion)} como Faltante y Repetida a la vez.")
+    # Validación simple
+    if set(nuevas_faltas).intersection(set(seleccion_repes)):
+        st.error("Error: Una figurita no puede ser Faltante y Repetida a la vez.")
     else:
-        save_album_page(user['id'], start, end, nuevas_faltas, nuevas_repes)
-        st.toast(f"¡{seleccion} actualizado!", icon="✅")
-        time.sleep(1) # Esperar un poco para que Supabase procese
+        save_album_page_advanced(user['id'], start, end, nuevas_faltas, edited_df)
+        st.toast(f"¡{seleccion} guardado correctamente!", icon="✅")
+        time.sleep(1)
         st.rerun()
 
 st.divider()
 
-# --- SECCIÓN DE MATCHES (BUSCADOR) ---
-st.subheader("🔍 Buscador de Canjes")
-
-# Traer inventario completo para buscar matches (no solo la página actual)
-full_f, full_r = get_full_inventory_ids(user['id'])
+# --- BUSCADOR ---
+st.subheader("🔍 Mercado")
 market_df = fetch_all_market_data(user['id'])
-matches, ventas = find_matches(full_f, full_r, market_df)
+matches, ventas = find_matches(user['id'], market_df)
 
-tab1, tab2 = st.tabs([f"Canjes ({len(matches)})", f"Ventas ({len(ventas)})"])
-
-with tab1:
-    if not matches: st.caption("No hay coincidencias directas.")
+t1, t2 = st.tabs([f"Canjes ({len(matches)})", f"Ventas ({len(ventas)})"])
+with t1:
     for m in matches:
         with st.container(border=True):
-            c1, c2 = st.columns([3, 1])
-            c1.markdown(f"🔄 **{m['nick']}** ({m['zone']}) cambia **#{m['figu']}** por tu **#{m['te_pide']}**")
-            if c2.button("WhatsApp", key=f"btn_c_{m['figu']}_{m['phone']}"):
+            st.markdown(f"🔄 **{m['nick']}** cambia **#{m['figu']}** por tu **#{m['te_pide']}**")
+            if st.button("WhatsApp", key=f"wc_{m['figu']}_{m['phone']}"):
                 if check_contact_limit(user):
                     consume_contact_credit(user)
-                    st.markdown(f"[Abrir Chat](https://wa.me/549{m['phone']})")
+                    st.markdown(f"[Chat](https://wa.me/549{m['phone']})")
                 else: st.error("Límite diario alcanzado.")
-
-with tab2:
-    if not ventas: st.caption("Nadie vende lo que buscas.")
+with t2:
     for v in ventas:
         with st.container(border=True):
-            c1, c2 = st.columns([3, 1])
-            c1.markdown(f"💰 **{v['nick']}** vende **#{v['figu']}** a **${v['price']}**")
-            if c2.button("Contactar", key=f"btn_v_{v['figu']}_{v['phone']}"):
+            st.markdown(f"💰 **{v['nick']}** vende **#{v['figu']}** a **${v['price']}**")
+            if st.button("WhatsApp", key=f"wv_{v['figu']}_{v['phone']}"):
                 if check_contact_limit(user):
                     consume_contact_credit(user)
-                    st.markdown(f"[Abrir Chat](https://wa.me/549{v['phone']})")
+                    st.markdown(f"[Chat](https://wa.me/549{v['phone']})")
                 else: st.error("Límite diario alcanzado.")
