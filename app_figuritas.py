@@ -3,27 +3,28 @@ import pandas as pd
 from supabase import create_client, Client
 from datetime import date
 import time
-import mercadopago # Nueva librería
+import mercadopago
+import bcrypt  # <--- NUEVA LIBRERÍA DE SEGURIDAD
 
 # --- CONFIGURACIÓN ---
-st.set_page_config(page_title="Figus 26 | Pro", layout="wide", page_icon="⚽")
+st.set_page_config(page_title="Figus 26 | Seguro", layout="wide", page_icon="⚽")
 
-# --- 🛠️ TUS DATOS ---
-ADMIN_PHONE = "2611234567"  # <--- TU NÚMERO
-# PRECIO DEL PREMIUM (Debe coincidir con lo que cobras en MP)
-PRECIO_PREMIUM = 5000 
-MP_LINK = "https://link.mercadopago.com.ar/..." # <--- TU LINK
-
-# Conexiones
+# --- 🛠️ DATOS SEGUROS ---
+# Ahora recuperamos tu teléfono desde la caja fuerte, no está escrito aquí.
 try:
+    ADMIN_PHONE = st.secrets["ADMIN_PHONE"]
+    PRECIO_PREMIUM = 5000 
+    # MP_LINK puede quedar público, no es un dato sensible, pero si quieres ocultarlo también puedes ponerlo en secrets.
+    MP_LINK = "https://link.mercadopago.com.ar/..." 
+    
     url = st.secrets["SUPABASE_URL"]
     key = st.secrets["SUPABASE_KEY"]
     mp_token = st.secrets["MP_ACCESS_TOKEN"]
     
     supabase: Client = create_client(url, key)
-    sdk = mercadopago.SDK(mp_token) # Inicializamos MP
-except:
-    st.error("Error de configuración: Faltan Secrets (Supabase o MP).")
+    sdk = mercadopago.SDK(mp_token)
+except Exception as e:
+    st.error(f"Error de configuración: Faltan Secrets. Detalle: {e}")
     st.stop()
 
 ALBUM_PAGES = {
@@ -38,64 +39,77 @@ ALBUM_PAGES = {
     "Especiales Coca-Cola": (600, 608)
 }
 
-# --- FUNCIONES ---
+# --- FUNCIONES DE SEGURIDAD ---
+
+def hash_password(password):
+    """Convierte texto plano en un hash seguro"""
+    # bcrypt requiere bytes, por eso usamos .encode()
+    return bcrypt.hashpw(password.encode('utf-8'), bcrypt.gensalt()).decode('utf-8')
+
+def check_password(plain_text, hashed_text):
+    """Verifica si la contraseña coincide con el hash"""
+    try:
+        return bcrypt.checkpw(plain_text.encode('utf-8'), hashed_text.encode('utf-8'))
+    except:
+        # Si falla (ej: usuario viejo sin encriptar), retorna False por seguridad
+        return False
+
+# --- FUNCIONES DE BASE DE DATOS ---
 
 def login_user(phone, password):
     response = supabase.table("users").select("*").eq("phone", phone).execute()
     if not response.data: return None, "Usuario no encontrado."
+    
     user = response.data[0]
-    if user['password'] == password: return user, "OK"
-    else: return None, "Contraseña incorrecta."
+    
+    # NUEVA VERIFICACIÓN CON BCRYPT
+    if check_password(password, user['password']):
+        return user, "OK"
+    else: 
+        return None, "Contraseña incorrecta."
 
 def register_user(nick, phone, zone, password):
     if supabase.table("users").select("*").eq("phone", phone).execute().data:
         return None, "El teléfono ya existe."
     try:
-        data = {"nick": nick, "phone": phone, "zone": zone, "password": password, "is_admin": (phone == ADMIN_PHONE)}
+        # ENCRIPTAMOS LA CONTRASEÑA ANTES DE GUARDAR
+        hashed_pw = hash_password(password)
+        
+        data = {
+            "nick": nick, 
+            "phone": phone, 
+            "zone": zone, 
+            "password": hashed_pw, # Guardamos el garabato seguro, no el texto
+            "is_admin": (phone == ADMIN_PHONE)
+        }
         response = supabase.table("users").insert(data).execute()
         return response.data[0], "OK"
     except Exception as e: return None, str(e)
 
 def verificar_pago_mp(payment_id, user_id):
-    """Consulta a la API de Mercado Pago si el pago es real"""
     try:
-        # 1. Verificar si ya se usó este ID en nuestra base de datos
         ya_usado = supabase.table("payments_log").select("*").eq("payment_id", payment_id).execute()
-        if ya_usado.data:
-            return False, "Este comprobante ya fue utilizado."
+        if ya_usado.data: return False, "Este comprobante ya fue utilizado."
 
-        # 2. Preguntar a Mercado Pago
         payment_info = sdk.payment().get(payment_id)
-        
-        if payment_info["status"] == 404:
-            return False, "ID de pago no encontrado."
+        if payment_info["status"] == 404: return False, "ID de pago no encontrado."
         
         response = payment_info["response"]
-        
-        # 3. Validar condiciones
         status = response.get("status")
         amount = response.get("transaction_amount")
         
         if status == "approved" and amount >= PRECIO_PREMIUM:
-            # 4. Registrar el uso para que no se repita
             supabase.table("payments_log").insert({
-                "payment_id": str(payment_id),
-                "user_id": user_id,
-                "amount": amount,
-                "status": status
+                "payment_id": str(payment_id), "user_id": user_id, "amount": amount, "status": status
             }).execute()
-            
-            # 5. Activar Premium
             supabase.table("users").update({"is_premium": True}).eq("id", user_id).execute()
             return True, "¡Pago validado! Eres Premium."
         else:
-            return False, f"El pago no está aprobado o el monto es menor a ${PRECIO_PREMIUM}."
-            
-    except Exception as e:
-        return False, f"Error validando: {str(e)}"
+            return False, f"El pago no está aprobado o el monto es menor."
+    except Exception as e: return False, f"Error validando: {str(e)}"
 
-# [MANTENER AQUÍ RESTO DE FUNCIONES: get_inventory_details, save_album_page_advanced, fetch_all_market_data, find_matches, check_contact_limit, consume_contact_credit]
-# (Copia las funciones del código anterior para mantener la respuesta limpia, son las mismas)
+# [Resto de funciones: get_inventory_details, save_album_page_advanced, etc. IGUAL QUE ANTES]
+# Las copio aquí para que el bloque sea funcional
 def get_inventory_details(user_id, start, end):
     response = supabase.table("inventory").select("*").eq("user_id", user_id).execute()
     df = pd.DataFrame(response.data)
@@ -198,22 +212,22 @@ user = st.session_state.user
 with st.sidebar:
     st.title(f"Hola {user['nick']}")
     
+    # 🕵️ MODO ADMIN OCULTO (Verifica contra el Secret)
+    if user['phone'] == ADMIN_PHONE:
+        st.info("🕵️ MODO SUPER ADMIN")
+        # Aquí puedes poner tus herramientas secretas
+
     if user['is_premium']: 
         st.success("💎 PREMIUM ACTIVADO")
     else: 
         st.info("👤 CUENTA GRATIS")
         st.progress(user['daily_contacts_count']/1, f"Contactos: {user['daily_contacts_count']}/1")
-        
         st.divider()
         st.markdown("### 🚀 Activar Premium")
-        st.markdown("1. Paga $5000 con Mercado Pago.")
         st.link_button("👉 Pagar Ahora", MP_LINK)
-        st.markdown("2. Al terminar, copia el **Número de Operación** del comprobante y pégalo aquí:")
-        
         op_id = st.text_input("Nro. Operación (ej: 1234567890)")
         if st.button("✅ Validar Pago"):
-            if not op_id:
-                st.warning("Pega el número primero.")
+            if not op_id: st.warning("Pega el número primero.")
             else:
                 exito, msg = verificar_pago_mp(op_id, user['id'])
                 if exito:
@@ -222,9 +236,8 @@ with st.sidebar:
                     time.sleep(3)
                     st.session_state.user['is_premium'] = True
                     st.rerun()
-                else:
-                    st.error(msg)
-
+                else: st.error(msg)
+    
     if st.button("Cerrar Sesión"):
         st.session_state.user = None
         st.rerun()
@@ -234,7 +247,6 @@ st.header("📖 Mi Álbum Pro")
 
 paises = list(ALBUM_PAGES.keys())
 seleccion = st.selectbox("Selecciona Sección:", paises)
-
 start, end = ALBUM_PAGES[seleccion]
 numeros_posibles = list(range(start, end + 1))
 mis_f_ids, repetidas_info_dict = get_inventory_details(user['id'], start, end)
