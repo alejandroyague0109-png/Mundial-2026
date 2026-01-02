@@ -13,6 +13,7 @@ st.set_page_config(page_title="Figus 26 | Colección", layout="wide", page_icon=
 st.markdown(
     """
     <style>
+    /* Estilo Verde para selección */
     div[data-testid="stPills"] span[aria-selected="true"] {
         background-color: #2e7d32 !important;
         color: white !important;
@@ -27,7 +28,7 @@ st.markdown(
         border-color: #66bb6a !important;
         color: #2e7d32 !important;
     }
-    /* Estilo para el botón de Like */
+    /* Botones redondeados */
     button[kind="secondary"] {
         border-radius: 20px;
     }
@@ -36,7 +37,7 @@ st.markdown(
     unsafe_allow_html=True
 )
 
-# --- 2. CONEXIÓN A SUPABASE Y MERCADO PAGO ---
+# --- 2. CONEXIÓN ---
 try:
     ADMIN_PHONE = st.secrets["ADMIN_PHONE"]
     PRECIO_PREMIUM = 5000 
@@ -64,7 +65,8 @@ ALBUM_PAGES = {
     "Especiales Coca-Cola": (600, 608)
 }
 
-# --- 3. FUNCIONES DE SEGURIDAD ---
+# --- 3. FUNCIONES DE SEGURIDAD Y VALIDACIÓN (MEJORA N°5) ---
+
 def hash_password(password):
     return bcrypt.hashpw(password.encode('utf-8'), bcrypt.gensalt()).decode('utf-8')
 
@@ -72,23 +74,59 @@ def check_password(plain_text, hashed_text):
     try: return bcrypt.checkpw(plain_text.encode('utf-8'), hashed_text.encode('utf-8'))
     except: return False
 
-def validar_telefono(phone):
-    return bool(re.match(r"^\d{10,13}$", phone))
+def limpiar_telefono(phone_input):
+    """
+    Elimina cualquier caracter que NO sea un número.
+    Ej: "261-123 456" -> "261123456"
+    """
+    if not phone_input: return ""
+    # Regex: \D significa "cualquier cosa que no sea dígito"
+    return re.sub(r"\D", "", phone_input)
+
+def validar_formato_telefono(phone_clean):
+    """
+    Verifica que el número limpio tenga sentido (10 a 14 dígitos)
+    """
+    # Regex: ^\d{10,14}$ significa "Empieza y termina con 10 a 14 números"
+    return bool(re.match(r"^\d{10,14}$", phone_clean))
+
+# --- FUNCIONES DE DB ---
 
 def login_user(phone, password):
-    response = supabase.table("users").select("*").eq("phone", phone).execute()
+    # Limpiamos el teléfono antes de buscarlo (UX)
+    clean_phone = limpiar_telefono(phone)
+    if not clean_phone: return None, "Ingresa un teléfono."
+    
+    response = supabase.table("users").select("*").eq("phone", clean_phone).execute()
     if not response.data: return None, "Usuario no encontrado."
     user = response.data[0]
     if check_password(password, user['password']): return user, "OK"
     else: return None, "Contraseña incorrecta."
 
 def register_user(nick, phone, zone, password):
-    if not validar_telefono(phone): return None, "Teléfono inválido."
-    if supabase.table("users").select("*").eq("phone", phone).execute().data: return None, "Teléfono ya existe."
+    # 1. Limpieza y Validación
+    clean_phone = limpiar_telefono(phone)
+    
+    if not validar_formato_telefono(clean_phone):
+        return None, "Teléfono inválido. Verifica que tenga código de área (ej: 261...) y al menos 10 números."
+    
+    if not nick or not password:
+        return None, "Falta el Nick o la Contraseña."
+
+    # 2. Verificar duplicados con el número LIMPIO
+    if supabase.table("users").select("*").eq("phone", clean_phone).execute().data:
+        return None, "Este teléfono ya está registrado."
+
     try:
         hashed_pw = hash_password(password)
-        # Inicializamos reputación en 0
-        data = {"nick": nick, "phone": phone, "zone": zone, "password": hashed_pw, "is_admin": (phone == ADMIN_PHONE), "reputation": 0}
+        data = {
+            "nick": nick, 
+            "phone": clean_phone, # Guardamos el limpio
+            "zone": zone, 
+            "password": hashed_pw, 
+            "is_admin": (clean_phone == ADMIN_PHONE), 
+            "reputation": 0
+        }
         response = supabase.table("users").insert(data).execute()
         return response.data[0], "OK"
     except Exception as e: return None, str(e)
@@ -109,31 +147,19 @@ def verificar_pago_mp(payment_id, user_id):
         else: return False, "Pago no aprobado."
     except Exception as e: return False, str(e)
 
-# --- 4. SISTEMA DE REPUTACIÓN (NUEVO) ---
+# --- 4. SISTEMA DE REPUTACIÓN ---
 def votar_usuario(voter_id, target_id):
-    """Permite dar like a otro usuario (solo una vez)"""
     if voter_id == target_id: return False, "No puedes votarte a ti mismo."
-    
-    # 1. Verificar si ya votó
     check = supabase.table("votes").select("*").eq("voter_id", voter_id).eq("target_id", target_id).execute()
-    if check.data:
-        return False, "Ya has recomendado a este usuario."
-    
+    if check.data: return False, "Ya has recomendado a este usuario."
     try:
-        # 2. Registrar voto
         supabase.table("votes").insert({"voter_id": voter_id, "target_id": target_id}).execute()
-        
-        # 3. Sumar reputación al usuario destino
-        # Obtenemos reputación actual
-        curr_rep = supabase.table("users").select("reputation").eq("id", target_id).execute().data[0]['reputation']
-        if curr_rep is None: curr_rep = 0
-        
+        curr_rep = supabase.table("users").select("reputation").eq("id", target_id).execute().data[0]['reputation'] or 0
         supabase.table("users").update({"reputation": curr_rep + 1}).eq("id", target_id).execute()
         return True, "¡Recomendación enviada!"
-    except Exception as e:
-        return False, str(e)
+    except Exception as e: return False, str(e)
 
-# --- 5. LÓGICA DE INVENTARIO ---
+# --- 5. INVENTARIO ---
 def get_inventory_status(user_id, start, end):
     response = supabase.table("inventory").select("*").eq("user_id", user_id).execute()
     df = pd.DataFrame(response.data)
@@ -169,7 +195,6 @@ def save_inventory_positive(user_id, start, end, ui_owned_list, ui_repe_df):
 
 # --- 6. MERCADO ---
 def fetch_market(user_id):
-    # Traemos también la columna 'reputation' de la tabla users
     resp = supabase.table("inventory").select("*, users(nick, zone, phone, reputation)").neq("user_id", user_id).execute()
     return pd.DataFrame(resp.data)
 
@@ -183,15 +208,11 @@ def find_matches(user_id, market_df):
     directos, ventas = [], []
     if market_df.empty: return [], []
     
-    # Extraemos datos del usuario incluyendo REPUTACIÓN
     market_df['nick'] = market_df['users'].apply(lambda x: x['nick'])
     market_df['zone'] = market_df['users'].apply(lambda x: x['zone'])
     market_df['phone'] = market_df['users'].apply(lambda x: x['phone'])
-    market_df['reputation'] = market_df['users'].apply(lambda x: x.get('reputation', 0)) # Nuevo campo
-    market_df['other_id'] = market_df['users'].apply(lambda x: x.get('id', 0)) # Necesitamos el ID para votar
-    
-    # Como 'users' viene anidado, el ID del usuario dueño de la figurita está en 'user_id' (FK de inventory)
-    # market_df['user_id'] ya existe y es correcto.
+    market_df['reputation'] = market_df['users'].apply(lambda x: x.get('reputation', 0))
+    market_df['other_id'] = market_df['users'].apply(lambda x: x.get('id', 0))
     
     ofertas = market_df[market_df['status'] == 'repetida']
     
@@ -203,9 +224,7 @@ def find_matches(user_id, market_df):
                 'figu': figu, 'price': row['price'], 
                 'reputation': row['reputation'], 'target_id': row['user_id']
             }
-            
-            if row['price'] > 0:
-                ventas.append(match)
+            if row['price'] > 0: ventas.append(match)
             else:
                 sus_tengo_list = market_df[(market_df['user_id'] == row['user_id']) & (market_df['status'] == 'tengo')]['sticker_num'].tolist()
                 sus_tengo_set = set(sus_tengo_list)
@@ -213,7 +232,6 @@ def find_matches(user_id, market_df):
                 if sirven:
                     match['te_pide'] = sirven[0]
                     directos.append(match)
-                    
     return directos, ventas
 
 def check_contact_limit(user):
@@ -237,30 +255,34 @@ if not st.session_state.user:
     st.title("🏆 Figus 26")
     t1, t2 = st.tabs(["Ingresar", "Registrarse"])
     with t1:
-        p = st.text_input("Teléfono"); pw = st.text_input("Pass", type="password")
+        p = st.text_input("Teléfono (ej: 261 555 1234)") # UX: Placeholder ejemplo
+        pw = st.text_input("Contraseña", type="password")
         if st.button("Entrar"):
             u, m = login_user(p, pw)
             if u: st.session_state.user = u; st.rerun()
             else: st.error(m)
     with t2:
-        n = st.text_input("Nick"); ph = st.text_input("Tel (ID)"); passw = st.text_input("Crear Pass", type="password")
-        z = st.selectbox("Zona", ["Centro", "Godoy Cruz", "Guaymallén", "Las Heras"])
-        if st.button("Crear"):
+        st.caption("Crea tu cuenta para guardar tu álbum.")
+        n = st.text_input("Apodo / Nick")
+        ph = st.text_input("Teléfono (Será tu ID)")
+        st.caption("Ingresa tu número con código de área (sin el 0 y sin el 15). Ej: 2614123456")
+        passw = st.text_input("Crea una Contraseña", type="password")
+        z = st.selectbox("Tu Zona", ["Centro", "Godoy Cruz", "Guaymallén", "Las Heras"])
+        if st.button("Crear Cuenta"):
             u, m = register_user(n, ph, z, passw)
-            if u: st.success("Creado!"); st.rerun()
+            if u: st.success("¡Cuenta creada! Ya puedes ingresar."); st.balloons()
             else: st.error(m)
     st.stop()
 
 user = st.session_state.user
 
-# Cálculos de progreso
+# Cálculos
 seleccion_pais = st.session_state.get("seleccion_pais_key", list(ALBUM_PAGES.keys())[0])
 start_active, end_active = ALBUM_PAGES[seleccion_pais]
 total_active = end_active - start_active + 1
 total_album = sum([(v[1] - v[0] + 1) for v in ALBUM_PAGES.values()])
 
 ids_tengo_db, repetidas_info, df_full = get_inventory_status(user['id'], start_active, end_active)
-
 key_pills = f"pills_tengo_{seleccion_pais}"
 if key_pills in st.session_state: ids_tengo_live = st.session_state[key_pills]
 else: ids_tengo_live = ids_tengo_db
@@ -274,7 +296,6 @@ tengo_global_live = (tengo_db_total - tengo_db_esta_seccion) + tengo_live_count
 # SIDEBAR
 with st.sidebar:
     st.title(f"Hola {user['nick']}")
-    # Mostrar mi propia reputación
     my_rep = user.get('reputation', 0)
     st.caption(f"⭐ Tu Reputación: {my_rep} votos")
     
@@ -338,10 +359,9 @@ matches, ventas = find_matches(user['id'], market_df)
 t1, t2 = st.tabs([f"Canjes ({len(matches)})", f"Ventas ({len(ventas)})"])
 
 with t1:
-    if not matches: st.info("No hay canjes directos disponibles en este momento.")
+    if not matches: st.info("No hay canjes directos disponibles.")
     for m in matches:
         with st.container(border=True):
-            # Columnas: Información | Botón WhatsApp | Botón Reputación
             c1, c2, c3 = st.columns([3, 1, 1])
             with c1:
                 st.markdown(f"🔄 **{m['nick']}** (⭐{m['reputation']}) cambia **#{m['figu']}** por tu **#{m['te_pide']}**")
@@ -349,9 +369,8 @@ with t1:
             with c2:
                 if st.button("WhatsApp", key=f"c_{m['figu']}_{m['target_id']}"):
                     if check_contact_limit(user): consume_credit(user); st.markdown(f"[Chat](https://wa.me/549{m['phone']})")
-                    else: st.error("Límite diario alcanzado.")
+                    else: st.error("Límite diario.")
             with c3:
-                # Botón de Votar
                 if st.button("👍 Recomendar", key=f"vote_{m['figu']}_{m['target_id']}"):
                     ok, msg = votar_usuario(user['id'], m['target_id'])
                     if ok: st.toast(msg, icon="⭐")
@@ -367,7 +386,7 @@ with t2:
             with c2:
                 if st.button("WhatsApp", key=f"v_{v['figu']}_{v['target_id']}"):
                     if check_contact_limit(user): consume_credit(user); st.markdown(f"[Chat](https://wa.me/549{v['phone']})")
-                    else: st.error("Límite diario alcanzado.")
+                    else: st.error("Límite diario.")
             with c3:
                 if st.button("👍 Recomendar", key=f"vote_v_{v['figu']}_{v['target_id']}"):
                     ok, msg = votar_usuario(user['id'], v['target_id'])
