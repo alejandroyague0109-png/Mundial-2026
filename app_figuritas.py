@@ -65,7 +65,36 @@ ALBUM_PAGES = {
     "Especiales Coca-Cola": (600, 608)
 }
 
-# --- 3. FUNCIONES DE SEGURIDAD Y VALIDACIÓN (MEJORA N°5) ---
+# --- 3. POP-UP LEGAL (NUEVO) ---
+@st.dialog("⚠️ Términos y Condiciones de Uso")
+def mostrar_terminos():
+    st.markdown("### Por favor lee atentamente antes de continuar")
+    
+    st.info("🔞 **Restricción de Edad:**\nDebes ser **mayor de 18 años** para utilizar esta aplicación.")
+    
+    st.warning("🤝 **Responsabilidad de Encuentros:**\nFigus 26 es solo una herramienta de contacto. Los encuentros presenciales para intercambiar figuritas se realizan bajo **tu exclusiva responsabilidad**.")
+    
+    st.markdown("""
+    **Al ingresar, aceptas que:**
+    * Los desarrolladores no se hacen responsables por conflictos, robos o transacciones fallidas entre usuarios.
+    * Te comprometes a realizar los intercambios en **lugares públicos y seguros**.
+    * Tratarás con respeto a los demás miembros de la comunidad.
+    """)
+    
+    st.divider()
+    
+    col1, col2 = st.columns(2)
+    with col1:
+        if st.button("❌ Salir", use_container_width=True):
+            st.warning("No puedes usar la app sin aceptar los términos.")
+            time.sleep(2)
+            st.stop()
+    with col2:
+        if st.button("✅ Acepto y Soy +18", type="primary", use_container_width=True):
+            st.session_state.terminos_aceptados = True
+            st.rerun()
+
+# --- 4. FUNCIONES DE SEGURIDAD Y VALIDACIÓN ---
 
 def hash_password(password):
     return bcrypt.hashpw(password.encode('utf-8'), bcrypt.gensalt()).decode('utf-8')
@@ -75,28 +104,17 @@ def check_password(plain_text, hashed_text):
     except: return False
 
 def limpiar_telefono(phone_input):
-    """
-    Elimina cualquier caracter que NO sea un número.
-    Ej: "261-123 456" -> "261123456"
-    """
     if not phone_input: return ""
-    # Regex: \D significa "cualquier cosa que no sea dígito"
     return re.sub(r"\D", "", phone_input)
 
 def validar_formato_telefono(phone_clean):
-    """
-    Verifica que el número limpio tenga sentido (10 a 14 dígitos)
-    """
-    # Regex: ^\d{10,14}$ significa "Empieza y termina con 10 a 14 números"
     return bool(re.match(r"^\d{10,14}$", phone_clean))
 
 # --- FUNCIONES DE DB ---
 
 def login_user(phone, password):
-    # Limpiamos el teléfono antes de buscarlo (UX)
     clean_phone = limpiar_telefono(phone)
     if not clean_phone: return None, "Ingresa un teléfono."
-    
     response = supabase.table("users").select("*").eq("phone", clean_phone).execute()
     if not response.data: return None, "Usuario no encontrado."
     user = response.data[0]
@@ -104,29 +122,16 @@ def login_user(phone, password):
     else: return None, "Contraseña incorrecta."
 
 def register_user(nick, phone, zone, password):
-    # 1. Limpieza y Validación
     clean_phone = limpiar_telefono(phone)
-    
     if not validar_formato_telefono(clean_phone):
-        return None, "Teléfono inválido. Verifica que tenga código de área (ej: 261...) y al menos 10 números."
-    
+        return None, "Teléfono inválido. Verifica código de área."
     if not nick or not password:
-        return None, "Falta el Nick o la Contraseña."
-
-    # 2. Verificar duplicados con el número LIMPIO
+        return None, "Falta Nick o Contraseña."
     if supabase.table("users").select("*").eq("phone", clean_phone).execute().data:
-        return None, "Este teléfono ya está registrado."
-
+        return None, "Teléfono ya registrado."
     try:
         hashed_pw = hash_password(password)
-        data = {
-            "nick": nick, 
-            "phone": clean_phone, # Guardamos el limpio
-            "zone": zone, 
-            "password": hashed_pw, 
-            "is_admin": (clean_phone == ADMIN_PHONE), 
-            "reputation": 0
-        }
+        data = {"nick": nick, "phone": clean_phone, "zone": zone, "password": hashed_pw, "is_admin": (clean_phone == ADMIN_PHONE), "reputation": 0}
         response = supabase.table("users").insert(data).execute()
         return response.data[0], "OK"
     except Exception as e: return None, str(e)
@@ -147,7 +152,7 @@ def verificar_pago_mp(payment_id, user_id):
         else: return False, "Pago no aprobado."
     except Exception as e: return False, str(e)
 
-# --- 4. SISTEMA DE REPUTACIÓN ---
+# --- SISTEMA DE REPUTACIÓN ---
 def votar_usuario(voter_id, target_id):
     if voter_id == target_id: return False, "No puedes votarte a ti mismo."
     check = supabase.table("votes").select("*").eq("voter_id", voter_id).eq("target_id", target_id).execute()
@@ -159,7 +164,7 @@ def votar_usuario(voter_id, target_id):
         return True, "¡Recomendación enviada!"
     except Exception as e: return False, str(e)
 
-# --- 5. INVENTARIO ---
+# --- INVENTARIO ---
 def get_inventory_status(user_id, start, end):
     response = supabase.table("inventory").select("*").eq("user_id", user_id).execute()
     df = pd.DataFrame(response.data)
@@ -193,7 +198,7 @@ def save_inventory_positive(user_id, start, end, ui_owned_list, ui_repe_df):
             })
     if new_rows: supabase.table("inventory").insert(new_rows).execute()
 
-# --- 6. MERCADO ---
+# --- MERCADO ---
 def fetch_market(user_id):
     resp = supabase.table("inventory").select("*, users(nick, zone, phone, reputation)").neq("user_id", user_id).execute()
     return pd.DataFrame(resp.data)
@@ -247,7 +252,18 @@ def consume_credit(user):
         supabase.table("users").update({"daily_contacts_count": nuevo}).eq("id", user['id']).execute()
         st.session_state.user['daily_contacts_count'] = nuevo
 
-# --- 7. UI PRINCIPAL ---
+# --- 7. BLOQUEO LEGAL (POP-UP) ---
+# Esto debe ir ANTES de cualquier login
+if 'terminos_aceptados' not in st.session_state:
+    st.session_state.terminos_aceptados = False
+
+if not st.session_state.terminos_aceptados:
+    mostrar_terminos() # Llama al pop-up
+    # Como st.dialog es modal pero deja correr el script de fondo a veces, ponemos stop para asegurar.
+    # Nota: st.dialog en versiones recientes maneja esto bien, pero un stop aquí evita parpadeos.
+    # Sin embargo, st.dialog ya bloquea la interacción.
+
+# --- 8. UI PRINCIPAL ---
 
 if 'user' not in st.session_state: st.session_state.user = None
 
@@ -255,7 +271,7 @@ if not st.session_state.user:
     st.title("🏆 Figus 26")
     t1, t2 = st.tabs(["Ingresar", "Registrarse"])
     with t1:
-        p = st.text_input("Teléfono (ej: 261 555 1234)") # UX: Placeholder ejemplo
+        p = st.text_input("Teléfono (ej: 261 555 1234)")
         pw = st.text_input("Contraseña", type="password")
         if st.button("Entrar"):
             u, m = login_user(p, pw)
@@ -265,12 +281,11 @@ if not st.session_state.user:
         st.caption("Crea tu cuenta para guardar tu álbum.")
         n = st.text_input("Apodo / Nick")
         ph = st.text_input("Teléfono (Será tu ID)")
-        st.caption("Ingresa tu número con código de área (sin el 0 y sin el 15). Ej: 2614123456")
         passw = st.text_input("Crea una Contraseña", type="password")
         z = st.selectbox("Tu Zona", ["Centro", "Godoy Cruz", "Guaymallén", "Las Heras"])
         if st.button("Crear Cuenta"):
             u, m = register_user(n, ph, z, passw)
-            if u: st.success("¡Cuenta creada! Ya puedes ingresar."); st.balloons()
+            if u: st.success("¡Cuenta creada!"); st.balloons()
             else: st.error(m)
     st.stop()
 
