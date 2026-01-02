@@ -65,36 +65,31 @@ ALBUM_PAGES = {
     "Especiales Coca-Cola": (600, 608)
 }
 
-# --- 3. POP-UP LEGAL (NUEVO) ---
-@st.dialog("⚠️ Términos y Condiciones de Uso")
-def mostrar_terminos():
-    st.markdown("### Por favor lee atentamente antes de continuar")
-    
-    st.info("🔞 **Restricción de Edad:**\nDebes ser **mayor de 18 años** para utilizar esta aplicación.")
-    
-    st.warning("🤝 **Responsabilidad de Encuentros:**\nFigus 26 es solo una herramienta de contacto. Los encuentros presenciales para intercambiar figuritas se realizan bajo **tu exclusiva responsabilidad**.")
-    
-    st.markdown("""
-    **Al ingresar, aceptas que:**
-    * Los desarrolladores no se hacen responsables por conflictos, robos o transacciones fallidas entre usuarios.
-    * Te comprometes a realizar los intercambios en **lugares públicos y seguros**.
-    * Tratarás con respeto a los demás miembros de la comunidad.
-    """)
-    
-    st.divider()
-    
-    col1, col2 = st.columns(2)
-    with col1:
-        if st.button("❌ Salir", use_container_width=True):
-            st.warning("No puedes usar la app sin aceptar los términos.")
-            time.sleep(2)
-            st.stop()
-    with col2:
-        if st.button("✅ Acepto y Soy +18", type="primary", use_container_width=True):
-            st.session_state.terminos_aceptados = True
-            st.rerun()
+# --- 3. TEXTO LEGAL COMPLETO ---
+TERMINOS_TEXTO = """
+TÉRMINOS Y CONDICIONES - FIGUS 26
+1. EDAD: Debes ser mayor de 18 años.
+2. RESPONSABILIDAD: Los encuentros presenciales son bajo tu exclusivo riesgo. Figus 26 no se hace responsable por seguridad, robos o conflictos.
+3. PRIVACIDAD: Aceptas que tu teléfono sea visible para otros coleccionistas con el fin de intercambiar.
+4. CONDUCTA: Se prohíbe el acoso, spam o venta de artículos ilegales.
+5. PAGOS: Los pagos Premium no son reembolsables.
+"""
 
-# --- 4. FUNCIONES DE SEGURIDAD Y VALIDACIÓN ---
+# --- 4. POP-UP DE INICIO (BARRERA DE EDAD) ---
+@st.dialog("⚠️ Bienvenido a Figus 26")
+def mostrar_barrera_entrada():
+    st.warning("🔞 Esta aplicación es para mayores de 18 años.")
+    st.info("🤝 Facilitamos el contacto entre coleccionistas, pero no intervenimos en los canjes ni garantizamos seguridad en los encuentros.")
+    
+    st.markdown("**Al continuar, declaras que:**")
+    st.markdown("* Eres mayor de edad.")
+    st.markdown("* Asumes la responsabilidad de tus encuentros.")
+    
+    if st.button("✅ Entendido, soy +18", type="primary", use_container_width=True):
+        st.session_state.barrera_superada = True
+        st.rerun()
+
+# --- 5. FUNCIONES DE SEGURIDAD Y VALIDACIÓN ---
 
 def hash_password(password):
     return bcrypt.hashpw(password.encode('utf-8'), bcrypt.gensalt()).decode('utf-8')
@@ -190,220 +185,3 @@ def save_inventory_positive(user_id, start, end, ui_owned_list, ui_repe_df):
     for num in ui_owned_list:
         new_rows.append({"user_id": user_id, "sticker_num": num, "status": "tengo", "price": 0})
     if not ui_repe_df.empty:
-        for _, row in ui_repe_df.iterrows():
-            new_rows.append({
-                "user_id": user_id, "sticker_num": row['Figurita'], 
-                "status": "repetida", 
-                "price": int(row['Precio']) if row['Modo'] == "Venta" else 0
-            })
-    if new_rows: supabase.table("inventory").insert(new_rows).execute()
-
-# --- MERCADO ---
-def fetch_market(user_id):
-    resp = supabase.table("inventory").select("*, users(nick, zone, phone, reputation)").neq("user_id", user_id).execute()
-    return pd.DataFrame(resp.data)
-
-def find_matches(user_id, market_df):
-    resp = supabase.table("inventory").select("sticker_num").eq("user_id", user_id).eq("status", "tengo").execute()
-    mis_tengo_set = set(item['sticker_num'] for item in resp.data)
-    
-    resp_r = supabase.table("inventory").select("sticker_num").eq("user_id", user_id).eq("status", "repetida").execute()
-    mis_repes_set = set(item['sticker_num'] for item in resp_r.data)
-    
-    directos, ventas = [], []
-    if market_df.empty: return [], []
-    
-    market_df['nick'] = market_df['users'].apply(lambda x: x['nick'])
-    market_df['zone'] = market_df['users'].apply(lambda x: x['zone'])
-    market_df['phone'] = market_df['users'].apply(lambda x: x['phone'])
-    market_df['reputation'] = market_df['users'].apply(lambda x: x.get('reputation', 0))
-    market_df['other_id'] = market_df['users'].apply(lambda x: x.get('id', 0))
-    
-    ofertas = market_df[market_df['status'] == 'repetida']
-    
-    for _, row in ofertas.iterrows():
-        figu = row['sticker_num']
-        if figu not in mis_tengo_set:
-            match = {
-                'nick': row['nick'], 'zone': row['zone'], 'phone': row['phone'], 
-                'figu': figu, 'price': row['price'], 
-                'reputation': row['reputation'], 'target_id': row['user_id']
-            }
-            if row['price'] > 0: ventas.append(match)
-            else:
-                sus_tengo_list = market_df[(market_df['user_id'] == row['user_id']) & (market_df['status'] == 'tengo')]['sticker_num'].tolist()
-                sus_tengo_set = set(sus_tengo_list)
-                sirven = [r for r in mis_repes_set if r not in sus_tengo_set]
-                if sirven:
-                    match['te_pide'] = sirven[0]
-                    directos.append(match)
-    return directos, ventas
-
-def check_contact_limit(user):
-    if user['is_premium']: return True
-    if str(user['last_contact_date']) != str(date.today()):
-        supabase.table("users").update({"last_contact_date": str(date.today()), "daily_contacts_count": 0}).eq("id", user['id']).execute()
-        return True
-    return user['daily_contacts_count'] < 1
-
-def consume_credit(user):
-    if not user['is_premium']:
-        nuevo = user['daily_contacts_count'] + 1
-        supabase.table("users").update({"daily_contacts_count": nuevo}).eq("id", user['id']).execute()
-        st.session_state.user['daily_contacts_count'] = nuevo
-
-# --- 7. BLOQUEO LEGAL (POP-UP) ---
-# Esto debe ir ANTES de cualquier login
-if 'terminos_aceptados' not in st.session_state:
-    st.session_state.terminos_aceptados = False
-
-if not st.session_state.terminos_aceptados:
-    mostrar_terminos() # Llama al pop-up
-    # Como st.dialog es modal pero deja correr el script de fondo a veces, ponemos stop para asegurar.
-    # Nota: st.dialog en versiones recientes maneja esto bien, pero un stop aquí evita parpadeos.
-    # Sin embargo, st.dialog ya bloquea la interacción.
-
-# --- 8. UI PRINCIPAL ---
-
-if 'user' not in st.session_state: st.session_state.user = None
-
-if not st.session_state.user:
-    st.title("🏆 Figus 26")
-    t1, t2 = st.tabs(["Ingresar", "Registrarse"])
-    with t1:
-        p = st.text_input("Teléfono (ej: 261 555 1234)")
-        pw = st.text_input("Contraseña", type="password")
-        if st.button("Entrar"):
-            u, m = login_user(p, pw)
-            if u: st.session_state.user = u; st.rerun()
-            else: st.error(m)
-    with t2:
-        st.caption("Crea tu cuenta para guardar tu álbum.")
-        n = st.text_input("Apodo / Nick")
-        ph = st.text_input("Teléfono (Será tu ID)")
-        passw = st.text_input("Crea una Contraseña", type="password")
-        z = st.selectbox("Tu Zona", ["Centro", "Godoy Cruz", "Guaymallén", "Las Heras"])
-        if st.button("Crear Cuenta"):
-            u, m = register_user(n, ph, z, passw)
-            if u: st.success("¡Cuenta creada!"); st.balloons()
-            else: st.error(m)
-    st.stop()
-
-user = st.session_state.user
-
-# Cálculos
-seleccion_pais = st.session_state.get("seleccion_pais_key", list(ALBUM_PAGES.keys())[0])
-start_active, end_active = ALBUM_PAGES[seleccion_pais]
-total_active = end_active - start_active + 1
-total_album = sum([(v[1] - v[0] + 1) for v in ALBUM_PAGES.values()])
-
-ids_tengo_db, repetidas_info, df_full = get_inventory_status(user['id'], start_active, end_active)
-key_pills = f"pills_tengo_{seleccion_pais}"
-if key_pills in st.session_state: ids_tengo_live = st.session_state[key_pills]
-else: ids_tengo_live = ids_tengo_db
-
-tengo_live_count = len(ids_tengo_live)
-try: tengo_db_total = df_full[df_full['status'] == 'tengo'].shape[0]
-except: tengo_db_total = 0
-tengo_db_esta_seccion = len(ids_tengo_db)
-tengo_global_live = (tengo_db_total - tengo_db_esta_seccion) + tengo_live_count
-
-# SIDEBAR
-with st.sidebar:
-    st.title(f"Hola {user['nick']}")
-    my_rep = user.get('reputation', 0)
-    st.caption(f"⭐ Tu Reputación: {my_rep} votos")
-    
-    if user['phone'] == ADMIN_PHONE: st.info("🕵️ ADMIN")
-    st.divider()
-    progreso_global = min(tengo_global_live / total_album, 1.0)
-    st.progress(progreso_global, text="Álbum Completo")
-    st.caption(f"Tienes **{tengo_global_live}** de {total_album} figuritas.")
-    st.divider()
-
-    if user['is_premium']: st.success("💎 PREMIUM")
-    else: 
-        st.warning("👤 GRATIS")
-        st.link_button("👉 Activar Premium", MP_LINK)
-        if st.button("Validar Pago"):
-            op = st.text_input("ID Op", key="op_v")
-            if op and st.button("OK"):
-                exito, msg = verificar_pago_mp(op, user['id'])
-                if exito: st.success(msg); time.sleep(2); st.rerun()
-    if st.button("Salir"): st.session_state.user = None; st.rerun()
-
-# CONTENIDO
-st.header("📖 Mi Álbum")
-seleccion = st.selectbox("Selecciona Sección:", list(ALBUM_PAGES.keys()), key="seleccion_pais_key")
-progreso_local = min(tengo_live_count / total_active, 1.0)
-st.progress(progreso_local, text=f"Sección {seleccion}: Tienes {tengo_live_count} de {total_active}")
-
-st.divider()
-st.markdown("### 1️⃣ ¿Cuáles TENÉS? (Verde ✅)")
-seleccion_tengo = st.pills("Tengo", list(range(start_active, end_active + 1)), default=ids_tengo_live, selection_mode="multi", key=key_pills)
-
-st.markdown("### 2️⃣ ¿Cuáles REPETISTE?")
-posibles_repetidas = sorted(seleccion_tengo) if seleccion_tengo else []
-ids_repetidas_validos = [k for k in repetidas_info.keys() if k in posibles_repetidas]
-seleccion_repes = st.pills("Repetidas", posibles_repetidas, default=ids_repetidas_validos, selection_mode="multi", key=f"pills_repes_{seleccion}")
-
-edited_df = pd.DataFrame()
-if seleccion_repes:
-    st.caption("💲 Precios")
-    ed_data = []
-    for num in seleccion_repes:
-        info = repetidas_info.get(num, {'price': 0})
-        modo = "Venta" if info['price'] > 0 else "Canje"
-        ed_data.append({"Figurita": num, "Modo": modo, "Precio": info['price']})
-    edited_df = st.data_editor(pd.DataFrame(ed_data), column_config={
-        "Figurita": st.column_config.NumberColumn(disabled=True),
-        "Modo": st.column_config.SelectboxColumn(options=["Canje", "Venta"], required=True),
-        "Precio": st.column_config.NumberColumn(min_value=0, step=100)
-    }, hide_index=True, use_container_width=True, key=f"editor_{seleccion}")
-
-st.markdown("---")
-if st.button("💾 GUARDAR CAMBIOS", type="primary", use_container_width=True):
-    save_inventory_positive(user['id'], start_active, end_active, seleccion_tengo, edited_df)
-    st.toast("¡Guardado!", icon="✅"); time.sleep(1); st.rerun()
-
-st.divider()
-st.subheader("🔍 Mercado")
-market_df = fetch_market(user['id'])
-matches, ventas = find_matches(user['id'], market_df)
-
-t1, t2 = st.tabs([f"Canjes ({len(matches)})", f"Ventas ({len(ventas)})"])
-
-with t1:
-    if not matches: st.info("No hay canjes directos disponibles.")
-    for m in matches:
-        with st.container(border=True):
-            c1, c2, c3 = st.columns([3, 1, 1])
-            with c1:
-                st.markdown(f"🔄 **{m['nick']}** (⭐{m['reputation']}) cambia **#{m['figu']}** por tu **#{m['te_pide']}**")
-                st.caption(f"Zona: {m['zone']}")
-            with c2:
-                if st.button("WhatsApp", key=f"c_{m['figu']}_{m['target_id']}"):
-                    if check_contact_limit(user): consume_credit(user); st.markdown(f"[Chat](https://wa.me/549{m['phone']})")
-                    else: st.error("Límite diario.")
-            with c3:
-                if st.button("👍 Recomendar", key=f"vote_{m['figu']}_{m['target_id']}"):
-                    ok, msg = votar_usuario(user['id'], m['target_id'])
-                    if ok: st.toast(msg, icon="⭐")
-                    else: st.toast(msg, icon="🚫")
-
-with t2:
-    if not ventas: st.info("Nadie vende lo que buscas.")
-    for v in ventas:
-        with st.container(border=True):
-            c1, c2, c3 = st.columns([3, 1, 1])
-            with c1:
-                st.markdown(f"💰 **{v['nick']}** (⭐{v['reputation']}) vende **#{v['figu']}** a **${v['price']}**")
-            with c2:
-                if st.button("WhatsApp", key=f"v_{v['figu']}_{v['target_id']}"):
-                    if check_contact_limit(user): consume_credit(user); st.markdown(f"[Chat](https://wa.me/549{v['phone']})")
-                    else: st.error("Límite diario.")
-            with c3:
-                if st.button("👍 Recomendar", key=f"vote_v_{v['figu']}_{v['target_id']}"):
-                    ok, msg = votar_usuario(user['id'], v['target_id'])
-                    if ok: st.toast(msg, icon="⭐")
-                    else: st.toast(msg, icon="🚫")
