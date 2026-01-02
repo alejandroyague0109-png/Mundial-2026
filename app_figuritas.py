@@ -65,36 +65,31 @@ ALBUM_PAGES = {
     "Especiales Coca-Cola": (600, 608)
 }
 
-# --- 3. POP-UP LEGAL (NUEVO) ---
-@st.dialog("⚠️ Términos y Condiciones de Uso")
-def mostrar_terminos():
-    st.markdown("### Por favor lee atentamente antes de continuar")
-    
-    st.info("🔞 **Restricción de Edad:**\nDebes ser **mayor de 18 años** para utilizar esta aplicación.")
-    
-    st.warning("🤝 **Responsabilidad de Encuentros:**\nFigus 26 es solo una herramienta de contacto. Los encuentros presenciales para intercambiar figuritas se realizan bajo **tu exclusiva responsabilidad**.")
-    
-    st.markdown("""
-    **Al ingresar, aceptas que:**
-    * Los desarrolladores no se hacen responsables por conflictos, robos o transacciones fallidas entre usuarios.
-    * Te comprometes a realizar los intercambios en **lugares públicos y seguros**.
-    * Tratarás con respeto a los demás miembros de la comunidad.
-    """)
-    
-    st.divider()
-    
-    col1, col2 = st.columns(2)
-    with col1:
-        if st.button("❌ Salir", use_container_width=True):
-            st.warning("No puedes usar la app sin aceptar los términos.")
-            time.sleep(2)
-            st.stop()
-    with col2:
-        if st.button("✅ Acepto y Soy +18", type="primary", use_container_width=True):
-            st.session_state.terminos_aceptados = True
-            st.rerun()
+# --- 3. TEXTO LEGAL COMPLETO ---
+TERMINOS_TEXTO = """
+TÉRMINOS Y CONDICIONES - FIGUS 26
+1. EDAD: Debes ser mayor de 18 años.
+2. RESPONSABILIDAD: Los encuentros presenciales son bajo tu exclusivo riesgo. Figus 26 no se hace responsable por seguridad, robos o conflictos.
+3. PRIVACIDAD: Aceptas que tu teléfono sea visible para otros coleccionistas con el fin de intercambiar.
+4. CONDUCTA: Se prohíbe el acoso, spam o venta de artículos ilegales.
+5. PAGOS: Los pagos Premium no son reembolsables.
+"""
 
-# --- 4. FUNCIONES DE SEGURIDAD Y VALIDACIÓN ---
+# --- 4. POP-UP DE INICIO (BARRERA DE EDAD) ---
+@st.dialog("⚠️ Bienvenido a Figus 26")
+def mostrar_barrera_entrada():
+    st.warning("🔞 Esta aplicación es para mayores de 18 años.")
+    st.info("🤝 Facilitamos el contacto entre coleccionistas, pero no intervenimos en los canjes ni garantizamos seguridad en los encuentros.")
+    
+    st.markdown("**Al continuar, declaras que:**")
+    st.markdown("* Eres mayor de edad.")
+    st.markdown("* Asumes la responsabilidad de tus encuentros.")
+    
+    if st.button("✅ Entendido, soy +18", type="primary", use_container_width=True):
+        st.session_state.barrera_superada = True
+        st.rerun()
+
+# --- 5. FUNCIONES DE SEGURIDAD Y VALIDACIÓN ---
 
 def hash_password(password):
     return bcrypt.hashpw(password.encode('utf-8'), bcrypt.gensalt()).decode('utf-8')
@@ -252,43 +247,58 @@ def consume_credit(user):
         supabase.table("users").update({"daily_contacts_count": nuevo}).eq("id", user['id']).execute()
         st.session_state.user['daily_contacts_count'] = nuevo
 
-# --- 7. BLOQUEO LEGAL (POP-UP) ---
-# Esto debe ir ANTES de cualquier login
-if 'terminos_aceptados' not in st.session_state:
-    st.session_state.terminos_aceptados = False
+# --- 6. BLOQUEO INICIAL (BARRERA DE EDAD) ---
+if 'barrera_superada' not in st.session_state:
+    st.session_state.barrera_superada = False
 
-if not st.session_state.terminos_aceptados:
-    mostrar_terminos() # Llama al pop-up
-    # Como st.dialog es modal pero deja correr el script de fondo a veces, ponemos stop para asegurar.
-    # Nota: st.dialog en versiones recientes maneja esto bien, pero un stop aquí evita parpadeos.
-    # Sin embargo, st.dialog ya bloquea la interacción.
+if not st.session_state.barrera_superada:
+    mostrar_barrera_entrada()
 
-# --- 8. UI PRINCIPAL ---
+# --- 7. UI PRINCIPAL (LOGIN / REGISTRO) ---
 
 if 'user' not in st.session_state: st.session_state.user = None
 
 if not st.session_state.user:
     st.title("🏆 Figus 26")
     t1, t2 = st.tabs(["Ingresar", "Registrarse"])
-    with t1:
+    
+    with t1: # LOGIN
         p = st.text_input("Teléfono (ej: 261 555 1234)")
         pw = st.text_input("Contraseña", type="password")
-        if st.button("Entrar"):
+        if st.button("Entrar", type="primary"):
             u, m = login_user(p, pw)
             if u: st.session_state.user = u; st.rerun()
             else: st.error(m)
-    with t2:
+            
+    with t2: # REGISTRO CON CHECKBOX LEGAL
         st.caption("Crea tu cuenta para guardar tu álbum.")
+        
         n = st.text_input("Apodo / Nick")
         ph = st.text_input("Teléfono (Será tu ID)")
+        st.caption("Ingresa tu número con código de área.")
         passw = st.text_input("Crea una Contraseña", type="password")
         z = st.selectbox("Tu Zona", ["Centro", "Godoy Cruz", "Guaymallén", "Las Heras"])
-        if st.button("Crear Cuenta"):
+        
+        st.divider()
+        
+        # --- NUEVO: Checkbox Obligatorio ---
+        with st.expander("📄 Leer Términos y Condiciones"):
+            st.markdown(TERMINOS_TEXTO)
+            
+        acepto_terminos = st.checkbox("He leído y acepto los Términos y Condiciones.")
+        
+        # El botón está deshabilitado (disabled=True) si NO aceptó términos
+        if st.button("Crear Cuenta", disabled=not acepto_terminos):
             u, m = register_user(n, ph, z, passw)
             if u: st.success("¡Cuenta creada!"); st.balloons()
             else: st.error(m)
+        
+        if not acepto_terminos:
+            st.caption("Debes aceptar los términos para habilitar el botón.")
+            
     st.stop()
 
+# --- APP LOGUEADA ---
 user = st.session_state.user
 
 # Cálculos
@@ -331,6 +341,10 @@ with st.sidebar:
                 exito, msg = verificar_pago_mp(op, user['id'])
                 if exito: st.success(msg); time.sleep(2); st.rerun()
     if st.button("Salir"): st.session_state.user = None; st.rerun()
+    
+    # Link a términos en sidebar también
+    with st.expander("Ayuda & Legales"):
+        st.caption(TERMINOS_TEXTO)
 
 # CONTENIDO
 st.header("📖 Mi Álbum")
