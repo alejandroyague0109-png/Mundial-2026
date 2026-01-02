@@ -7,14 +7,34 @@ import mercadopago
 import bcrypt
 import re
 
-# --- CONFIGURACIÓN ---
-st.set_page_config(page_title="Figus 26 | Mi Colección", layout="wide", page_icon="⚽")
+# --- CONFIGURACIÓN E INYECCIÓN DE ESTILO (VERDE) ---
+st.set_page_config(page_title="Figus 26 | Colección", layout="wide", page_icon="⚽")
+
+# TRUCO CSS: Forzar que las selecciones ("Pills") sean VERDES en lugar de rojas
+st.markdown(
+    """
+    <style>
+    /* Cambiar fondo de píldoras seleccionadas a VERDE */
+    div[data-testid="stPills"] button[aria-selected="true"] {
+        background-color: #2e7d32 !important; /* Verde Fuerte */
+        color: white !important;
+        border-color: #2e7d32 !important;
+    }
+    /* Efecto hover suave */
+    div[data-testid="stPills"] button:hover {
+        border-color: #66bb6a !important;
+        color: #2e7d32 !important;
+    }
+    </style>
+    """,
+    unsafe_allow_html=True
+)
 
 # --- 🛠️ DATOS SEGUROS ---
 try:
     ADMIN_PHONE = st.secrets["ADMIN_PHONE"]
     PRECIO_PREMIUM = 5000 
-    MP_LINK = "https://link.mercadopago.com.ar/..." 
+    MP_LINK = "https://link.mercadopago.com.ar/..." # <--- TU LINK DE MP
     
     url = st.secrets["SUPABASE_URL"]
     key = st.secrets["SUPABASE_KEY"]
@@ -94,18 +114,12 @@ def calcular_progreso_global(user_id):
     total_faltantes = resp.count if resp.count else 0
     return total_faltantes, total_album
 
-# --- NUEVA LÓGICA DE INVENTARIO (INVERTIDA) ---
+# --- LÓGICA DE INVENTARIO ---
 def get_inventory_status(user_id, start, end):
-    """
-    Recupera el estado pero lo invierte para la UI.
-    Si NO está en la tabla como 'faltante', asume que la TIENE.
-    """
     response = supabase.table("inventory").select("*").eq("user_id", user_id).execute()
     df = pd.DataFrame(response.data)
     
     numeros_rango = list(range(start, end + 1))
-    
-    # 1. Identificar Faltantes Reales (están en BD como 'faltante')
     db_faltantes = []
     db_repetidas_info = {}
     
@@ -116,67 +130,28 @@ def get_inventory_status(user_id, start, end):
         for _, row in df_page[df_page['status'] == 'repetida'].iterrows():
             db_repetidas_info[row['sticker_num']] = {'price': row['price']}
     
-    # 2. Calcular "Las que TENGO" (Todas - Faltantes)
-    # Si el usuario es nuevo y no tiene filas, asumimos que le faltan todas (todavía no marcamos 'faltante' en BD, pero la UI las mostrará desmarcadas)
-    # Lógica: UI_Owned = All - DB_Missing
-    
-    # PERO, si es la primera vez (no hay registros de faltantes), ¿cómo diferenciamos "Usuario nuevo" de "Usuario que tiene todo"?
-    # Estrategia Robustez: Si hay 0 registros en BD para este usuario en este rango, asumimos que no tiene nada.
-    
-    ids_que_tengo = [n for n in numeros_rango if n not in db_faltantes]
-    
-    # Caso borde: Si el usuario es nuevo, db_faltantes está vacío, entonces parecería que tiene TODAS. 
-    # Corrección: Necesitamos saber si existen registros.
-    # Simplificación para MVP:
-    # Usamos la lógica explícita: Guardamos Faltantes en BD. 
-    # Al principio, cargamos "faltantes" masivamente o asumimos vacío?
-    # MEJOR: La base de datos guarda explicitamente las FALTANTES.
-    # Si borro la faltante -> La tengo.
-    
-    # PARA QUE FUNCIONE AL INICIO: El usuario deberá marcar lo que tiene.
-    # El sistema asume que lo que NO está marcado como "Faltante" en la BD es porque LO TIENE.
-    # PROBLEMA: Un usuario nuevo no tiene filas de "Faltante". El sistema pensaría que tiene el álbum lleno.
-    
-    # SOLUCIÓN DEL MVP:
-    # Vamos a confiar en la UI.
-    #ids_que_tengo = [n for n in numeros_rango if n not in db_faltantes] 
-    
-    # *FIX*: Si la query está vacía, ¿tiene todo o nada?
-    # Para evitar confusión, vamos a usar una lógica de "Posesión Explícita" en la UI,
-    # pero guardamos "Faltantes" en la BD para el motor de búsqueda.
-    
-    # Vamos a hacer una consulta para ver si hay ALGO registrado en este rango.
-    # Si no hay NADA, asumimos que le falta todo (para pintar gris la UI).
+    # Si no hay datos, asumimos que faltan todas (para el visualizador)
     has_data = not df[ (df['sticker_num'] >= start) & (df['sticker_num'] <= end) ].empty
-    
     if not has_data:
-        ids_que_tengo = [] # No tiene nada
-        # Y en el 'save' guardaremos todas como faltantes implícitamente
+        ids_que_tengo = []
     else:
         ids_que_tengo = [n for n in numeros_rango if n not in db_faltantes]
 
     return ids_que_tengo, db_repetidas_info
 
 def save_inventory_inverted(user_id, start, end, ui_owned_list, ui_repe_df):
-    """
-    Recibe lo que el usuario TIENE y REPITIO.
-    Calcula lo que FALTA y guarda eso en la BD.
-    """
     page_numbers = list(range(start, end + 1))
     
     # 1. Limpiar rango
     supabase.table("inventory").delete().eq("user_id", user_id).in_("sticker_num", page_numbers).execute()
     
     new_rows = []
-    
     # 2. Calcular Faltantes (Lo que NO marcó como Tengo)
-    # Faltantes = Todo el rango - Lo que marcó que tiene
     ids_faltantes = [n for n in page_numbers if n not in ui_owned_list]
-    
     for num in ids_faltantes:
         new_rows.append({"user_id": user_id, "sticker_num": num, "status": "faltante", "price": 0})
         
-    # 3. Guardar Repetidas (Las que marcó en la segunda lista)
+    # 3. Guardar Repetidas
     if not ui_repe_df.empty:
         for _, row in ui_repe_df.iterrows():
             num = row['Figurita']
@@ -184,11 +159,10 @@ def save_inventory_inverted(user_id, start, end, ui_owned_list, ui_repe_df):
             precio = row['Precio'] if modo == "Venta" else 0
             new_rows.append({"user_id": user_id, "sticker_num": num, "status": "repetida", "price": int(precio)})
             
-    # 4. Insertar lote
     if new_rows:
         supabase.table("inventory").insert(new_rows).execute()
 
-# [FUNCIONES FETCH MARKET, MATCH, ETC SE MANTIENEN IGUALES]
+# --- FUNCIONES DE MERCADO ---
 def fetch_all_market_data(mi_id):
     response = supabase.table("inventory").select("*, users(nick, zone, phone)").neq("user_id", mi_id).execute()
     return pd.DataFrame(response.data)
@@ -230,7 +204,7 @@ def consume_contact_credit(user):
         supabase.table("users").update({"daily_contacts_count": nuevo}).eq("id", user['id']).execute()
         st.session_state.user['daily_contacts_count'] = nuevo
 
-# --- INTERFAZ ---
+# --- UI PRINCIPAL ---
 if 'user' not in st.session_state: st.session_state.user = None
 
 if not st.session_state.user:
@@ -260,15 +234,11 @@ with st.sidebar:
     st.title(f"Hola {user['nick']}")
     if user['phone'] == ADMIN_PHONE: st.info("🕵️ ADMIN")
     
-    # Progreso Global
     st.divider()
     cant_faltas, total_album = calcular_progreso_global(user['id'])
-    
-    # Ajuste visual: Si no hay datos (usuario nuevo), cant_faltas será 0 pero porque no cargó nada.
-    # Corrección visual simple:
     percent_missing = min(cant_faltas / total_album, 1.0) if total_album > 0 else 1.0
     st.progress(percent_missing, text="Tu Álbum (Faltantes)")
-    st.caption(f"Te faltan {cant_faltas} de {total_album}")
+    st.caption(f"Faltan {cant_faltas} de {total_album}")
     st.divider()
 
     if user['is_premium']: st.success("💎 PREMIUM")
@@ -287,71 +257,76 @@ with st.sidebar:
 st.header("📖 Mi Álbum")
 
 paises = list(ALBUM_PAGES.keys())
-seleccion = st.selectbox("Selecciona Sección:", paises)
-start, end = ALBUM_PAGES[seleccion]
+seleccion_pais = st.selectbox("Selecciona Sección:", paises)
+start, end = ALBUM_PAGES[seleccion_pais]
 numeros_posibles = list(range(start, end + 1))
 
-# Obtenemos lo que TENEMOS (no lo que falta)
+# Obtenemos estado actual
 ids_tengo, repetidas_info = get_inventory_status(user['id'], start, end)
 
 # Progreso Local
-total_sec = end - start + 1
 tengo_sec = len(ids_tengo)
-st.progress(tengo_sec / total_sec, text=f"Tienes {tengo_sec} de {total_sec} figuritas")
+total_sec = end - start + 1
+st.progress(tengo_sec / total_sec, text=f"Tienes {tengo_sec} de {total_sec}")
 
-# --- UI CASCADA (LÓGICA MEJORADA) ---
-with st.form("album_logic_inverted"):
-    
-    st.markdown("### 1️⃣ ¿Cuáles TENÉS?")
-    st.caption("Marca todas las que te salieron en el paquete.")
-    # Selector de Posesión
-    seleccion_tengo = st.pills(
-        "Mis Figuritas", 
-        numeros_posibles, 
-        default=ids_tengo, 
-        selection_mode="multi", 
-        key="pills_tengo"
-    )
-    
-    st.markdown("---")
-    
-    st.markdown("### 2️⃣ ¿Cuáles están REPETIDAS?")
-    st.caption("De las que tienes arriba, marca las que te sobran.")
-    
-    # El selector de repetidas SOLO muestra las que marcaste arriba como "Tengo"
-    # Si desmarcas arriba, desaparece de abajo automáticamente.
-    posibles_repetidas = sorted(seleccion_tengo) if seleccion_tengo else []
-    ids_repetidas_actuales = list(repetidas_info.keys())
-    # Filtramos para que no queden IDs huerfanos si desmarcaste arriba
-    ids_repetidas_validos = [ID for ID in ids_repetidas_actuales if ID in posibles_repetidas]
-    
-    seleccion_repes = st.pills(
-        "Mis Repetidas", 
-        posibles_repetidas, 
-        default=ids_repetidas_validos, 
-        selection_mode="multi", 
-        key="pills_repes"
-    )
+st.divider()
 
-    # Configuración de Precios (Solo si hay repetidas)
-    edited_df = pd.DataFrame()
-    if seleccion_repes:
-        st.caption("💲 Configurar valores (Opcional)")
-        ed_data = []
-        for num in seleccion_repes:
-            info = repetidas_info.get(num, {'price': 0})
-            modo = "Venta" if info['price'] > 0 else "Canje"
-            ed_data.append({"Figurita": num, "Modo": modo, "Precio": info['price']})
-        
-        edited_df = st.data_editor(pd.DataFrame(ed_data), column_config={
-            "Figurita": st.column_config.NumberColumn(disabled=True),
-            "Modo": st.column_config.SelectboxColumn(options=["Canje", "Venta"], required=True),
-            "Precio": st.column_config.NumberColumn(min_value=0, step=100)
-        }, hide_index=True, use_container_width=True)
+# --- INTERFAZ DE CARGA (SIN FORMULARIO para reactividad instantánea) ---
+# Hemos quitado 'with st.form' para que al tocar 'Tengo', se actualice 'Repetidas' al instante.
 
-    if st.form_submit_button("💾 Guardar Mi Álbum", use_container_width=True):
-        save_inventory_inverted(user['id'], start, end, seleccion_tengo, edited_df)
-        st.toast("¡Álbum Actualizado!", icon="✅"); time.sleep(1); st.rerun()
+st.markdown("### 1️⃣ ¿Cuáles TENÉS?")
+st.caption("Marca las que te salieron (Se pondrán VERDES ✅)")
+
+seleccion_tengo = st.pills(
+    "Mis Figuritas", 
+    numeros_posibles, 
+    default=ids_tengo, 
+    selection_mode="multi", 
+    key=f"pills_tengo_{seleccion_pais}" # Key única por país para evitar bugs
+)
+
+st.markdown("### 2️⃣ ¿Cuáles REPETISTE?")
+st.caption("De las verdes de arriba, marca las que te sobran.")
+
+# Lógica Cascada Instantánea:
+# Las opciones de abajo son SOLO las que seleccionaste arriba.
+posibles_repetidas = sorted(seleccion_tengo) if seleccion_tengo else []
+ids_repetidas_actuales = list(repetidas_info.keys())
+ids_repetidas_validos = [ID for ID in ids_repetidas_actuales if ID in posibles_repetidas]
+
+seleccion_repes = st.pills(
+    "Mis Repetidas", 
+    posibles_repetidas, 
+    default=ids_repetidas_validos, 
+    selection_mode="multi", 
+    key=f"pills_repes_{seleccion_pais}"
+)
+
+# Editor de Precios (Solo aparece si hay repetidas)
+edited_df = pd.DataFrame()
+if seleccion_repes:
+    st.markdown("#### 💲 Configurar Precios (Opcional)")
+    ed_data = []
+    for num in seleccion_repes:
+        info = repetidas_info.get(num, {'price': 0})
+        # Si acabas de agregarla a repetidas, por defecto es Canje ($0)
+        modo = "Venta" if info['price'] > 0 else "Canje"
+        ed_data.append({"Figurita": num, "Modo": modo, "Precio": info['price']})
+    
+    edited_df = st.data_editor(pd.DataFrame(ed_data), column_config={
+        "Figurita": st.column_config.NumberColumn(disabled=True),
+        "Modo": st.column_config.SelectboxColumn(options=["Canje", "Venta"], required=True),
+        "Precio": st.column_config.NumberColumn(min_value=0, step=100)
+    }, hide_index=True, use_container_width=True, key=f"editor_{seleccion_pais}")
+
+st.markdown("---")
+
+# Botón de Guardado (Ahora es un botón normal, no un form_submit)
+if st.button("💾 GUARDAR CAMBIOS", type="primary", use_container_width=True):
+    save_inventory_inverted(user['id'], start, end, seleccion_tengo, edited_df)
+    st.toast("¡Álbum Actualizado!", icon="✅")
+    time.sleep(1)
+    st.rerun()
 
 st.divider()
 st.subheader("🔍 Mercado")
