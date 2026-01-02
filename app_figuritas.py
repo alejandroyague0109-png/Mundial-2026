@@ -65,29 +65,55 @@ ALBUM_PAGES = {
     "Especiales Coca-Cola": (600, 608)
 }
 
-# --- 3. TEXTO LEGAL COMPLETO ---
-TERMINOS_TEXTO = """
-TÉRMINOS Y CONDICIONES - FIGUS 26
-1. EDAD: Debes ser mayor de 18 años.
-2. RESPONSABILIDAD: Los encuentros presenciales son bajo tu exclusivo riesgo. Figus 26 no se hace responsable por seguridad, robos o conflictos.
-3. PRIVACIDAD: Aceptas que tu teléfono sea visible para otros coleccionistas con el fin de intercambiar.
-4. CONDUCTA: Se prohíbe el acoso, spam o venta de artículos ilegales.
-5. PAGOS: Los pagos Premium no son reembolsables.
+# --- 3. TEXTO LEGAL EXTENDIDO ---
+TEXTO_LEGAL_COMPLETO = """
+### TÉRMINOS Y CONDICIONES DE USO - FIGUS 26
+
+**1. Edad Mínima y Elegibilidad**
+El uso de la Aplicación está estrictamente reservado para personas **mayores de 18 años**. Al registrarse, usted declara bajo juramento tener la mayoría de edad legal.
+
+**2. Naturaleza del Servicio**
+Figus 26 actúa exclusivamente como una plataforma tecnológica de **conexión e información** entre coleccionistas. No vendemos figuritas directamente ni garantizamos el stock.
+
+**3. Seguridad en Encuentros Presenciales**
+La Aplicación facilita el contacto para intercambios físicos. **Usted reconoce y acepta que:**
+* **Figus 26 NO se hace responsable** por la seguridad física, robos, hurtos o fraudes durante los encuentros.
+* Los encuentros son bajo su **exclusiva responsabilidad**.
+* **Recomendación:** Realice intercambios únicamente en **lugares públicos, concurridos y de día**.
+
+**4. Privacidad y Uso de la Información**
+Su "Nick", "Zona" y "Teléfono" serán visibles para otros usuarios registrados para facilitar el contacto. Usted autoriza esto al registrarse. Está prohibido usar estos datos para spam o acoso.
+
+**5. Reglas de Conducta**
+Se prohíbe publicar información falsa, usar lenguaje ofensivo o intentar vender artículos ilegales. Las cuentas que violen esto serán suspendidas sin reembolso.
+
+**6. Sistema de Reputación**
+Las calificaciones son referenciales y basadas en opiniones de terceros. La App no garantiza la veracidad de los votos.
+
+**7. Pagos y Servicios Premium**
+Los pagos Premium se realizan vía Mercado Pago. No almacenamos datos bancarios. No se realizan reembolsos salvo error técnico comprobable.
+
+**8. Limitación de Responsabilidad**
+El servicio se ofrece "tal cual". No somos responsables por daños indirectos, pérdida de datos o interrupciones del servicio.
 """
 
-# --- 4. POP-UP DE INICIO (BARRERA DE EDAD) ---
+# --- 4. MODALES (POP-UPS) ---
+
+# A. Barrera de Edad (Al inicio)
 @st.dialog("⚠️ Bienvenido a Figus 26")
 def mostrar_barrera_entrada():
     st.warning("🔞 Esta aplicación es para mayores de 18 años.")
     st.info("🤝 Facilitamos el contacto entre coleccionistas, pero no intervenimos en los canjes ni garantizamos seguridad en los encuentros.")
-    
-    st.markdown("**Al continuar, declaras que:**")
-    st.markdown("* Eres mayor de edad.")
-    st.markdown("* Asumes la responsabilidad de tus encuentros.")
-    
+    st.markdown("**Al continuar, declaras que:**\n* Eres mayor de edad.\n* Asumes la responsabilidad de tus encuentros.")
     if st.button("✅ Entendido, soy +18", type="primary", use_container_width=True):
         st.session_state.barrera_superada = True
         st.rerun()
+
+# B. Visor de Contrato (En el registro)
+@st.dialog("📄 Términos y Condiciones Completos", width="large")
+def ver_contrato_completo():
+    st.markdown(TEXTO_LEGAL_COMPLETO)
+    st.caption("Al cerrar esta ventana podrás marcar la casilla de aceptación.")
 
 # --- 5. FUNCIONES DE SEGURIDAD Y VALIDACIÓN ---
 
@@ -270,7 +296,7 @@ if not st.session_state.user:
             if u: st.session_state.user = u; st.rerun()
             else: st.error(m)
             
-    with t2: # REGISTRO CON CHECKBOX LEGAL
+    with t2: # REGISTRO CON CHECKBOX LEGAL Y MODAL
         st.caption("Crea tu cuenta para guardar tu álbum.")
         
         n = st.text_input("Apodo / Nick")
@@ -281,20 +307,20 @@ if not st.session_state.user:
         
         st.divider()
         
-        # --- NUEVO: Checkbox Obligatorio ---
-        with st.expander("📄 Leer Términos y Condiciones"):
-            st.markdown(TERMINOS_TEXTO)
+        # --- NUEVO: Botón para abrir el POP-UP Legal ---
+        if st.button("📖 Leer Términos y Condiciones Completos", type="secondary"):
+            ver_contrato_completo() # Abre el modal
             
         acepto_terminos = st.checkbox("He leído y acepto los Términos y Condiciones.")
         
-        # El botón está deshabilitado (disabled=True) si NO aceptó términos
+        # El botón está deshabilitado si NO aceptó términos
         if st.button("Crear Cuenta", disabled=not acepto_terminos):
             u, m = register_user(n, ph, z, passw)
             if u: st.success("¡Cuenta creada!"); st.balloons()
             else: st.error(m)
         
         if not acepto_terminos:
-            st.caption("Debes aceptar los términos para habilitar el botón.")
+            st.caption("Debes marcar la casilla para continuar.")
             
     st.stop()
 
@@ -342,9 +368,9 @@ with st.sidebar:
                 if exito: st.success(msg); time.sleep(2); st.rerun()
     if st.button("Salir"): st.session_state.user = None; st.rerun()
     
-    # Link a términos en sidebar también
-    with st.expander("Ayuda & Legales"):
-        st.caption(TERMINOS_TEXTO)
+    # Link a términos en sidebar también (opcional pero útil)
+    if st.button("Ver Términos de Uso", type="secondary"):
+        ver_contrato_completo()
 
 # CONTENIDO
 st.header("📖 Mi Álbum")
