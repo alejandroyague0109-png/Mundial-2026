@@ -7,21 +7,26 @@ import mercadopago
 import bcrypt
 import re
 
-# --- CONFIGURACIÓN E INYECCIÓN DE ESTILO (VERDE) ---
+# --- CONFIGURACIÓN E INYECCIÓN DE ESTILO (VERDE FORZADO) ---
 st.set_page_config(page_title="Figus 26 | Colección", layout="wide", page_icon="⚽")
 
-# TRUCO CSS: Forzar que las selecciones ("Pills") sean VERDES en lugar de rojas
 st.markdown(
     """
     <style>
-    /* Cambiar fondo de píldoras seleccionadas a VERDE */
-    div[data-testid="stPills"] button[aria-selected="true"] {
-        background-color: #2e7d32 !important; /* Verde Fuerte */
+    /* Forzar color VERDE en Píldoras Seleccionadas */
+    /* Selector genérico para versiones recientes de Streamlit */
+    div[data-testid="stPills"] span[aria-selected="true"] {
+        background-color: #2e7d32 !important;
         color: white !important;
         border-color: #2e7d32 !important;
     }
-    /* Efecto hover suave */
-    div[data-testid="stPills"] button:hover {
+    div[data-testid="stPills"] button[aria-selected="true"] {
+        background-color: #2e7d32 !important;
+        color: white !important;
+        border-color: #2e7d32 !important;
+    }
+    /* Eliminar el borde rojo por defecto al hacer hover */
+    div[data-testid="stPills"] span:hover, div[data-testid="stPills"] button:hover {
         border-color: #66bb6a !important;
         color: #2e7d32 !important;
     }
@@ -34,7 +39,7 @@ st.markdown(
 try:
     ADMIN_PHONE = st.secrets["ADMIN_PHONE"]
     PRECIO_PREMIUM = 5000 
-    MP_LINK = "https://link.mercadopago.com.ar/..." # <--- TU LINK DE MP
+    MP_LINK = "https://link.mercadopago.com.ar/..." 
     
     url = st.secrets["SUPABASE_URL"]
     key = st.secrets["SUPABASE_KEY"]
@@ -58,7 +63,7 @@ ALBUM_PAGES = {
     "Especiales Coca-Cola": (600, 608)
 }
 
-# --- FUNCIONES DE SEGURIDAD Y UTILIDADES ---
+# --- FUNCIONES CORE ---
 def hash_password(password):
     return bcrypt.hashpw(password.encode('utf-8'), bcrypt.gensalt()).decode('utf-8')
 
@@ -67,10 +72,8 @@ def check_password(plain_text, hashed_text):
     except: return False
 
 def validar_telefono(phone):
-    patron = re.compile(r"^\d{10,13}$")
-    return bool(patron.match(phone))
+    return bool(re.match(r"^\d{10,13}$", phone))
 
-# --- FUNCIONES DE BASE DE DATOS ---
 def login_user(phone, password):
     response = supabase.table("users").select("*").eq("phone", phone).execute()
     if not response.data: return None, "Usuario no encontrado."
@@ -79,9 +82,8 @@ def login_user(phone, password):
     else: return None, "Contraseña incorrecta."
 
 def register_user(nick, phone, zone, password):
-    if not validar_telefono(phone): return None, "Teléfono inválido (solo números)."
-    if supabase.table("users").select("*").eq("phone", phone).execute().data:
-        return None, "El teléfono ya existe."
+    if not validar_telefono(phone): return None, "Teléfono inválido."
+    if supabase.table("users").select("*").eq("phone", phone).execute().data: return None, "Teléfono ya existe."
     try:
         hashed_pw = hash_password(password)
         data = {"nick": nick, "phone": phone, "zone": zone, "password": hashed_pw, "is_admin": (phone == ADMIN_PHONE)}
@@ -91,8 +93,8 @@ def register_user(nick, phone, zone, password):
 
 def verificar_pago_mp(payment_id, user_id):
     try:
-        ya_usado = supabase.table("payments_log").select("*").eq("payment_id", payment_id).execute()
-        if ya_usado.data: return False, "Comprobante ya usado."
+        if supabase.table("payments_log").select("*").eq("payment_id", payment_id).execute().data:
+            return False, "Comprobante ya usado."
         payment_info = sdk.payment().get(payment_id)
         if payment_info["status"] == 404: return False, "ID no encontrado."
         resp = payment_info["response"]
@@ -102,20 +104,13 @@ def verificar_pago_mp(payment_id, user_id):
             }).execute()
             supabase.table("users").update({"is_premium": True}).eq("id", user_id).execute()
             return True, "¡Premium Activado!"
-        else: return False, "Pago no aprobado o monto insuficiente."
-    except Exception as e: return False, f"Error: {str(e)}"
+        else: return False, "Pago no aprobado."
+    except Exception as e: return False, str(e)
 
-# --- LÓGICA DE PROGRESO ---
-def calcular_progreso_global(user_id):
-    total_album = 0
-    for key, val in ALBUM_PAGES.items():
-        total_album += (val[1] - val[0] + 1)
-    resp = supabase.table("inventory").select("sticker_num", count="exact").eq("user_id", user_id).eq("status", "faltante").execute()
-    total_faltantes = resp.count if resp.count else 0
-    return total_faltantes, total_album
+# --- 🧠 LÓGICA INTELIGENTE DE DATOS ---
 
-# --- LÓGICA DE INVENTARIO ---
 def get_inventory_status(user_id, start, end):
+    """Trae datos de la BD para inicializar la vista"""
     response = supabase.table("inventory").select("*").eq("user_id", user_id).execute()
     df = pd.DataFrame(response.data)
     
@@ -124,81 +119,79 @@ def get_inventory_status(user_id, start, end):
     db_repetidas_info = {}
     
     if not df.empty:
+        # Filtramos solo lo relevante para esta página
         mask = (df['sticker_num'] >= start) & (df['sticker_num'] <= end)
         df_page = df[mask]
         db_faltantes = df_page[df_page['status'] == 'faltante']['sticker_num'].tolist()
         for _, row in df_page[df_page['status'] == 'repetida'].iterrows():
             db_repetidas_info[row['sticker_num']] = {'price': row['price']}
     
-    # Si no hay datos, asumimos que faltan todas (para el visualizador)
+    # Si no hay datos, asumimos vacío (para que marque)
     has_data = not df[ (df['sticker_num'] >= start) & (df['sticker_num'] <= end) ].empty
-    if not has_data:
-        ids_que_tengo = []
-    else:
-        ids_que_tengo = [n for n in numeros_rango if n not in db_faltantes]
+    if not has_data: ids_que_tengo = []
+    else: ids_que_tengo = [n for n in numeros_rango if n not in db_faltantes]
 
-    return ids_que_tengo, db_repetidas_info
+    return ids_que_tengo, db_repetidas_info, df # Devolvemos df completo para cálculos globales
 
 def save_inventory_inverted(user_id, start, end, ui_owned_list, ui_repe_df):
     page_numbers = list(range(start, end + 1))
-    
-    # 1. Limpiar rango
     supabase.table("inventory").delete().eq("user_id", user_id).in_("sticker_num", page_numbers).execute()
     
     new_rows = []
-    # 2. Calcular Faltantes (Lo que NO marcó como Tengo)
+    # Guardar Faltantes (Lo que NO tiene)
     ids_faltantes = [n for n in page_numbers if n not in ui_owned_list]
     for num in ids_faltantes:
         new_rows.append({"user_id": user_id, "sticker_num": num, "status": "faltante", "price": 0})
-        
-    # 3. Guardar Repetidas
+    
+    # Guardar Repetidas
     if not ui_repe_df.empty:
         for _, row in ui_repe_df.iterrows():
-            num = row['Figurita']
-            modo = row['Modo']
-            precio = row['Precio'] if modo == "Venta" else 0
-            new_rows.append({"user_id": user_id, "sticker_num": num, "status": "repetida", "price": int(precio)})
-            
-    if new_rows:
-        supabase.table("inventory").insert(new_rows).execute()
+            new_rows.append({
+                "user_id": user_id, 
+                "sticker_num": row['Figurita'], 
+                "status": "repetida", 
+                "price": int(row['Precio']) if row['Modo'] == "Venta" else 0
+            })
+    if new_rows: supabase.table("inventory").insert(new_rows).execute()
 
-# --- FUNCIONES DE MERCADO ---
-def fetch_all_market_data(mi_id):
-    response = supabase.table("inventory").select("*, users(nick, zone, phone)").neq("user_id", mi_id).execute()
-    return pd.DataFrame(response.data)
+def fetch_market(user_id):
+    resp = supabase.table("inventory").select("*, users(nick, zone, phone)").neq("user_id", user_id).execute()
+    return pd.DataFrame(resp.data)
 
 def find_matches(user_id, market_df):
-    response = supabase.table("inventory").select("*").eq("user_id", user_id).execute()
-    mi_df = pd.DataFrame(response.data)
+    resp = supabase.table("inventory").select("*").eq("user_id", user_id).execute()
+    mi_df = pd.DataFrame(resp.data)
     if mi_df.empty: return [], []
+    
     mis_f = mi_df[mi_df['status'] == 'faltante']['sticker_num'].tolist()
     mis_r = mi_df[mi_df['status'] == 'repetida']['sticker_num'].tolist()
+    
     directos, ventas = [], []
     if market_df.empty: return [], []
+    
     market_df['nick'] = market_df['users'].apply(lambda x: x['nick'])
     market_df['zone'] = market_df['users'].apply(lambda x: x['zone'])
     market_df['phone'] = market_df['users'].apply(lambda x: x['phone'])
+    
     ofertas = market_df[(market_df['status'] == 'repetida') & (market_df['sticker_num'].isin(mis_f))]
     for _, row in ofertas.iterrows():
         match = {'nick': row['nick'], 'zone': row['zone'], 'phone': row['phone'], 'figu': row['sticker_num'], 'price': row['price']}
         if row['price'] > 0: ventas.append(match)
         else:
             sus_faltas = market_df[(market_df['user_id'] == row['user_id']) & (market_df['status'] == 'faltante')]['sticker_num'].tolist()
-            cruce = set(mis_r).intersection(set(sus_faltas))
-            if cruce:
-                match['te_pide'] = list(cruce)[0]
+            if set(mis_r).intersection(set(sus_faltas)):
+                match['te_pide'] = list(set(mis_r).intersection(set(sus_faltas)))[0]
                 directos.append(match)
     return directos, ventas
 
 def check_contact_limit(user):
     if user['is_premium']: return True
-    hoy = str(date.today())
-    if str(user['last_contact_date']) != hoy:
-        supabase.table("users").update({"last_contact_date": hoy, "daily_contacts_count": 0}).eq("id", user['id']).execute()
+    if str(user['last_contact_date']) != str(date.today()):
+        supabase.table("users").update({"last_contact_date": str(date.today()), "daily_contacts_count": 0}).eq("id", user['id']).execute()
         return True
     return user['daily_contacts_count'] < 1
 
-def consume_contact_credit(user):
+def consume_credit(user):
     if not user['is_premium']:
         nuevo = user['daily_contacts_count'] + 1
         supabase.table("users").update({"daily_contacts_count": nuevo}).eq("id", user['id']).execute()
@@ -209,107 +202,133 @@ if 'user' not in st.session_state: st.session_state.user = None
 
 if not st.session_state.user:
     st.title("🏆 Figus 26")
-    tab_log, tab_reg = st.tabs(["Ingresar", "Registrarse"])
-    with tab_log:
-        p = st.text_input("Teléfono")
-        pw = st.text_input("Contraseña", type="password")
+    t1, t2 = st.tabs(["Ingresar", "Registrarse"])
+    with t1:
+        p = st.text_input("Teléfono"); pw = st.text_input("Pass", type="password")
         if st.button("Entrar"):
             u, m = login_user(p, pw)
             if u: st.session_state.user = u; st.rerun()
             else: st.error(m)
-    with tab_reg:
-        n = st.text_input("Nick")
-        ph = st.text_input("Teléfono (ID)")
-        passw = st.text_input("Crear Contraseña", type="password")
+    with t2:
+        n = st.text_input("Nick"); ph = st.text_input("Tel (ID)"); passw = st.text_input("Crear Pass", type="password")
         z = st.selectbox("Zona", ["Centro", "Godoy Cruz", "Guaymallén", "Las Heras"])
-        if st.button("Crear Cuenta"):
+        if st.button("Crear"):
             u, m = register_user(n, ph, z, passw)
-            if u: st.success("Creado! Ingresa ahora.")
+            if u: st.success("Creado!"); st.rerun()
             else: st.error(m)
     st.stop()
 
 user = st.session_state.user
 
+# --- CÁLCULO DE PROGRESO DINÁMICO (LA MAGIA) ---
+# Aquí calculamos el progreso combinando BD + Lo que estás tocando ahora mismo en pantalla
+
+# 1. Recuperar selección actual del usuario (país activo)
+seleccion_pais = st.session_state.get("seleccion_pais_key", list(ALBUM_PAGES.keys())[0])
+start_active, end_active = ALBUM_PAGES[seleccion_pais]
+total_active = end_active - start_active + 1
+
+# Recuperamos lo que tiene en BD para inicializar
+ids_tengo_db, repetidas_info, df_full = get_inventory_status(user['id'], start_active, end_active)
+
+# VERIFICAR SI HAY CAMBIOS EN VIVO (Session State)
+# Si el usuario tocó las pildoras, usamos ese valor. Si no, usamos DB.
+key_pills = f"pills_tengo_{seleccion_pais}"
+if key_pills in st.session_state:
+    ids_tengo_live = st.session_state[key_pills]
+else:
+    ids_tengo_live = ids_tengo_db
+
+tengo_live_count = len(ids_tengo_live)
+
+# 2. Calcular Progreso Global Dinámico
+# Total del álbum
+total_album = sum([(v[1] - v[0] + 1) for v in ALBUM_PAGES.values()])
+
+# Cuántas tengo en TOTAL (Sumamos las de la BD de OTROS países + las LIVE de este país)
+# Filtramos del DF full todo lo que NO sea de este país y que NO sea faltante
+df_otros = df_full[~((df_full['sticker_num'] >= start_active) & (df_full['sticker_num'] <= end_active))]
+# En BD guardamos faltantes, así que Tengo_Otros = Total_Otros - Faltantes_Otros
+# (Simplificación: Asumimos que lo que no está en 'faltante' lo tiene, para mantener lógica)
+# Para hacerlo robusto: Contamos faltantes globales en BD
+faltantes_db_total = df_full[df_full['status'] == 'faltante'].shape[0]
+# Restamos las faltantes de este país según BD (porque las reemplazaremos con las live)
+faltantes_db_este_pais = df_full[(df_full['status'] == 'faltante') & (df_full['sticker_num'] >= start_active) & (df_full['sticker_num'] <= end_active)].shape[0]
+
+faltantes_reales_otros = faltantes_db_total - faltantes_db_este_pais
+faltantes_live_este_pais = total_active - tengo_live_count
+
+faltantes_totales_live = faltantes_reales_otros + faltantes_live_este_pais
+tengo_total_live = total_album - faltantes_totales_live
+
+# --- SIDEBAR ---
 with st.sidebar:
     st.title(f"Hola {user['nick']}")
     if user['phone'] == ADMIN_PHONE: st.info("🕵️ ADMIN")
     
     st.divider()
-    cant_faltas, total_album = calcular_progreso_global(user['id'])
-    percent_missing = min(cant_faltas / total_album, 1.0) if total_album > 0 else 1.0
-    st.progress(percent_missing, text="Tu Álbum (Faltantes)")
-    st.caption(f"Faltan {cant_faltas} de {total_album}")
+    # BARRA GLOBAL DINÁMICA
+    progreso_global = min(tengo_total_live / total_album, 1.0)
+    st.progress(progreso_global, text="Tu Álbum Completo")
+    st.caption(f"Tienes **{tengo_total_live}** de {total_album} figuritas.")
+    
     st.divider()
-
     if user['is_premium']: st.success("💎 PREMIUM")
     else: 
         st.warning("👤 GRATIS")
         st.link_button("👉 Activar Premium", MP_LINK)
-        op_id = st.text_input("Validar Pago")
-        if st.button("✅ Validar"):
-            if op_id:
-                exito, msg = verificar_pago_mp(op_id, user['id'])
-                if exito: st.balloons(); st.success(msg); time.sleep(2); st.rerun()
-                else: st.error(msg)
+        if st.button("Validar Pago"):
+            st.info("Pega tu ID de operación:")
+            op = st.text_input("ID", key="op_id")
+            if op and st.button("Confirmar"):
+                exito, msg = verificar_pago_mp(op, user['id'])
+                if exito: st.success(msg); time.sleep(2); st.rerun()
     if st.button("Salir"): st.session_state.user = None; st.rerun()
 
 # --- PÁGINA PRINCIPAL ---
 st.header("📖 Mi Álbum")
 
-paises = list(ALBUM_PAGES.keys())
-seleccion_pais = st.selectbox("Selecciona Sección:", paises)
-start, end = ALBUM_PAGES[seleccion_pais]
-numeros_posibles = list(range(start, end + 1))
+# Selector de país con KEY para que podamos leerlo en el sidebar
+seleccion = st.selectbox("Selecciona Sección:", list(ALBUM_PAGES.keys()), key="seleccion_pais_key")
 
-# Obtenemos estado actual
-ids_tengo, repetidas_info = get_inventory_status(user['id'], start, end)
-
-# Progreso Local
-tengo_sec = len(ids_tengo)
-total_sec = end - start + 1
-st.progress(tengo_sec / total_sec, text=f"Tienes {tengo_sec} de {total_sec}")
+# BARRA LOCAL DINÁMICA
+progreso_local = min(tengo_live_count / total_active, 1.0)
+st.progress(progreso_local, text=f"Sección {seleccion}: Tienes {tengo_live_count} de {total_active}")
 
 st.divider()
 
-# --- INTERFAZ DE CARGA (SIN FORMULARIO para reactividad instantánea) ---
-# Hemos quitado 'with st.form' para que al tocar 'Tengo', se actualice 'Repetidas' al instante.
-
-st.markdown("### 1️⃣ ¿Cuáles TENÉS?")
-st.caption("Marca las que te salieron (Se pondrán VERDES ✅)")
-
+# --- INTERFAZ REACTIVA ---
+st.markdown("### 1️⃣ ¿Cuáles TENÉS? (Verde ✅)")
+# Widget Pills: Al tocar aquí, se actualiza el session_state y la barra de arriba cambia sola
 seleccion_tengo = st.pills(
-    "Mis Figuritas", 
-    numeros_posibles, 
-    default=ids_tengo, 
+    "Tengo", 
+    list(range(start_active, end_active + 1)), 
+    default=ids_tengo_live, 
     selection_mode="multi", 
-    key=f"pills_tengo_{seleccion_pais}" # Key única por país para evitar bugs
+    key=key_pills
 )
 
 st.markdown("### 2️⃣ ¿Cuáles REPETISTE?")
-st.caption("De las verdes de arriba, marca las que te sobran.")
-
-# Lógica Cascada Instantánea:
-# Las opciones de abajo son SOLO las que seleccionaste arriba.
+# Lógica cascada con lo que acabas de tocar
 posibles_repetidas = sorted(seleccion_tengo) if seleccion_tengo else []
-ids_repetidas_actuales = list(repetidas_info.keys())
-ids_repetidas_validos = [ID for ID in ids_repetidas_actuales if ID in posibles_repetidas]
+# Recuperar repetidas previas (limpiando las que ya no tengo)
+ids_repetidas_validos = [k for k in repetidas_info.keys() if k in posibles_repetidas]
 
 seleccion_repes = st.pills(
-    "Mis Repetidas", 
+    "Repetidas", 
     posibles_repetidas, 
     default=ids_repetidas_validos, 
     selection_mode="multi", 
-    key=f"pills_repes_{seleccion_pais}"
+    key=f"pills_repes_{seleccion}"
 )
 
-# Editor de Precios (Solo aparece si hay repetidas)
+# Editor de Precios
 edited_df = pd.DataFrame()
 if seleccion_repes:
-    st.markdown("#### 💲 Configurar Precios (Opcional)")
+    st.caption("💲 Precios")
     ed_data = []
     for num in seleccion_repes:
         info = repetidas_info.get(num, {'price': 0})
-        # Si acabas de agregarla a repetidas, por defecto es Canje ($0)
         modo = "Venta" if info['price'] > 0 else "Canje"
         ed_data.append({"Figurita": num, "Modo": modo, "Precio": info['price']})
     
@@ -317,20 +336,17 @@ if seleccion_repes:
         "Figurita": st.column_config.NumberColumn(disabled=True),
         "Modo": st.column_config.SelectboxColumn(options=["Canje", "Venta"], required=True),
         "Precio": st.column_config.NumberColumn(min_value=0, step=100)
-    }, hide_index=True, use_container_width=True, key=f"editor_{seleccion_pais}")
+    }, hide_index=True, use_container_width=True, key=f"editor_{seleccion}")
 
 st.markdown("---")
-
-# Botón de Guardado (Ahora es un botón normal, no un form_submit)
 if st.button("💾 GUARDAR CAMBIOS", type="primary", use_container_width=True):
-    save_inventory_inverted(user['id'], start, end, seleccion_tengo, edited_df)
-    st.toast("¡Álbum Actualizado!", icon="✅")
-    time.sleep(1)
-    st.rerun()
+    save_inventory_inverted(user['id'], start_active, end_active, seleccion_tengo, edited_df)
+    st.toast("¡Guardado!", icon="✅"); time.sleep(1); st.rerun()
 
 st.divider()
 st.subheader("🔍 Mercado")
-market_df = fetch_all_market_data(user['id'])
+# ... (El mercado sigue igual)
+market_df = fetch_market(user['id'])
 matches, ventas = find_matches(user['id'], market_df)
 
 t1, t2 = st.tabs([f"Canjes ({len(matches)})", f"Ventas ({len(ventas)})"])
@@ -338,17 +354,13 @@ with t1:
     for m in matches:
         with st.container(border=True):
             st.markdown(f"🔄 **{m['nick']}** cambia **#{m['figu']}** por tu **#{m['te_pide']}**")
-            if st.button("WhatsApp", key=f"wc_{m['figu']}_{m['phone']}"):
-                if check_contact_limit(user):
-                    consume_contact_credit(user)
-                    st.markdown(f"[Chat](https://wa.me/549{m['phone']})")
+            if st.button("WhatsApp", key=f"c_{m['figu']}"):
+                if check_contact_limit(user): consume_credit(user); st.markdown(f"[Chat](https://wa.me/549{m['phone']})")
                 else: st.error("Límite diario alcanzado.")
 with t2:
     for v in ventas:
         with st.container(border=True):
             st.markdown(f"💰 **{v['nick']}** vende **#{v['figu']}** a **${v['price']}**")
-            if st.button("WhatsApp", key=f"wv_{v['figu']}_{v['phone']}"):
-                if check_contact_limit(user):
-                    consume_contact_credit(user)
-                    st.markdown(f"[Chat](https://wa.me/549{v['phone']})")
+            if st.button("WhatsApp", key=f"v_{v['figu']}"):
+                if check_contact_limit(user): consume_credit(user); st.markdown(f"[Chat](https://wa.me/549{v['phone']})")
                 else: st.error("Límite diario alcanzado.")
