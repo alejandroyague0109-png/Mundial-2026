@@ -105,12 +105,17 @@ def verificar_pago_mp(payment_id, user_id):
         else: return False, "Pago no aprobado."
     except Exception as e: return False, str(e)
 
-# --- 5. LÓGICA DE INVENTARIO (CORREGIDA) ---
+# --- 5. LÓGICA DE INVENTARIO (CON RED DE SEGURIDAD ANTI-CRASH) ---
 def get_inventory_status(user_id, start, end):
     # Traemos lo que el usuario YA TIENE guardado en BD
     response = supabase.table("inventory").select("*").eq("user_id", user_id).execute()
     df = pd.DataFrame(response.data)
     
+    # --- FIX CRÍTICO: Si la BD está vacía, crear columnas vacías ---
+    if df.empty:
+        df = pd.DataFrame(columns=['sticker_num', 'status', 'price', 'user_id'])
+    # -----------------------------------------------------------------
+
     db_tengo = []
     db_repetidas_info = {}
     
@@ -125,7 +130,7 @@ def get_inventory_status(user_id, start, end):
         # Recuperamos repetidas
         for _, row in df_page[df_page['status'] == 'repetida'].iterrows():
             db_repetidas_info[row['sticker_num']] = {'price': row['price']}
-            # Si está como repetida, asumimos que también la tiene (por si acaso no la marcó en 'tengo')
+            # Si está como repetida, asumimos que también la tiene
             if row['sticker_num'] not in db_tengo:
                 db_tengo.append(row['sticker_num'])
                 
@@ -250,7 +255,7 @@ start_active, end_active = ALBUM_PAGES[seleccion_pais]
 total_active = end_active - start_active + 1
 total_album = sum([(v[1] - v[0] + 1) for v in ALBUM_PAGES.values()])
 
-# Datos de BD
+# Datos de BD (AQUÍ ES DONDE ANTES FALLABA)
 ids_tengo_db, repetidas_info, df_full = get_inventory_status(user['id'], start_active, end_active)
 
 # Datos EN VIVO (Session State para reactividad)
@@ -263,7 +268,12 @@ else:
 tengo_live_count = len(ids_tengo_live) # De la sección activa
 
 # Global = (Total BD - Lo viejo de esta sección) + Lo nuevo de esta sección
-tengo_db_total = df_full[df_full['status'] == 'tengo'].shape[0]
+# (Usamos try/except por si el df está vacío)
+try:
+    tengo_db_total = df_full[df_full['status'] == 'tengo'].shape[0]
+except:
+    tengo_db_total = 0 # Si falla, es 0
+
 tengo_db_esta_seccion = len(ids_tengo_db)
 tengo_global_live = (tengo_db_total - tengo_db_esta_seccion) + tengo_live_count
 
