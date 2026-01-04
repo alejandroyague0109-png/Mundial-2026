@@ -28,7 +28,7 @@ st.markdown("""
 @st.dialog("⚠️ Bienvenido a Figus 26")
 def mostrar_barrera_entrada():
     st.warning("🔞 Esta aplicación es para mayores de 18 años.")
-    st.info("🤝 Facilitamos el contacto, pero no intervenimos en los canjes.")
+    st.info("🤝 Facilitamos el contacto, pero no intervenimos en los canjes. No nos responsabilizamos por las reuniones pactadas.")
     st.markdown("**Al continuar, declaras que eres mayor de edad.**")
     if st.button("✅ Entendido, soy +18", type="primary", use_container_width=True):
         st.session_state.barrera_superada = True
@@ -48,7 +48,9 @@ if not st.session_state.user:
     t1, t2 = st.tabs(["Ingresar", "Registrarse"])
     
     with t1:
-        p = st.text_input("Teléfono"); pw = st.text_input("Contraseña", type="password")
+        # CORRECCIÓN AQUÍ: Agregamos key="login_tel"
+        p = st.text_input("Teléfono", key="login_tel")
+        pw = st.text_input("Contraseña", type="password", key="login_pass")
         if st.button("Entrar", type="primary"):
             u, m = db.login_user(p, pw)
             if u: st.session_state.user = u; st.rerun()
@@ -56,7 +58,10 @@ if not st.session_state.user:
             
     with t2:
         st.caption("Crea tu cuenta.")
-        n = st.text_input("Nick"); ph = st.text_input("Teléfono"); passw = st.text_input("Crear Pass", type="password")
+        n = st.text_input("Nick")
+        # CORRECCIÓN AQUÍ: Agregamos key="reg_tel" para diferenciarlo del login
+        ph = st.text_input("Teléfono", key="reg_tel")
+        passw = st.text_input("Crear Pass", type="password", key="reg_pass")
         z = st.selectbox("Zona", ["Centro", "Godoy Cruz", "Guaymallén", "Las Heras"])
         st.divider()
         if st.button("📖 Leer Términos", type="secondary"): ver_contrato()
