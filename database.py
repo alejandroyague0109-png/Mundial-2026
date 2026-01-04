@@ -44,7 +44,9 @@ def register_user(nick, phone, zone, password):
             "nick": nick, "phone": clean_phone, "zone": zone, 
             "password": hashed_pw, 
             "is_admin": (clean_phone == config.ADMIN_PHONE), 
-            "reputation": 0
+            "reputation": 0,
+            "daily_contacts_count": 0,
+            "last_contact_date": str(date.today())
         }
         response = supabase.table("users").insert(data).execute()
         return response.data[0], "OK"
@@ -125,7 +127,8 @@ def find_matches(user_id, market_df):
                     directos.append(match)
     return directos, ventas
 
-# --- PAGOS & REPUTACIÓN ---
+# --- PAGOS, CRÉDITOS Y REPUTACIÓN (Lógica Mejorada) ---
+
 def verificar_pago_mp(payment_id, user_id):
     try:
         if supabase.table("payments_log").select("*").eq("payment_id", payment_id).execute().data:
@@ -153,25 +156,51 @@ def votar_usuario(voter_id, target_id):
         return True, "¡Recomendación enviada!"
     except Exception as e: return False, str(e)
 
-def check_contact_limit(user):
-    if user['is_premium']: return True
-    if str(user['last_contact_date']) != str(date.today()):
-        supabase.table("users").update({"last_contact_date": str(date.today()), "daily_contacts_count": 0}).eq("id", user['id']).execute()
-        return True
-    return user['daily_contacts_count'] < 1
+def ensure_daily_quota_reset(user):
+    """
+    Verifica si cambió el día. Si es así, resetea el contador en DB y devuelve el usuario actualizado.
+    """
+    hoy = str(date.today())
+    last_date = str(user.get('last_contact_date', ''))
+    
+    if last_date != hoy:
+        # Es un día nuevo, resetear
+        supabase.table("users").update({
+            "last_contact_date": hoy, 
+            "daily_contacts_count": 0
+        }).eq("id", user['id']).execute()
+        
+        # Actualizamos el objeto local para que la UI se entere ya
+        user['daily_contacts_count'] = 0
+        user['last_contact_date'] = hoy
+        return user
+    return user
 
-def consume_credit(user):
-    if not user['is_premium']:
-        nuevo = user['daily_contacts_count'] + 1
-        supabase.table("users").update({"daily_contacts_count": nuevo}).eq("id", user['id']).execute()
-        st.session_state.user['daily_contacts_count'] = nuevo
+def increment_contact_count():
+    """
+    CALLBACK: Esta función se ejecuta CUANDO el usuario hace clic en el enlace.
+    Aumenta el contador en +1.
+    """
+    if 'user' in st.session_state and st.session_state.user:
+        user = st.session_state.user
+        if not user.get('is_premium', False):
+            # Aumentar en memoria
+            new_count = user.get('daily_contacts_count', 0) + 1
+            st.session_state.user['daily_contacts_count'] = new_count
+            
+            # Aumentar en Base de Datos (en background)
+            try:
+                supabase.table("users").update({
+                    "daily_contacts_count": new_count
+                }).eq("id", user['id']).execute()
+            except:
+                pass # Fail silently en callback para no romper UX
 
-# --- NUEVA FUNCIÓN GENÉRICA PARA CSV ---
 def process_csv_upload(df, user_id):
     try:
         df.columns = [c.lower().strip() for c in df.columns]
         expected_cols = ['num', 'status', 'price']
-        if not all(col in df.columns for col in expected_cols): return False, "CSV inválido. Faltan columnas."
+        if not all(col in df.columns for col in expected_cols): return False, "CSV inválido."
         rows_to_insert = []
         for _, row in df.iterrows():
             st_val = str(row['status']).lower().strip()
@@ -181,11 +210,9 @@ def process_csv_upload(df, user_id):
                 "status": st_val, "price": int(row['price']) if pd.notnull(row['price']) else 0
             })
         if rows_to_insert:
-            # Borramos las que va a sobreescribir para evitar duplicados
             nums = [r['sticker_num'] for r in rows_to_insert]
             supabase.table("inventory").delete().eq("user_id", user_id).in_("sticker_num", nums).execute()
-            # Insertamos
             supabase.table("inventory").insert(rows_to_insert).execute()
-            return True, f"¡Éxito! Se cargaron {len(rows_to_insert)} figuritas."
+            return True, f"Cargadas {len(rows_to_insert)}."
         return False, "CSV vacío."
     except Exception as e: return False, str(e)

@@ -23,27 +23,24 @@ st.markdown("""
     </style>
 """, unsafe_allow_html=True)
 
-# --- MODALES (POP-UPS) ---
+# --- MODALES ---
 
 @st.dialog("💎 Pásate a Premium", width="small")
 def mostrar_modal_premium():
     st.markdown(f"""
     ### 🚀 ¡Rompe los límites!
-    
     Actualmente tienes **1 contacto gratis por día**.
     
     **Al hacerte Premium obtienes:**
-    
-    * 🔓 **Contactos Ilimitados:** Escribe a todos los que quieras sin restricciones.
-    * 🌍 **Un pago, todo el mundial:** No es suscripción mensual. Pagas una sola vez y dura hasta que termine el evento.
-    * ⭐ **Destacado:** Tu nombre aparecerá con el diamante de confianza.
+    * 🔓 **Contactos Ilimitados**
+    * 🌍 **Un pago, todo el mundial**
+    * ⭐ **Destacado**
     
     ---
     ### Precio Final: **${config.PRECIO_PREMIUM}**
     """)
-    
     st.link_button("👉 Pagar ahora con Mercado Pago", config.MP_LINK, type="primary", use_container_width=True)
-    st.caption("Luego de pagar, copia el ID de la operación y pégalo en el menú lateral para activarlo.")
+    st.caption("Luego de pagar, copia el ID de la operación y pégalo en el menú lateral.")
 
 @st.dialog("⚠️ Bienvenido a Figus 26")
 def mostrar_barrera_entrada():
@@ -61,14 +58,9 @@ def ver_contrato():
 @st.dialog("📤 Cómo cargar tu Excel/CSV")
 def mostrar_instrucciones_csv():
     st.markdown("### 1. Descarga la Plantilla")
-    st.markdown("Usa el archivo de ejemplo para no equivocarte en el formato.")
+    st.markdown("Usa el archivo de ejemplo.")
     st.markdown("### 2. Llena los datos")
-    st.markdown("""
-    * **num**: Número (ej: 10).
-    * **status**: `tengo` o `repetida`.
-    * **price**: Precio venta (0 para canje).
-    """)
-    st.info("💡 Tip: Puedes subir varios países juntos.")
+    st.markdown("* **num**: Número\n* **status**: `tengo` o `repetida`\n* **price**: Precio venta")
 
 # --- LOGIN / REGISTRO ---
 if 'barrera_superada' not in st.session_state: st.session_state.barrera_superada = False
@@ -84,7 +76,11 @@ if not st.session_state.user:
         pw = st.text_input("Contraseña", type="password", key="login_pass")
         if st.button("Entrar", type="primary"):
             u, m = db.login_user(p, pw)
-            if u: st.session_state.user = u; st.rerun()
+            if u: 
+                st.session_state.user = u
+                # Al loguear, verificamos si hay que resetear el día
+                st.session_state.user = db.ensure_daily_quota_reset(st.session_state.user)
+                st.rerun()
             else: st.error(m)
             
     with t2:
@@ -102,9 +98,12 @@ if not st.session_state.user:
             else: st.error(m)
     st.stop()
 
-user = st.session_state.user
+# --- APP LOGIC ---
+# Asegurar que el usuario esté fresco con la fecha de hoy
+user = db.ensure_daily_quota_reset(st.session_state.user)
+st.session_state.user = user # Actualizar session state
 
-# --- LÓGICA DE PROGRESO ---
+# Lógica de progreso
 seleccion_pais = st.session_state.get("seleccion_pais_key", list(config.ALBUM_PAGES.keys())[0])
 start, end = config.ALBUM_PAGES[seleccion_pais]
 total_active = end - start + 1
@@ -129,12 +128,9 @@ with st.sidebar:
     with st.expander("📤 Carga Masiva (Excel/CSV)"):
         st.caption("Sube todo tu inventario.")
         if st.button("❓ Instrucciones", use_container_width=True): mostrar_instrucciones_csv()
-
         df_plantilla = pd.DataFrame([{"num": 10, "status": "tengo", "price": 0}, {"num": 25, "status": "repetida", "price": 500}])
         csv_plantilla = df_plantilla.to_csv(index=False).encode('utf-8')
-        
         st.download_button("⬇️ Plantilla", data=csv_plantilla, file_name="plantilla.csv", mime="text/csv", use_container_width=True)
-
         up_file = st.file_uploader("Subir archivo", type=["csv"])
         if up_file and st.button("🚀 Procesar", type="primary", use_container_width=True):
             df_up = pd.read_csv(up_file)
@@ -147,20 +143,19 @@ with st.sidebar:
     st.caption(f"Tienes **{tengo_global_live}** de {total_album}.")
     st.divider()
 
-    # --- SECCIÓN PREMIUM ACTUALIZADA ---
     if user['is_premium']: 
         st.success("💎 PREMIUM ACTIVADO")
-        st.caption("Tienes acceso ilimitado.")
+        st.caption("Sin límites.")
     else: 
         st.info("👤 CUENTA GRATIS")
-        st.caption("Límite: 1 contacto cada 24hs.")
+        contactos_hoy = user.get('daily_contacts_count', 0)
+        st.progress(min(contactos_hoy/1, 1.0), f"Contactos hoy: {contactos_hoy}/1")
         
-        # Botón que abre el Modal de Venta
         if st.button("💎 Ver Beneficios Premium", type="primary", use_container_width=True):
             mostrar_modal_premium()
             
-        with st.expander("Validar Pago Realizado"):
-            op = st.text_input("ID Operación MP", key="op_v")
+        with st.expander("Validar Pago"):
+            op = st.text_input("ID Op", key="op_v")
             if op and st.button("Validar"):
                 exito, msg = db.verificar_pago_mp(op, user['id'])
                 if exito: st.balloons(); st.success(msg); time.sleep(2); st.rerun()
@@ -202,6 +197,10 @@ st.subheader("🔍 Mercado")
 market_df = db.fetch_market(user['id'])
 matches, ventas = db.find_matches(user['id'], market_df)
 
+# --- DETERMINE CREDIT STATUS ---
+# Calculamos si tiene permiso AQUÍ, antes de dibujar los botones.
+has_credit = user.get('is_premium', False) or (user.get('daily_contacts_count', 0) < 1)
+
 t1, t2 = st.tabs([f"Canjes ({len(matches)})", f"Ventas ({len(ventas)})"])
 
 with t1:
@@ -211,13 +210,17 @@ with t1:
             c1, c2, c3 = st.columns([3, 1, 1])
             c1.markdown(f"🔄 **{m['nick']}** (⭐{m['reputation']}) cambia **#{m['figu']}** por tu **#{m['te_pide']}**")
             
-            # --- LÓGICA DE CONTACTO Y VENTA ---
-            if c2.button("WhatsApp", key=f"c_{m['figu']}_{m['target_id']}"):
-                if db.check_contact_limit(user): 
-                    db.consume_credit(user)
-                    st.markdown(f"[Chat](https://wa.me/549{m['phone']})")
-                else: 
-                    # AQUÍ ESTÁ LA MAGIA: Si se acaba el límite -> Pop-up de Venta
+            # --- BOTÓN INTELIGENTE ---
+            # Si tiene crédito -> Muestra link directo y descuenta al clickear
+            if has_credit:
+                c2.link_button(
+                    "WhatsApp", 
+                    f"https://wa.me/549{m['phone']}", 
+                    on_click=db.increment_contact_count # Callback que descuenta
+                )
+            # Si NO tiene crédito -> Muestra botón normal que abre modal
+            else:
+                if c2.button("WhatsApp", key=f"nc_c_{m['figu']}_{m['target_id']}"):
                     mostrar_modal_premium()
             
             if c3.button("👍", key=f"v_{m['target_id']}_{m['figu']}"):
@@ -231,12 +234,15 @@ with t2:
             c1, c2, c3 = st.columns([3, 1, 1])
             c1.markdown(f"💰 **{v['nick']}** (⭐{v['reputation']}) vende **#{v['figu']}** a **${v['price']}**")
             
-            if c2.button("WhatsApp", key=f"ve_{v['figu']}_{v['target_id']}"):
-                if db.check_contact_limit(user): 
-                    db.consume_credit(user)
-                    st.markdown(f"[Chat](https://wa.me/549{v['phone']})")
-                else: 
-                    # AQUÍ TAMBIÉN: Pop-up de Venta
+            # --- BOTÓN INTELIGENTE ---
+            if has_credit:
+                c2.link_button(
+                    "WhatsApp", 
+                    f"https://wa.me/549{v['phone']}", 
+                    on_click=db.increment_contact_count
+                )
+            else:
+                if c2.button("WhatsApp", key=f"nc_v_{v['figu']}_{v['target_id']}"):
                     mostrar_modal_premium()
             
             if c3.button("👍", key=f"vv_{v['target_id']}_{v['figu']}"):
