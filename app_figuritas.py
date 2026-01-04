@@ -1,14 +1,13 @@
 import streamlit as st
 import pandas as pd
 import time
-# --- IMPORTAMOS NUESTROS MÓDULOS ---
 import config
 import database as db
 
 # --- CONFIGURACIÓN UI ---
 st.set_page_config(page_title="Figus 26 | Colección", layout="wide", page_icon="⚽")
 
-# Inyección de estilos CSS
+# Estilos
 st.markdown("""
     <style>
     div[data-testid="stPills"] span[aria-selected="true"] {
@@ -28,7 +27,7 @@ st.markdown("""
 @st.dialog("⚠️ Bienvenido a Figus 26")
 def mostrar_barrera_entrada():
     st.warning("🔞 Esta aplicación es para mayores de 18 años.")
-    st.info("🤝 Facilitamos el contacto, pero no intervenimos en los canjes. No nos responsabilizamos por las reuniones pactadas.")
+    st.info("🤝 Facilitamos el contacto, pero no intervenimos en los canjes.")
     st.markdown("**Al continuar, declaras que eres mayor de edad.**")
     if st.button("✅ Entendido, soy +18", type="primary", use_container_width=True):
         st.session_state.barrera_superada = True
@@ -38,7 +37,23 @@ def mostrar_barrera_entrada():
 def ver_contrato():
     st.markdown(config.TEXTO_LEGAL_COMPLETO)
 
-# --- INICIO DE SESIÓN / REGISTRO ---
+# --- NUEVO: MODAL DE INSTRUCCIONES CSV ---
+@st.dialog("📤 Cómo cargar tu Excel/CSV")
+def mostrar_instrucciones_csv():
+    st.markdown("### 1. Descarga la Plantilla")
+    st.markdown("Usa el archivo de ejemplo para no equivocarte en el formato.")
+    
+    st.markdown("### 2. Llena los datos")
+    st.markdown("""
+    El archivo debe tener 3 columnas obligatorias:
+    * **num**: Número de figurita (ej: 10, 150).
+    * **status**: Escribe `tengo` o `repetida`.
+    * **price**: Precio de venta (si es canje pon 0).
+    """)
+    
+    st.info("💡 **Tip:** Puedes subir figuritas de diferentes países en un solo archivo.")
+
+# --- LOGIN / REGISTRO ---
 if 'barrera_superada' not in st.session_state: st.session_state.barrera_superada = False
 if not st.session_state.barrera_superada: mostrar_barrera_entrada()
 
@@ -48,7 +63,6 @@ if not st.session_state.user:
     t1, t2 = st.tabs(["Ingresar", "Registrarse"])
     
     with t1:
-        # CORRECCIÓN AQUÍ: Agregamos key="login_tel"
         p = st.text_input("Teléfono", key="login_tel")
         pw = st.text_input("Contraseña", type="password", key="login_pass")
         if st.button("Entrar", type="primary"):
@@ -59,7 +73,6 @@ if not st.session_state.user:
     with t2:
         st.caption("Crea tu cuenta.")
         n = st.text_input("Nick")
-        # CORRECCIÓN AQUÍ: Agregamos key="reg_tel" para diferenciarlo del login
         ph = st.text_input("Teléfono", key="reg_tel")
         passw = st.text_input("Crear Pass", type="password", key="reg_pass")
         z = st.selectbox("Zona", ["Centro", "Godoy Cruz", "Guaymallén", "Las Heras"])
@@ -95,14 +108,40 @@ with st.sidebar:
     st.title(f"Hola {user['nick']}")
     st.caption(f"⭐ Reputación: {user.get('reputation', 0)}")
     
-    if user['is_admin']: # Usamos el campo is_admin de la DB
-        st.info("🕵️ ADMIN")
-        with st.expander("📤 Carga Masiva"):
-            up = st.file_uploader("CSV", type="csv")
-            if up and st.button("Procesar"):
-                ok, msg = db.admin_process_csv(pd.read_csv(up), user['id'])
-                if ok: st.success(msg)
-                else: st.error(msg)
+    # --- CARGA MASIVA PARA TODOS (MEJORA) ---
+    st.divider()
+    with st.expander("📤 Carga Masiva (Excel/CSV)"):
+        st.caption("Sube todo tu inventario de una vez.")
+        
+        # 1. Botón de Ayuda
+        if st.button("❓ Ver Instrucciones", use_container_width=True):
+            mostrar_instrucciones_csv()
+
+        # 2. Generador de Plantilla
+        # Creamos un DF de ejemplo y lo convertimos a CSV para descargar
+        df_plantilla = pd.DataFrame([
+            {"num": 10, "status": "tengo", "price": 0},
+            {"num": 25, "status": "repetida", "price": 500},
+            {"num": 150, "status": "tengo", "price": 0}
+        ])
+        csv_plantilla = df_plantilla.to_csv(index=False).encode('utf-8')
+        
+        # 3. Botón de Descarga
+        st.download_button(
+            label="⬇️ Descargar Plantilla",
+            data=csv_plantilla,
+            file_name="plantilla_figus26.csv",
+            mime="text/csv",
+            use_container_width=True
+        )
+
+        # 4. Uploader
+        up_file = st.file_uploader("Subir tu archivo", type=["csv"])
+        if up_file and st.button("🚀 Procesar Carga", type="primary", use_container_width=True):
+            df_up = pd.read_csv(up_file)
+            ok, msg = db.process_csv_upload(df_up, user['id'])
+            if ok: st.success(msg); time.sleep(2); st.rerun()
+            else: st.error(msg)
     
     st.divider()
     st.progress(min(tengo_global_live / total_album, 1.0), text="Álbum Completo")

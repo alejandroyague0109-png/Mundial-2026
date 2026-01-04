@@ -3,8 +3,8 @@ import pandas as pd
 from supabase import create_client, Client
 import mercadopago
 from datetime import date
-import config # Importamos nuestra config
-import utils  # Importamos nuestras utilidades
+import config 
+import utils
 
 # --- CONEXIÓN ---
 try:
@@ -90,7 +90,6 @@ def fetch_market(user_id):
     return pd.DataFrame(resp.data)
 
 def find_matches(user_id, market_df):
-    # Preparamos sets para búsqueda rápida
     resp = supabase.table("inventory").select("sticker_num").eq("user_id", user_id).eq("status", "tengo").execute()
     mis_tengo_set = set(item['sticker_num'] for item in resp.data)
     
@@ -100,7 +99,6 @@ def find_matches(user_id, market_df):
     directos, ventas = [], []
     if market_df.empty: return [], []
     
-    # Procesar DataFrame
     market_df['nick'] = market_df['users'].apply(lambda x: x['nick'])
     market_df['zone'] = market_df['users'].apply(lambda x: x['zone'])
     market_df['phone'] = market_df['users'].apply(lambda x: x['phone'])
@@ -168,11 +166,12 @@ def consume_credit(user):
         supabase.table("users").update({"daily_contacts_count": nuevo}).eq("id", user['id']).execute()
         st.session_state.user['daily_contacts_count'] = nuevo
 
-def admin_process_csv(df, user_id):
+# --- NUEVA FUNCIÓN GENÉRICA PARA CSV ---
+def process_csv_upload(df, user_id):
     try:
         df.columns = [c.lower().strip() for c in df.columns]
         expected_cols = ['num', 'status', 'price']
-        if not all(col in df.columns for col in expected_cols): return False, "CSV inválido."
+        if not all(col in df.columns for col in expected_cols): return False, "CSV inválido. Faltan columnas."
         rows_to_insert = []
         for _, row in df.iterrows():
             st_val = str(row['status']).lower().strip()
@@ -182,9 +181,11 @@ def admin_process_csv(df, user_id):
                 "status": st_val, "price": int(row['price']) if pd.notnull(row['price']) else 0
             })
         if rows_to_insert:
+            # Borramos las que va a sobreescribir para evitar duplicados
             nums = [r['sticker_num'] for r in rows_to_insert]
             supabase.table("inventory").delete().eq("user_id", user_id).in_("sticker_num", nums).execute()
+            # Insertamos
             supabase.table("inventory").insert(rows_to_insert).execute()
-            return True, f"Cargadas {len(rows_to_insert)}."
+            return True, f"¡Éxito! Se cargaron {len(rows_to_insert)} figuritas."
         return False, "CSV vacío."
     except Exception as e: return False, str(e)
