@@ -63,6 +63,7 @@ ZONAS_DISPONIBLES = ["Centro", "Godoy Cruz", "Guaymallén", "Las Heras"]
 
 # --- MODALES ---
 
+# 1. MODAL DE SEGURIDAD
 @st.dialog("🛡️ Consejos de Seguridad")
 def modal_seguridad(target_id):
     st.markdown("### ⚠️ Antes de contactar:")
@@ -88,6 +89,7 @@ def modal_seguridad(target_id):
         else:
             st.error("Error: No tienes créditos suficientes.")
 
+# 2. MODAL PREMIUM (TEXTO ACTUALIZADO)
 @st.dialog("💎 Pásate a Premium", width="small")
 def mostrar_modal_premium():
     st.markdown(f"""
@@ -98,7 +100,7 @@ def mostrar_modal_premium():
     * 🔓 **Ilimitado:** Contacta sin restricciones.
     * 📐 **Triangulaciones:** Acceso a cadenas de cambio.
     * 🌍 **Un pago único:** Todo el mundial.
-    * ⭐ **Destacado:** Perfil verificado.
+    * ⭐ **Destacado:** Aparecerás primero en las listas.
     
     ---
     ### Precio Final: **${config.PRECIO_PREMIUM}**
@@ -106,6 +108,7 @@ def mostrar_modal_premium():
     st.link_button("👉 Pagar con Mercado Pago", config.MP_LINK, type="primary", use_container_width=True)
     st.caption("Luego pega tu ID de operación en el menú lateral.")
 
+# 3. MODAL BIENVENIDA (+18)
 @st.dialog("⚠️ Bienvenido a Figus 26")
 def mostrar_barrera_entrada():
     st.warning("🔞 Esta aplicación es para mayores de 18 años.")
