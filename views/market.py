@@ -50,6 +50,7 @@ def mostrar_modal_premium():
     **Tenés** 1 contacto gratis por día.
     **Jugá en Primera con Premium:**
     * 🔓 **Ilimitado:** Contactá sin restricciones.
+    * 🔔 **Alertas Wishlist:** Aviso si aparece una difícil.
     * 📐 **Triangulaciones:** Acceso a cadenas de cambio.
     * 🌍 **Un pago único:** Todo el mundial.
     * ⭐ **Destacado:** Aparecés primero en las listas.
@@ -118,7 +119,6 @@ def render_card(item, tipo, user):
         with col_actions:
             if is_unlocked:
                 if phone_target: 
-                    # type="secondary" + CSS global = Blanco
                     st.link_button("🟢 WhatsApp", link_wa, type="secondary", use_container_width=True)
                 
                 if tipo == 'canje':
@@ -144,7 +144,7 @@ def render_card(item, tipo, user):
                 st.toast(m)
 
 def paginar_y_mostrar(lista_items, tipo_key, tipo_card, user):
-    # Scroll automático (Truco Timestamp)
+    # Scroll automático
     unique_id = time.time()
     js = f"""
     <script>
