@@ -8,27 +8,41 @@ import database as db
 # --- CONFIGURACIÓN UI ---
 st.set_page_config(page_title="Figus 26 | Colección", layout="wide", page_icon="⚽")
 
-# --- ESTILOS CSS (INCLUYE AJUSTE DE SIDEBAR) ---
+# --- ESTILOS CSS AGRESIVOS (SOLUCIÓN VISUAL) ---
 st.markdown("""
     <style>
-    /* 1. Estilo para adelgazar el Sidebar */
-    section[data-testid="stSidebar"] {
-        min-width: 240px !important; /* Ancho mínimo forzado */
-        max-width: 240px !important; /* Ancho máximo forzado */
+    /* 1. FORZAR BOTONES VERDES (Sobreescribe el rojo por defecto) */
+    button[kind="primary"] {
+        background-color: #2e7d32 !important;
+        border-color: #2e7d32 !important;
+        color: white !important;
+    }
+    button[kind="primary"]:hover {
+        background-color: #1b5e20 !important;
+        border-color: #1b5e20 !important;
+        color: white !important;
+    }
+    button[kind="primary"]:focus {
+        background-color: #2e7d32 !important;
+        border-color: #2e7d32 !important;
+        box-shadow: none !important;
     }
 
-    /* 2. Estilos de Pills (Botones de selección) */
+    /* 2. ADELGAZAR SIDEBAR (Más comprimido) */
+    [data-testid="stSidebar"] {
+        min-width: 200px !important;
+        max-width: 200px !important;
+    }
+    
+    /* 3. Estilos de Pills (Botones de selección) */
     div[data-testid="stPills"] span[aria-selected="true"] {
         background-color: #2e7d32 !important; color: white !important; border-color: #2e7d32 !important;
     }
     div[data-testid="stPills"] button[aria-selected="true"] {
         background-color: #2e7d32 !important; color: white !important; border-color: #2e7d32 !important;
     }
-    div[data-testid="stPills"] span:hover, div[data-testid="stPills"] button:hover {
-        border-color: #66bb6a !important; color: #2e7d32 !important;
-    }
     
-    /* 3. Botones secundarios redondeados */
+    /* 4. Botones secundarios redondeados */
     button[kind="secondary"] { border-radius: 20px; }
     </style>
 """, unsafe_allow_html=True)
@@ -238,7 +252,7 @@ def render_card(item, tipo):
         target_id = item['target_id']
         fig_recibo = item['figu']
         
-        # --- GENERADOR DE MENSAJE WHATSAPP ---
+        # GENERAR MENSAJE WHATSAPP
         phone_target = item['phone']
         if tipo == 'canje':
             fig_entrego = item['te_pide']
@@ -249,17 +263,15 @@ def render_card(item, tipo):
             texto_base = f"Hola! Vi en Figus 26 que vendes la figurita #{fig_recibo} a ${precio}. ¿La tienes disponible?"
             c1.markdown(f"💰 **{item['nick']}** ({item['zone']}) vende **#{fig_recibo}** a **${precio}**")
 
-        # Codificamos el mensaje para URL
+        # Mensaje codificado
         mensaje_encoded = quote(texto_base)
         link_wa = f"https://wa.me/549{phone_target}?text={mensaje_encoded}"
 
-        # COLUMNA 2: ACCIÓN
+        # ACCIONES
         is_unlocked = target_id in st.session_state.unlocked_users
         
         if is_unlocked:
-            # BOTÓN VERDE CON MENSAJE PREDEFINIDO
             c2.link_button("🟢 Abrir Chat", link_wa, use_container_width=True)
-            
             if tipo == 'canje':
                 with c1.expander("⚙️ Confirmar Canje"):
                     st.caption("Solo si ya realizaste el intercambio:")
