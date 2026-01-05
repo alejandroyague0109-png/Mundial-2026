@@ -58,36 +58,29 @@ ZONAS_DISPONIBLES = ["Centro", "Godoy Cruz", "Guaymallén", "Las Heras"]
 
 # --- MODALES ---
 
-# 1. MODAL DE SEGURIDAD (NUEVO)
+# 1. MODAL DE SEGURIDAD (SOLO PARA DESBLOQUEO)
 @st.dialog("🛡️ Consejos de Seguridad")
-def modal_seguridad(tipo_accion, link_wa=None, target_id=None):
-    st.markdown("### ⚠️ Antes de continuar:")
+def modal_seguridad(target_id):
+    st.markdown("### ⚠️ Antes de contactar:")
     st.info("Para realizar un intercambio seguro, te recomendamos:")
     
     st.markdown("""
-    * 🏢 **Lugar Público:** Reúnete siempre en zonas concurridas (plazas, centros comerciales, cafeterías).
-    * 👀 **Verificación:** Revisa el estado de las figuritas antes de entregar las tuyas.
-    * 👥 **Compañía:** Si es posible, asiste acompañado/a.
-    * 💰 **Dinero:** No realices transferencias por adelantado a desconocidos.
+    * 🏢 **Lugar Público:** Reúnete siempre en zonas concurridas.
+    * 👀 **Verificación:** Revisa las figuritas antes de entregar las tuyas.
+    * 💰 **Dinero:** No envíes dinero por adelantado.
     """)
     st.divider()
-
-    # Si la acción es IR AL CHAT
-    if tipo_accion == "chat":
-        st.markdown("Al hacer clic abajo, abrirás WhatsApp con esta persona.")
-        st.link_button("✅ Entendido, Ir a WhatsApp", link_wa, type="primary", use_container_width=True)
-
-    # Si la acción es DESBLOQUEAR CONTACTO
-    elif tipo_accion == "unlock":
-        st.markdown("Al confirmar, gastarás 1 crédito diario (si no eres Premium) para ver el teléfono.")
-        if st.button("✅ Entendido, Ver Contacto", type="primary", use_container_width=True):
-            # Lógica de desbloqueo dentro del modal
-            if db.check_contact_limit(st.session_state.user):
-                db.consume_credit(st.session_state.user)
-                st.session_state.unlocked_users.add(target_id)
-                st.rerun()
-            else:
-                st.error("No tienes créditos suficientes.")
+    
+    st.caption("Al confirmar, usarás 1 crédito diario (si no eres Premium) para ver el teléfono.")
+    
+    if st.button("✅ Entendido, Ver Contacto", type="primary", use_container_width=True):
+        # LÓGICA DE DESBLOQUEO
+        if db.check_contact_limit(st.session_state.user):
+            db.consume_credit(st.session_state.user)
+            st.session_state.unlocked_users.add(target_id)
+            st.rerun()
+        else:
+            st.error("Error: No tienes créditos suficientes.")
 
 # 2. MODAL PREMIUM
 @st.dialog("💎 Pásate a Premium", width="small")
@@ -326,9 +319,8 @@ def render_card(item, tipo):
         is_unlocked = target_id in st.session_state.unlocked_users
         
         if is_unlocked:
-            # BOTÓN VERDE "ABRIR CHAT" -> Abre modal de seguridad
-            if c2.button("🟢 Abrir Chat", key=f"chat_btn_{tipo}_{fig_recibo}_{target_id}", use_container_width=True):
-                modal_seguridad("chat", link_wa=link_wa)
+            # BOTÓN VERDE (Link Directo)
+            c2.link_button("🟢 Abrir Chat", link_wa, use_container_width=True)
             
             # CONFIRMACIÓN (SOLO CANJE)
             if tipo == 'canje':
@@ -339,11 +331,10 @@ def render_card(item, tipo):
                         if ok: st.balloons(); st.success(msg); time.sleep(3); st.rerun()
                         else: st.error(msg)
         else:
-            # BOTÓN CONTACTAR -> Abre modal de seguridad para desbloquear
+            # BOTÓN CONTACTAR -> Abre modal de seguridad
             if c2.button("🔓 Contactar", key=f"ul_{tipo}_{fig_recibo}_{target_id}", use_container_width=True):
-                # Verificamos crédito ANTES de mostrar el modal de seguridad
                 if db.check_contact_limit(user):
-                     modal_seguridad("unlock", target_id=target_id)
+                     modal_seguridad(target_id)
                 else: 
                      mostrar_modal_premium()
         
