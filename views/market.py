@@ -65,7 +65,6 @@ def render_card(item, tipo, user):
         target_id = item['target_id']
         fig_recibo = item['figu']
         
-        # Detectar Wishlist
         is_wishlist = item.get('is_wishlist', False)
         
         is_unlocked = target_id in st.session_state.unlocked_users
@@ -85,9 +84,8 @@ def render_card(item, tipo, user):
                 link_wa = f"https://wa.me/549{phone_target}?text={mensaje_encoded}"
             else: st.error("Error al desencriptar.")
 
-        # --- COLUMNA INFO ---
+        # --- INFO ---
         with col_info:
-            # Badge de Wishlist
             if is_wishlist:
                 st.markdown("<span style='background-color:#ffebee; color:#c62828; padding:2px 6px; border-radius:4px; font-size:0.8em; font-weight:bold;'>❤️ TU DESEO</span>", unsafe_allow_html=True)
 
@@ -115,18 +113,23 @@ def render_card(item, tipo, user):
             
             st.caption(f"⭐ Reputación: {item.get('reputation', 0)}")
 
-        # --- COLUMNA ACCIONES ---
+        # --- ACCIONES ---
         with col_actions:
             if is_unlocked:
                 if phone_target: 
                     st.link_button("🟢 WhatsApp", link_wa, type="secondary", use_container_width=True)
                 
-                if tipo == 'canje':
-                    if st.button("✅ Fichaje cerrado", key=f"sw_{fig_recibo}_{target_id}", help="Marcar como intercambiada", width="stretch"):
-                        with utils.spinner_futbolero():
+                # BOTÓN FICHAJE CERRADO (AHORA PARA AMBOS TIPOS)
+                if st.button("✅ Fichaje cerrado", key=f"sw_{fig_recibo}_{target_id}", help="Ya la tengo, agregar a mi álbum", width="stretch"):
+                    with utils.spinner_futbolero():
+                        if tipo == 'canje':
                             ok, msg = db.register_exchange(user['id'], fig_entrego, fig_recibo)
-                        if ok: st.toast("¡Golazo!", icon="⚽"); st.success(msg); time.sleep(3); st.rerun()
-                        else: st.error(msg)
+                        else: # Es VENTA
+                            ok, msg = db.register_purchase(user['id'], fig_recibo)
+                            
+                    if ok: st.toast("¡Golazo!", icon="⚽"); st.success(msg); time.sleep(3); st.rerun()
+                    else: st.error(msg)
+
             else:
                 if st.button("🔓 Desbloquear", key=f"ul_{tipo}_{fig_recibo}_{target_id}", type="secondary", width="stretch"):
                     if db.check_contact_limit(user):
@@ -144,7 +147,6 @@ def render_card(item, tipo, user):
                 st.toast(m)
 
 def paginar_y_mostrar(lista_items, tipo_key, tipo_card, user):
-    # Scroll automático
     unique_id = time.time()
     js = f"""
     <script>
