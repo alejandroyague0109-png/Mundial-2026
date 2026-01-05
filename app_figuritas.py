@@ -30,7 +30,7 @@ st.markdown("""
     }
     section[data-testid="stSidebar"] h1 { font-size: 2rem !important; padding-bottom: 0.5rem !important; }
     
-    /* Pills Verdes */
+    /* Pills Verdes (Solo aplica si el usuario está en modo compatible, pero no fuerza el resto) */
     div[data-testid="stPills"] span[aria-selected="true"] { background-color: #2e7d32 !important; border-color: #2e7d32 !important; color: white !important; }
     div[data-testid="stPills"] button[aria-selected="true"] { background-color: #2e7d32 !important; border-color: #2e7d32 !important; color: white !important; }
     
@@ -55,6 +55,7 @@ ITEMS_POR_PAGINA = 15
 
 # --- FUNCIONES AUXILIARES ---
 def reset_pagination():
+    """Resetea la paginación a 1 cuando cambian los filtros."""
     st.session_state.page_canjes = 1
     st.session_state.page_ventas = 1
 
@@ -62,6 +63,7 @@ def change_page(key, delta):
     st.session_state[key] += delta
 
 # --- MODALES ---
+
 @st.dialog("🛡️ Consejos de Seguridad")
 def modal_seguridad(target_id):
     st.markdown("### ⚠️ Antes de contactar:")
@@ -73,25 +75,31 @@ def modal_seguridad(target_id):
     """)
     st.divider()
     st.caption("Si confirmás, usás 1 crédito diario (si no sos Premium) para ver el número.")
+    
     no_volver_a_mostrar = st.checkbox("No me mostrés esto de nuevo", key="chk_skip_sec")
+    
     if st.button("✅ Dale, Ver Contacto", type="primary", use_container_width=True):
         if no_volver_a_mostrar: st.session_state.skip_security_modal = True
+        
         if db.check_contact_limit(st.session_state.user):
             db.consume_credit(st.session_state.user)
             st.session_state.unlocked_users.add(target_id)
             st.rerun()
-        else: st.error("Error: Te quedaste sin créditos por hoy.")
+        else:
+            st.error("Error: Te quedaste sin créditos por hoy.")
 
 @st.dialog("💎 Pasate a Premium", width="small")
 def mostrar_modal_premium():
     st.markdown(f"""
     ### 🚀 Límite Alcanzado
     **Tenés** 1 contacto gratis por día.
+    
     **Jugá en Primera con Premium:**
     * 🔓 **Ilimitado:** Contactá sin restricciones.
     * 📐 **Triangulaciones:** Acceso a cadenas de cambio.
     * 🌍 **Un pago único:** Todo el mundial.
     * ⭐ **Destacado:** Aparecés primero en las listas.
+    
     ---
     ### Precio Final: **${config.PRECIO_PREMIUM}**
     """)
@@ -103,6 +111,7 @@ def mostrar_barrera_entrada():
     st.warning("🔞 Esta aplicación es para mayores de 18 años.")
     st.info("🤝 Facilitamos el contacto entre coleccionistas, pero no intervenimos en los canjes. No nos hacemos responsables de las reuniones pactadas por los usuarios ni de las transacciones realizadas.")
     st.markdown("**Al continuar, declarás bajo juramento que sos mayor de edad.**")
+    
     if st.button("✅ Entendido, soy +18", type="primary", use_container_width=True):
         st.session_state.barrera_superada = True
         st.rerun()
@@ -122,34 +131,44 @@ def mostrar_instrucciones_csv():
     """)
 
 # --- LOGIN / REGISTRO ---
+
 if 'barrera_superada' not in st.session_state: st.session_state.barrera_superada = False
 if not st.session_state.barrera_superada: mostrar_barrera_entrada()
 is_locked = not st.session_state.barrera_superada
 
 if 'user' not in st.session_state: st.session_state.user = None
+
 if not st.session_state.user:
     st.title("🏆 Figus 26")
     t1, t2 = st.tabs(["Ingresar", "Registrarse"])
+    
     with t1:
         p = st.text_input("Teléfono", key="l_p", placeholder="Ej: 2604...")
         pw = st.text_input("Contraseña", type="password", key="l_pw")
+        
         if st.button("Entrar", type="primary", disabled=is_locked, use_container_width=True):
             u, m = db.login_user(p, pw)
             if u: st.session_state.user = u; st.rerun()
             else: st.error(m)
+            
     with t2:
         n = st.text_input("Nick / Apodo")
         ph = st.text_input("Teléfono", key="r_p", placeholder="Ej: 2604...")
         pw2 = st.text_input("Contraseña", type="password", key="r_pw")
+        
+        # Selección de ubicación en cascada (Obligatoria)
         col_prov, col_dep = st.columns(2)
         reg_prov = col_prov.selectbox("Provincia", list(locations.ARGENTINA.keys()), index=None, placeholder="Seleccioná Provincia...")
         opciones_deptos = locations.ARGENTINA.get(reg_prov, []) if reg_prov else []
         reg_zone = col_dep.selectbox("Departamento / Barrio", opciones_deptos, index=None, placeholder="Seleccioná Zona...")
+        
         st.divider()
         col_legales, col_check = st.columns([1, 2])
         col_legales.button("📄 Leer Legales", type="secondary", on_click=ver_contrato, use_container_width=True)
         acepto = col_check.checkbox("Acepto términos y condiciones")
+        
         campos_completos = n and ph and pw2 and reg_prov and reg_zone and acepto
+        
         if st.button("Registrarme", type="primary", disabled=(is_locked or not campos_completos), use_container_width=True):
             u, m = db.register_user(n, ph, reg_prov, reg_zone, pw2)
             if u: 
@@ -157,45 +176,58 @@ if not st.session_state.user:
                 st.success("Te creaste la cuenta. Ahora entrá.")
                 time.sleep(2)
             else: st.error(m)
+            
     st.stop()
 
 user = st.session_state.user
 
+# --- VERIFICACIÓN DIARIA ---
 if db.verify_daily_reset(user):
     st.session_state.unlocked_users = set()
     st.toast("📅 ¡Nuevo día! Se renovaron tus créditos.", icon="☀️")
 
+# --- CÁLCULOS GLOBALES ---
 seleccion_pais = st.session_state.get("seleccion_pais_key", list(config.ALBUM_PAGES.keys())[0])
 start, end = config.ALBUM_PAGES[seleccion_pais]
 total_active = end - start + 1
 total_album = sum([(v[1] - v[0] + 1) for v in config.ALBUM_PAGES.values()])
+
 ids_tengo_db, repetidas_info, df_full = db.get_inventory_status(user['id'], start, end)
 key_pills = f"pills_tengo_{seleccion_pais}"
-ids_tengo_live = st.session_state.get(key_pills, ids_tengo_db)
-try: tengo_db_total = df_full[df_full['status'] == 'tengo'].shape[0]
-except: tengo_db_total = 0
-tengo_db_esta_seccion = len(ids_tengo_db)
-tengo_live_count = len(ids_tengo_live)
-tengo_global_live = (tengo_db_total - tengo_db_esta_seccion) + tengo_live_count
 
+# --- SIDEBAR ---
 with st.sidebar:
     st.title(f"Hola {user['nick']}")
     user_prov = user.get('province', 'Mendoza')
     user_zone = user.get('zone', '')
     st.caption(f"📍 {user_prov} - {user_zone}")
     st.caption(f"⭐ Reputación: {user.get('reputation', 0)}")
+    
     st.divider()
+    # Calculamos el total global para la barra de progreso
+    try: tengo_db_total = df_full[df_full['status'] == 'tengo'].shape[0]
+    except: tengo_db_total = 0
+    # Obtenemos lo que está en vivo en la UI, o usamos la DB si no hay cambios aún
+    ids_tengo_live = st.session_state.get(key_pills, ids_tengo_db)
+    
+    tengo_db_esta_seccion = len(ids_tengo_db)
+    tengo_live_count = len(ids_tengo_live)
+    tengo_global_live = (tengo_db_total - tengo_db_esta_seccion) + tengo_live_count
+    
     progreso = min(tengo_global_live / total_album, 1.0)
     st.progress(progreso, text="🏆 Mi Álbum")
     st.caption(f"Tenés **{tengo_global_live}** de {total_album}.")
+    
     st.divider()
     with st.expander("📤 Carga Masiva (CSV)"):
         st.caption("Carga rápida de inventario.")
         col_a, col_b = st.columns(2)
         if col_a.button("❓ Ayuda", use_container_width=True): mostrar_instrucciones_csv()
+        
         df_plantilla = pd.DataFrame([{"num": 10, "status": "tengo", "price": 0, "quantity": 1}, {"num": 25, "status": "repetida", "price": 500, "quantity": 2}])
         csv_plantilla = df_plantilla.to_csv(index=False).encode('utf-8')
         col_b.download_button("⬇️ Plantilla", data=csv_plantilla, file_name="plantilla.csv", mime="text/csv", use_container_width=True)
+        
         up = st.file_uploader("Subí tu CSV", type="csv")
         if up and st.button("🚀 Procesar", type="primary", use_container_width=True):
             ok, msg = db.process_csv_upload(pd.read_csv(up), user['id'])
@@ -203,32 +235,43 @@ with st.sidebar:
                 st.toast("¡Inventario actualizado!", icon="📦")
                 st.success(msg); time.sleep(1); st.rerun()
             else: st.error(msg)
+            
     st.divider()
     if user.get('is_premium', False):
         st.success("💎 PREMIUM")
     else:
         st.info("👤 GRATIS")
         contacts = user.get('daily_contacts_count', 0)
+        
         if contacts >= 1: st.progress(1.0, text="Límite: 1/1 (Agotado)")
         else: st.progress(0.0, text="Límite: 0/1 (Disponible)")
+            
         if st.button("💎 Hacete Premium", use_container_width=True): mostrar_modal_premium()
+        
         with st.expander("Validar Pago"):
             op = st.text_input("ID Op")
             if op and st.button("Validar"):
                 ok, msg = db.verificar_pago_mp(op, user['id'])
                 if ok: st.success(msg); st.toast("¡Ya sos Premium!", icon="💎"); time.sleep(2); st.rerun()
                 else: st.error(msg)
+
     if st.button("Chau / Salir"): st.session_state.user = None; st.rerun()
 
+# --- APP PRINCIPAL: INVENTARIO ---
 st.header("📖 Mi Álbum")
 seleccion_pais = st.selectbox("Sección:", list(config.ALBUM_PAGES.keys()), key="seleccion_pais_key")
 
-# --- SECCIÓN 1: TUS FIGUS (CON BOTONES DE SELECCIÓN MASIVA) ---
+# --- SECCIÓN 1: TUS FIGUS ---
 col_head_1, col_btn_all, col_btn_none = st.columns([4, 1, 1])
 col_head_1.markdown("### 1️⃣ Tus Figus")
 
-# Botones de Acción Masiva
-if col_btn_all.button("Todas", use_container_width=True, help="Marcar todas las de esta sección"):
+# LÓGICA DE CORRECCIÓN PARA st.pills
+# 1. Si la key no está en session state, la inicializamos con los datos de DB.
+if key_pills not in st.session_state:
+    st.session_state[key_pills] = ids_tengo_db
+
+# 2. Botones de Acción Masiva (Modifican Session State Directamente)
+if col_btn_all.button("Todas", use_container_width=True, help="Marcar todas"):
     st.session_state[key_pills] = list(range(start, end + 1))
     st.rerun()
 
@@ -236,10 +279,11 @@ if col_btn_none.button("Ninguna", use_container_width=True, help="Desmarcar toda
     st.session_state[key_pills] = []
     st.rerun()
 
-# Pills (Selectbox múltiple visual)
-seleccion_tengo = st.pills("Tengo", list(range(start, end + 1)), default=ids_tengo_live, selection_mode="multi", key=key_pills, label_visibility="collapsed")
+# 3. Widget st.pills SIN parámetro default (porque ya usamos la key)
+seleccion_tengo = st.pills("Tengo", list(range(start, end + 1)), selection_mode="multi", key=key_pills, label_visibility="collapsed")
 
 st.markdown("### 2️⃣ Repes")
+# Para repetidas, usamos lógica similar o derivamos de 'tengo'
 posibles_repes = sorted(seleccion_tengo) if seleccion_tengo else []
 ids_repes_val = [k for k in repetidas_info.keys() if k in posibles_repes]
 seleccion_repes = st.pills("Repes", posibles_repes, default=ids_repes_val, selection_mode="multi", key=f"repes_{seleccion_pais}")
@@ -253,24 +297,42 @@ if seleccion_repes:
         qty = info.get('quantity', 1)
         modo = "💰 Venta" if precio > 0 else "🔄 Canje"
         data.append({"Figurita": n, "Cantidad": qty, "Modo": modo, "Precio": precio})
-    edited_df = st.data_editor(pd.DataFrame(data), column_config={"Figurita": st.column_config.NumberColumn(disabled=True), "Cantidad": st.column_config.NumberColumn(min_value=1, step=1, help="Copias disponibles"), "Modo": st.column_config.SelectboxColumn(options=["🔄 Canje", "💰 Venta"], required=True), "Precio": st.column_config.NumberColumn(min_value=0, step=100)}, hide_index=True, use_container_width=True)
+        
+    edited_df = st.data_editor(
+        pd.DataFrame(data), 
+        column_config={
+            "Figurita": st.column_config.NumberColumn(disabled=True),
+            "Cantidad": st.column_config.NumberColumn(min_value=1, step=1, help="Copias disponibles"),
+            "Modo": st.column_config.SelectboxColumn(options=["🔄 Canje", "💰 Venta"], required=True),
+            "Precio": st.column_config.NumberColumn(min_value=0, step=100)
+        }, 
+        hide_index=True, use_container_width=True
+    )
+    
     if st.button("💾 GUARDAR CAMBIOS", type="primary", use_container_width=True):
         db.save_inventory_positive(user['id'], start, end, seleccion_tengo, edited_df)
         st.toast("Joyas guardadas", icon="💾"); time.sleep(0.5); st.rerun()
 
+# --- MERCADO ---
 st.divider()
 st.subheader("🔍 Mercado")
 
 with st.expander("🔎 Filtros", expanded=True):
     col_f1, col_f2, col_f3 = st.columns(3)
+    
+    # Filtro Provincia
     filtro_prov = col_f1.multiselect("Provincia:", list(locations.ARGENTINA.keys()), default=[user.get('province', 'Mendoza')], on_change=reset_pagination)
+    
+    # Filtro Zona (Dinámico)
     avail_zones = []
     if filtro_prov:
         for p in filtro_prov:
             avail_zones.extend(locations.ARGENTINA.get(p, []))
+            
     filtro_zonas = col_f2.multiselect("Depto / Barrio:", avail_zones, on_change=reset_pagination)
     filtro_num = col_f3.text_input("Buscá por número:", placeholder="Ej: 10", on_change=reset_pagination)
 
+# Obtener y procesar mercado (Cacheado)
 market_df = db.fetch_market(user['id'])
 matches, ventas = db.find_matches(user['id'], market_df)
 
@@ -286,14 +348,18 @@ def aplicar_filtros(lista_items):
 matches_filtrados = aplicar_filtros(matches)
 ventas_filtradas = aplicar_filtros(ventas)
 
+# --- RENDERIZADO ---
+
 def render_card(item, tipo):
     with st.container(border=True):
         c1, c2, c3 = st.columns([3, 1, 1])
         target_id = item['target_id']
         fig_recibo = item['figu']
+        
         is_unlocked = target_id in st.session_state.unlocked_users
         phone_target = None
         link_wa = "#"
+        
         if is_unlocked:
             phone_target = utils.decrypt_phone(item.get('phone_encrypted'))
             if phone_target:
@@ -303,11 +369,14 @@ def render_card(item, tipo):
                 else:
                     precio = item['price']
                     texto_base = f"Hola! Vi en Figus 26 que vendés la #{fig_recibo} a ${precio}. ¿La tenés?"
+                
                 mensaje_encoded = quote(texto_base)
                 link_wa = f"https://wa.me/549{phone_target}?text={mensaje_encoded}"
-            else: st.error("Error al desencriptar.")
+            else:
+                st.error("Error al desencriptar.")
 
         loc_str = f"{item['province']} - {item['zone']}"
+        
         if tipo == 'canje':
             fig_entrego = item.get('te_pide', '?')
             c1.markdown(f"🔄 **{item['nick']}**")
@@ -320,7 +389,8 @@ def render_card(item, tipo):
             c1.markdown(f"Vende **#{fig_recibo}** a **${precio}**")
 
         if is_unlocked:
-            if phone_target: c2.link_button("🟢 Abrir Chat", link_wa, use_container_width=True)
+            if phone_target:
+                c2.link_button("🟢 Abrir Chat", link_wa, use_container_width=True)
             if tipo == 'canje':
                 with c1.expander("⚙️ Confirmar"):
                     st.caption("Solo si ya hicieron el cambio:")
@@ -337,8 +407,11 @@ def render_card(item, tipo):
                         db.consume_credit(user)
                         st.session_state.unlocked_users.add(target_id)
                         st.rerun()
-                    else: modal_seguridad(target_id)
-                else: mostrar_modal_premium()
+                    else:
+                        modal_seguridad(target_id)
+                else: 
+                     mostrar_modal_premium()
+        
         if c3.button("👍", key=f"vt_{tipo}_{fig_recibo}_{target_id}"):
             ok, m = db.votar_usuario(user['id'], target_id)
             st.toast(m)
@@ -347,22 +420,39 @@ def paginar_y_mostrar(lista_items, tipo_key, tipo_card):
     if not lista_items:
         st.info("No encontramos nada con estos filtros.")
         return
+
     total_items = len(lista_items)
     total_pages = (total_items - 1) // ITEMS_POR_PAGINA + 1
-    if st.session_state[tipo_key] > total_pages: st.session_state[tipo_key] = 1
+    
+    if st.session_state[tipo_key] > total_pages:
+        st.session_state[tipo_key] = 1
+        
     curr_page = st.session_state[tipo_key]
     start_idx = (curr_page - 1) * ITEMS_POR_PAGINA
     end_idx = start_idx + ITEMS_POR_PAGINA
+    
     batch = lista_items[start_idx:end_idx]
-    for item in batch: render_card(item, tipo_card)
+    
+    for item in batch:
+        render_card(item, tipo_card)
+        
     st.divider()
+    
     col_p1, col_p2, col_p3 = st.columns([1, 2, 1])
+    
     with col_p1:
-        if curr_page > 1: st.button("⬅️ Anterior", key=f"prev_{tipo_key}", on_click=change_page, args=(tipo_key, -1), use_container_width=True)
-    with col_p2: st.markdown(f"<div style='text-align: center; padding-top: 5px;'><b>Página {curr_page} de {total_pages}</b></div>", unsafe_allow_html=True)
+        if curr_page > 1:
+            st.button("⬅️ Anterior", key=f"prev_{tipo_key}", on_click=change_page, args=(tipo_key, -1), use_container_width=True)
+            
+    with col_p2:
+        st.markdown(f"<div style='text-align: center; padding-top: 5px;'><b>Página {curr_page} de {total_pages}</b></div>", unsafe_allow_html=True)
+        
     with col_p3:
-        if curr_page < total_pages: st.button("Siguiente ➡️", key=f"next_{tipo_key}", on_click=change_page, args=(tipo_key, 1), use_container_width=True)
+        if curr_page < total_pages:
+            st.button("Siguiente ➡️", key=f"next_{tipo_key}", on_click=change_page, args=(tipo_key, 1), use_container_width=True)
 
-t1, t2 = st.tabs([f"Canjes ({len(matches_filtrados)})", f"Ventas ({len(ventas_filtradas)})"])
-with t1: paginar_y_mostrar(matches_filtrados, 'page_canjes', 'canje')
-with t2: paginar_y_mostrar(ventas_filtradas, 'page_ventas', 'venta')
+with t1:
+    paginar_y_mostrar(matches_filtrados, 'page_canjes', 'canje')
+
+with t2:
+    paginar_y_mostrar(ventas_filtradas, 'page_ventas', 'venta')
