@@ -8,16 +8,12 @@ import database as db
 # --- CONFIGURACIÓN UI ---
 st.set_page_config(page_title="Figus 26 | Colección", layout="wide", page_icon="⚽")
 
-# --- ESTILOS CSS ---
+# --- ESTILOS CSS (VERSIÓN ESTABLE) ---
 st.markdown("""
     <style>
-    /* 0. ELIMINAR ENLACES (ANCLAJES) AL LADO DE LOS TÍTULOS */
-    .stHeading a {
-        display: none !important;
-    }
-    [data-testid="stHeaderActionElements"] {
-        display: none !important;
-    }
+    /* 0. ELIMINAR ENLACES DE TÍTULOS */
+    .stHeading a { display: none !important; }
+    [data-testid="stHeaderActionElements"] { display: none !important; }
 
     /* 1. SIDEBAR: Ancho (350px) y Compacto Verticalmente */
     section[data-testid="stSidebar"] {
@@ -60,28 +56,31 @@ st.markdown("""
 
 # --- INICIALIZAR MEMORIA ---
 if 'unlocked_users' not in st.session_state: st.session_state.unlocked_users = set()
+if 'skip_security_modal' not in st.session_state: st.session_state.skip_security_modal = False
 
 # --- CONSTANTES ---
 ZONAS_DISPONIBLES = ["Centro", "Godoy Cruz", "Guaymallén", "Las Heras"]
 
 # --- MODALES ---
 
-# 1. MODAL DE SEGURIDAD (SOLO PARA DESBLOQUEO)
 @st.dialog("🛡️ Consejos de Seguridad")
 def modal_seguridad(target_id):
     st.markdown("### ⚠️ Antes de contactar:")
     st.info("Para realizar un intercambio seguro, te recomendamos:")
-    
     st.markdown("""
     * 🏢 **Lugar Público:** Reúnete siempre en zonas concurridas.
     * 👀 **Verificación:** Revisa las figuritas antes de entregar las tuyas.
     * 💰 **Dinero:** No envíes dinero por adelantado.
     """)
     st.divider()
-    
     st.caption("Al confirmar, usarás 1 crédito diario (si no eres Premium) para ver el teléfono.")
     
+    no_volver_a_mostrar = st.checkbox("No volver a mostrar este mensaje", key="chk_skip_sec")
+    
     if st.button("✅ Entendido, Ver Contacto", type="primary", use_container_width=True):
+        if no_volver_a_mostrar:
+            st.session_state.skip_security_modal = True
+            
         if db.check_contact_limit(st.session_state.user):
             db.consume_credit(st.session_state.user)
             st.session_state.unlocked_users.add(target_id)
@@ -89,7 +88,6 @@ def modal_seguridad(target_id):
         else:
             st.error("Error: No tienes créditos suficientes.")
 
-# 2. MODAL PREMIUM
 @st.dialog("💎 Pásate a Premium", width="small")
 def mostrar_modal_premium():
     st.markdown(f"""
@@ -108,13 +106,11 @@ def mostrar_modal_premium():
     st.link_button("👉 Pagar con Mercado Pago", config.MP_LINK, type="primary", use_container_width=True)
     st.caption("Luego pega tu ID de operación en el menú lateral.")
 
-# 3. MODAL BIENVENIDA (+18)
 @st.dialog("⚠️ Bienvenido a Figus 26")
 def mostrar_barrera_entrada():
     st.warning("🔞 Esta aplicación es para mayores de 18 años.")
     st.info("🤝 Facilitamos el contacto entre coleccionistas, pero no intervenimos en los canjes. No nos hacemos responsables de las reuniones pactadas por los usuarios ni de las transacciones realizadas.")
     st.markdown("**Al continuar, declaras bajo juramento que eres mayor de edad.**")
-    
     if st.button("✅ Entendido, soy +18", type="primary", use_container_width=True):
         st.session_state.barrera_superada = True
         st.rerun()
@@ -134,46 +130,41 @@ def mostrar_instrucciones_csv():
     """)
 
 # --- LOGIN / REGISTRO ---
-
-# Control de acceso +18
 if 'barrera_superada' not in st.session_state: st.session_state.barrera_superada = False
-
-# Si no ha superado la barrera, mostramos el modal.
-if not st.session_state.barrera_superada:
-    mostrar_barrera_entrada()
-
-# Variable para bloquear los botones de ingreso
+if not st.session_state.barrera_superada: mostrar_barrera_entrada()
 is_locked = not st.session_state.barrera_superada
 
 if 'user' not in st.session_state: st.session_state.user = None
 if not st.session_state.user:
     st.title("🏆 Figus 26")
     t1, t2 = st.tabs(["Ingresar", "Registrarse"])
-    
     with t1:
         p = st.text_input("Teléfono", key="l_p")
         pw = st.text_input("Contraseña", type="password", key="l_pw")
-        
         if st.button("Entrar", type="primary", disabled=is_locked):
             u, m = db.login_user(p, pw)
             if u: st.session_state.user = u; st.rerun()
             else: st.error(m)
-            
     with t2:
         n = st.text_input("Nick"); ph = st.text_input("Teléfono", key="r_p"); pw2 = st.text_input("Crear Pass", type="password", key="r_pw")
         z = st.selectbox("Zona", ZONAS_DISPONIBLES)
         st.divider()
         if st.button("Legales", type="secondary"): ver_contrato()
         acepto = st.checkbox("Acepto términos")
-        
         if st.button("Crear Cuenta", disabled=(is_locked or not acepto)):
             u, m = db.register_user(n, ph, z, pw2)
             if u: st.success("Creado!"); st.balloons()
             else: st.error(m)
-            
     st.stop()
 
 user = st.session_state.user
+
+# --- VERIFICACIÓN DIARIA (RESET) ---
+if db.verify_daily_reset(user):
+    # Si la función devuelve True, es que cambió el día.
+    # Borramos la lista de desbloqueados para "re-bloquear" a todos.
+    st.session_state.unlocked_users = set()
+    st.toast("📅 ¡Nuevo día! Tus contactos diarios se han renovado.", icon="☀️")
 
 # --- CÁLCULOS ---
 seleccion_pais = st.session_state.get("seleccion_pais_key", list(config.ALBUM_PAGES.keys())[0])
@@ -206,11 +197,9 @@ with st.sidebar:
         st.caption("Carga rápida de inventario.")
         col_a, col_b = st.columns(2)
         if col_a.button("❓ Ayuda", use_container_width=True): mostrar_instrucciones_csv()
-        
         df_plantilla = pd.DataFrame([{"num": 10, "status": "tengo", "price": 0, "quantity": 1}, {"num": 25, "status": "repetida", "price": 500, "quantity": 2}])
         csv_plantilla = df_plantilla.to_csv(index=False).encode('utf-8')
         col_b.download_button("⬇️ Plantilla", data=csv_plantilla, file_name="plantilla.csv", mime="text/csv", use_container_width=True)
-        
         up = st.file_uploader("Subir CSV", type="csv")
         if up and st.button("🚀 Procesar Carga", type="primary", use_container_width=True):
             ok, msg = db.process_csv_upload(pd.read_csv(up), user['id'])
@@ -223,12 +212,9 @@ with st.sidebar:
     else:
         st.info("👤 GRATIS")
         contacts = user.get('daily_contacts_count', 0)
-        
         if contacts >= 1: st.progress(1.0, text="Límite: 1/1 (Agotado)")
         else: st.progress(0.0, text="Límite: 0/1 (Disponible)")
-            
         if st.button("💎 Ser Premium", use_container_width=True): mostrar_modal_premium()
-        
         with st.expander("Validar Pago"):
             op = st.text_input("ID Op")
             if op and st.button("Validar"):
@@ -306,7 +292,6 @@ def render_card(item, tipo):
         target_id = item['target_id']
         fig_recibo = item['figu']
         
-        # MENSAJE WHATSAPP
         phone_target = item['phone']
         if tipo == 'canje':
             fig_entrego = item['te_pide']
@@ -320,14 +305,10 @@ def render_card(item, tipo):
         mensaje_encoded = quote(texto_base)
         link_wa = f"https://wa.me/549{phone_target}?text={mensaje_encoded}"
 
-        # ACCIÓN
         is_unlocked = target_id in st.session_state.unlocked_users
         
         if is_unlocked:
-            # BOTÓN VERDE (Link Directo)
             c2.link_button("🟢 Abrir Chat", link_wa, use_container_width=True)
-            
-            # CONFIRMACIÓN (SOLO CANJE)
             if tipo == 'canje':
                 with c1.expander("⚙️ Confirmar Canje"):
                     st.caption("Solo si ya realizaste el intercambio:")
@@ -336,14 +317,17 @@ def render_card(item, tipo):
                         if ok: st.balloons(); st.success(msg); time.sleep(3); st.rerun()
                         else: st.error(msg)
         else:
-            # BOTÓN CONTACTAR -> Abre modal de seguridad
             if c2.button("🔓 Contactar", key=f"ul_{tipo}_{fig_recibo}_{target_id}", use_container_width=True):
                 if db.check_contact_limit(user):
-                     modal_seguridad(target_id)
+                    if st.session_state.skip_security_modal:
+                        db.consume_credit(user)
+                        st.session_state.unlocked_users.add(target_id)
+                        st.rerun()
+                    else:
+                        modal_seguridad(target_id)
                 else: 
                      mostrar_modal_premium()
         
-        # VOTO
         if c3.button("👍", key=f"vt_{tipo}_{fig_recibo}_{target_id}"):
             ok, m = db.votar_usuario(user['id'], target_id)
             st.toast(m)

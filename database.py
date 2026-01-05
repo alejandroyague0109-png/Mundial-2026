@@ -44,7 +44,7 @@ def register_user(nick, phone, zone, password):
         return response.data[0], "OK"
     except Exception as e: return None, str(e)
 
-# --- INVENTARIO (CON CANTIDADES) ---
+# --- INVENTARIO ---
 def get_inventory_status(user_id, start, end):
     response = supabase.table("inventory").select("*").eq("user_id", user_id).execute()
     df = pd.DataFrame(response.data)
@@ -57,16 +57,11 @@ def get_inventory_status(user_id, start, end):
         mask = (df['sticker_num'] >= start) & (df['sticker_num'] <= end)
         df_page = df[mask]
         
-        # Lista simple de lo que tengo
         db_tengo = df_page[df_page['status'] == 'tengo']['sticker_num'].tolist()
-        
-        # Diccionario detallado de repetidas
         for _, row in df_page[df_page['status'] == 'repetida'].iterrows():
             qty = row.get('quantity', 1)
             if pd.isna(qty): qty = 1
             db_repetidas_info[row['sticker_num']] = {'price': row['price'], 'quantity': int(qty)}
-            
-            # Si es repetida, también cuenta como "Tengo" visualmente
             if row['sticker_num'] not in db_tengo: db_tengo.append(row['sticker_num'])
             
     return db_tengo, db_repetidas_info, df
@@ -76,11 +71,9 @@ def save_inventory_positive(user_id, start, end, ui_owned_list, ui_repe_df):
     supabase.table("inventory").delete().eq("user_id", user_id).in_("sticker_num", page_numbers).execute()
     new_rows = []
     
-    # 1. Guardar TENGO
     for num in ui_owned_list:
         new_rows.append({"user_id": user_id, "sticker_num": num, "status": "tengo", "price": 0, "quantity": 1})
         
-    # 2. Guardar REPETIDAS (Sobreescribe si estaba en tengo)
     if not ui_repe_df.empty:
         for _, row in ui_repe_df.iterrows():
             es_venta = "Venta" in str(row['Modo'])
@@ -92,66 +85,34 @@ def save_inventory_positive(user_id, start, end, ui_owned_list, ui_repe_df):
             })
     if new_rows: supabase.table("inventory").insert(new_rows).execute()
 
-# --- INTERCAMBIO (Lógica Core) ---
-# --- REEMPLAZA ESTA FUNCIÓN EN database.py ---
-
+# --- INTERCAMBIO ---
 def register_exchange(user_id, given_fig, received_fig):
-    """
-    Registra el canje:
-    1. Resta/Borra la figurita que entregas (given_fig).
-    2. Agrega la figurita que recibes (received_fig).
-    """
     try:
-        # 0. Asegurar tipos de datos (Integers)
         given_fig = int(given_fig)
         received_fig = int(received_fig)
         
-        # ---------------------------------------------------------
-        # PASO 1: GESTIONAR LA QUE ENTREGO (La Repetida)
-        # ---------------------------------------------------------
-        # Buscamos la figurita repetida exacta
+        # 1. Gestionar ENTREGA
         resp = supabase.table("inventory").select("*").eq("user_id", user_id).eq("sticker_num", given_fig).eq("status", "repetida").execute()
-        
-        if not resp.data:
-            return False, f"Error: No encontramos la figurita #{given_fig} en tus repetidas."
+        if not resp.data: return False, f"Error: No tienes la #{given_fig} repetida."
             
         row = resp.data[0]
-        row_id = row['id']
-        # Si quantity es None (datos viejos), asumimos 1.
         current_qty = int(row.get('quantity') or 1)
         
         if current_qty > 1:
-            # Si hay más de 1, restamos y guardamos
-            new_qty = current_qty - 1
-            supabase.table("inventory").update({"quantity": new_qty}).eq("id", row_id).execute()
+            supabase.table("inventory").update({"quantity": current_qty - 1}).eq("id", row['id']).execute()
         else:
-            # Si es 1 (o menos), la borramos definitivamente
-            supabase.table("inventory").delete().eq("id", row_id).execute()
-
-        # ---------------------------------------------------------
-        # PASO 2: GESTIONAR LA QUE RECIBO (La Nueva)
-        # ---------------------------------------------------------
-        # Verificamos si ya existe como 'tengo' para no duplicar
-        check = supabase.table("inventory").select("*").eq("user_id", user_id).eq("sticker_num", received_fig).eq("status", "tengo").execute()
+            supabase.table("inventory").delete().eq("id", row['id']).execute()
         
+        # 2. Gestionar RECEPCIÓN
+        check = supabase.table("inventory").select("*").eq("user_id", user_id).eq("sticker_num", received_fig).eq("status", "tengo").execute()
         if not check.data:
-            # Insertamos la nueva figurita en verde (Tengo)
             supabase.table("inventory").insert({
-                "user_id": user_id, 
-                "sticker_num": received_fig,
-                "status": "tengo", 
-                "price": 0, 
-                "quantity": 1
+                "user_id": user_id, "sticker_num": received_fig, "status": "tengo", "price": 0, "quantity": 1
             }).execute()
-        else:
-            # Si ya la tenías (raro, pero posible), no hacemos nada o podrías sumar cantidad.
-            # Por ahora asumimos que solo quieres marcarla como tenida.
-            pass
             
         return True, f"¡Canje exitoso! Entregaste la #{given_fig} y se guardó la #{received_fig}."
-
     except Exception as e:
-        return False, f"Error en el proceso: {str(e)}"
+        return False, str(e)
 
 # --- MERCADO ---
 def fetch_market(user_id):
@@ -213,15 +174,34 @@ def votar_usuario(voter_id, target_id):
         return True, "¡Recomendación enviada!"
     except Exception as e: return False, str(e)
 
-def check_contact_limit(user):
-    if user.get('is_premium', False): return True
+# --- GESTIÓN DE CRÉDITOS DIARIOS ---
+
+def verify_daily_reset(user):
+    """Verifica si cambió el día. Si es así, resetea contadores y devuelve True."""
+    if not user: return False
     hoy = str(date.today())
     last_date = str(user.get('last_contact_date', ''))
+    
     if last_date != hoy:
-        supabase.table("users").update({"last_contact_date": hoy, "daily_contacts_count": 0}).eq("id", user['id']).execute()
-        user['daily_contacts_count'] = 0
+        # Reset DB
+        supabase.table("users").update({
+            "last_contact_date": hoy, 
+            "daily_contacts_count": 0
+        }).eq("id", user['id']).execute()
+        
+        # Reset Local
         user['last_contact_date'] = hoy
+        user['daily_contacts_count'] = 0
         return True
+    return False
+
+def check_contact_limit(user):
+    # Aseguramos que la fecha esté actualizada primero
+    if verify_daily_reset(user):
+        # Si se reseteó, seguro tiene crédito
+        return True
+    
+    if user.get('is_premium', False): return True
     return user.get('daily_contacts_count', 0) < 1
 
 def consume_credit(user):
