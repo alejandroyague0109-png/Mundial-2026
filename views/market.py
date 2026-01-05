@@ -31,7 +31,6 @@ def modal_seguridad(target_id, user):
     
     no_volver_a_mostrar = st.checkbox("No me mostrés esto de nuevo", key="chk_skip_sec")
     
-    # FIX 2026: width="stretch"
     if st.button("✅ Dale, Ver Contacto", type="primary", width="stretch"):
         if no_volver_a_mostrar: st.session_state.skip_security_modal = True
         
@@ -57,19 +56,17 @@ def mostrar_modal_premium():
     ---
     ### Precio Final: **${config.PRECIO_PREMIUM}**
     """)
-    # st.link_button usa use_container_width aún en algunas versiones, pero vamos a asumir que también necesita width="stretch" 
-    # si falla, volver a use_container_width. Pero el error pedía replace.
-    # NOTA: st.link_button a veces tiene API distinta a st.button. 
-    # El error del usuario fue específico. Lo aplicaré aquí por seguridad.
-    st.link_button("👉 Pagá con Mercado Pago", config.MP_LINK, type="primary", use_container_width=True) 
-    # MANTUVE use_container_width AQUÍ porque st.link_button suele ir aparte, 
-    # pero si te da error, cambialo a width="stretch".
+    st.link_button("👉 Pagá con Mercado Pago", config.MP_LINK, type="primary", use_container_width=True)
 
 def render_card(item, tipo, user):
     with st.container(border=True):
         col_info, col_actions = st.columns([0.75, 0.25])
         target_id = item['target_id']
         fig_recibo = item['figu']
+        
+        # Detectar Wishlist
+        is_wishlist = item.get('is_wishlist', False)
+        
         is_unlocked = target_id in st.session_state.unlocked_users
         phone_target = None
         link_wa = "#"
@@ -87,8 +84,12 @@ def render_card(item, tipo, user):
                 link_wa = f"https://wa.me/549{phone_target}?text={mensaje_encoded}"
             else: st.error("Error al desencriptar.")
 
-        # --- INFO ---
+        # --- COLUMNA INFO ---
         with col_info:
+            # Badge de Wishlist
+            if is_wishlist:
+                st.markdown("<span style='background-color:#ffebee; color:#c62828; padding:2px 6px; border-radius:4px; font-size:0.8em; font-weight:bold;'>❤️ TU DESEO</span>", unsafe_allow_html=True)
+
             st.markdown(f"""
                 <div style="line-height: 1.2;">
                     <span style="font-size: 1.25em; font-weight: bold;">{item['nick']}</span>
@@ -110,26 +111,23 @@ def render_card(item, tipo, user):
                     💰 Vende <b>#{fig_recibo}</b> a <b>${precio}</b>
                 </div>
                 """, unsafe_allow_html=True)
+            
             st.caption(f"⭐ Reputación: {item.get('reputation', 0)}")
 
-        # --- ACCIONES ---
+        # --- COLUMNA ACCIONES ---
         with col_actions:
             if is_unlocked:
                 if phone_target: 
-                    # FIX 2026: width="stretch" (st.link_button)
-                    st.link_button("🟢 WhatsApp", link_wa, type="secondary", use_container_width=True) 
-                    # Nota: Mantenemos use_container_width para link_button si no dio error específico, 
-                    # si falla, cambiar a width="stretch". 
+                    # type="secondary" + CSS global = Blanco
+                    st.link_button("🟢 WhatsApp", link_wa, type="secondary", use_container_width=True)
                 
                 if tipo == 'canje':
-                    # FIX 2026: width="stretch"
                     if st.button("✅ Fichaje cerrado", key=f"sw_{fig_recibo}_{target_id}", help="Marcar como intercambiada", width="stretch"):
                         with utils.spinner_futbolero():
                             ok, msg = db.register_exchange(user['id'], fig_entrego, fig_recibo)
                         if ok: st.toast("¡Golazo!", icon="⚽"); st.success(msg); time.sleep(3); st.rerun()
                         else: st.error(msg)
             else:
-                # FIX 2026: width="stretch"
                 if st.button("🔓 Desbloquear", key=f"ul_{tipo}_{fig_recibo}_{target_id}", type="secondary", width="stretch"):
                     if db.check_contact_limit(user):
                         if st.session_state.skip_security_modal:
@@ -141,28 +139,20 @@ def render_card(item, tipo, user):
                         else: modal_seguridad(target_id, user)
                     else: mostrar_modal_premium()
             
-            # FIX 2026: width="stretch"
             if st.button("⭐ Recomendar", key=f"vt_{tipo}_{fig_recibo}_{target_id}", help="Dar voto positivo", width="stretch"):
                 ok, m = db.votar_usuario(user['id'], target_id)
                 st.toast(m)
 
 def paginar_y_mostrar(lista_items, tipo_key, tipo_card, user):
-    # --- SCROLL AUTOMÁTICO JS (Mejorado) ---
+    # Scroll automático (Truco Timestamp)
     unique_id = time.time()
     js = f"""
     <script>
         try {{
             var doc = window.parent.document;
             var target = doc.querySelector('[data-testid="stAppViewContainer"]');
-            if (target) {{
-                target.scrollTop = 0;
-            }} else {{
-                doc.body.scrollTop = 0;
-                doc.documentElement.scrollTop = 0;
-            }}
-        }} catch(e) {{
-            console.log(e);
-        }}
+            if (target) {{ target.scrollTop = 0; }} else {{ doc.body.scrollTop = 0; doc.documentElement.scrollTop = 0; }}
+        }} catch(e) {{ console.log(e); }}
     </script>
     <div style="display:none;">{unique_id}</div>
     """
@@ -186,11 +176,9 @@ def paginar_y_mostrar(lista_items, tipo_key, tipo_card, user):
     
     col_p1, col_p2, col_p3 = st.columns([1, 2, 1])
     with col_p1:
-        # FIX 2026: width="stretch"
         if curr_page > 1: st.button("⬅️", key=f"prev_{tipo_key}", on_click=change_page, args=(tipo_key, -1), width="stretch")
     with col_p2: st.markdown(f"<div style='text-align: center; padding-top: 5px;'>Pág {curr_page}/{total_pages}</div>", unsafe_allow_html=True)
     with col_p3:
-        # FIX 2026: width="stretch"
         if curr_page < total_pages: st.button("➡️", key=f"next_{tipo_key}", on_click=change_page, args=(tipo_key, 1), width="stretch")
 
 def render_market(user):

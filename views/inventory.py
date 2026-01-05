@@ -5,17 +5,22 @@ import database as db
 import utils 
 
 def render_inventory(user, start, end, seleccion_pais):
-    ids_tengo_db, repetidas_info, _ = db.get_inventory_status(user['id'], start, end)
+    # Desempaquetamos 4 valores ahora
+    ids_tengo_db, ids_wishlist_db, repetidas_info, _ = db.get_inventory_status(user['id'], start, end)
+    
     key_pills = f"pills_tengo_{seleccion_pais}"
+    key_wish = f"pills_wish_{seleccion_pais}"
 
-    if key_pills not in st.session_state:
-        st.session_state[key_pills] = ids_tengo_db
+    if key_pills not in st.session_state: st.session_state[key_pills] = ids_tengo_db
+    if key_wish not in st.session_state: st.session_state[key_wish] = ids_wishlist_db
 
     col_head_1, col_btn_all, col_btn_none = st.columns([4, 1, 1])
     col_head_1.markdown("### 1️⃣ Tus Figus")
 
     if col_btn_all.button("Todas", width="stretch", key=f"all_{seleccion_pais}"):
         st.session_state[key_pills] = list(range(start, end + 1))
+        # Si marco todas como tengo, limpio la wishlist
+        st.session_state[key_wish] = []
         st.rerun()
 
     if col_btn_none.button("Ninguna", width="stretch", key=f"none_{seleccion_pais}"):
@@ -24,14 +29,27 @@ def render_inventory(user, start, end, seleccion_pais):
 
     seleccion_tengo = st.pills("Tengo", list(range(start, end + 1)), selection_mode="multi", key=key_pills, label_visibility="collapsed")
 
+    # --- SECCIÓN WISHLIST (NUEVA) ---
+    st.markdown("### ❤️ Wishlist (Prioridad)")
+    st.caption("Marcá las que **TE FALTAN** y querés conseguir urgente. Te aparecerán primero en el mercado.")
+    
+    # Calculamos faltantes para mostrar solo esas
+    todas = set(range(start, end + 1))
+    tengo_set = set(seleccion_tengo) if seleccion_tengo else set()
+    faltantes = sorted(list(todas - tengo_set))
+    
+    # Limpiamos la wishlist visual de cosas que ya marqué como tengo
+    wish_actual = [x for x in st.session_state.get(key_wish, []) if x in faltantes]
+    
+    seleccion_wishlist = st.pills("Deseo", faltantes, default=wish_actual, selection_mode="multi", key=key_wish)
+
+    # --- SECCIÓN REPETIDAS ---
     st.markdown("### 2️⃣ Repes")
     posibles_repes = sorted(seleccion_tengo) if seleccion_tengo else []
     ids_repes_val = [k for k in repetidas_info.keys() if k in posibles_repes]
     seleccion_repes = st.pills("Repes", posibles_repes, default=ids_repes_val, selection_mode="multi", key=f"repes_{seleccion_pais}")
 
-    # Inicializamos el dataframe vacío por si no hay repetidas
     edited_df = pd.DataFrame()
-
     if seleccion_repes:
         st.info("👇 **Data:** Hacé doble clic en 'Modo' para cambiar entre **Canje** y **Venta**. Ajustá la 'Cantidad'.")
         data = []
@@ -55,12 +73,11 @@ def render_inventory(user, start, end, seleccion_pais):
     
     st.divider()
 
-    # --- BOTÓN GUARDAR (AHORA FUERA DEL IF) ---
-    # Esto asegura que siempre puedas guardar, incluso si marcaste "Ninguna" o "Todas" sin repetidas.
     if st.button("💾 GUARDAR CAMBIOS", type="primary", width="stretch"):
         with utils.spinner_futbolero():
-            db.save_inventory_positive(user['id'], start, end, seleccion_tengo, edited_df)
+            # Pasamos TAMBIÉN la wishlist al guardar
+            db.save_inventory_positive(user['id'], start, end, seleccion_tengo, seleccion_wishlist, edited_df)
         
-        st.toast("Joyas guardadas", icon="💾")
+        st.toast("Joyas guardadas (y wishlist actualizada)", icon="💾")
         time.sleep(0.5)
         st.rerun()
