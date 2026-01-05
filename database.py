@@ -93,39 +93,65 @@ def save_inventory_positive(user_id, start, end, ui_owned_list, ui_repe_df):
     if new_rows: supabase.table("inventory").insert(new_rows).execute()
 
 # --- INTERCAMBIO (Lógica Core) ---
+# --- REEMPLAZA ESTA FUNCIÓN EN database.py ---
+
 def register_exchange(user_id, given_fig, received_fig):
     """
-    1. Resta 1 a la repetida que entregas. Si llega a 0, la borra.
-    2. Agrega la nueva como 'tengo' (verde).
+    Registra el canje:
+    1. Resta/Borra la figurita que entregas (given_fig).
+    2. Agrega la figurita que recibes (received_fig).
     """
     try:
-        # A. GESTIONAR LA QUE ENTREGO (REPETIDA)
+        # 0. Asegurar tipos de datos (Integers)
+        given_fig = int(given_fig)
+        received_fig = int(received_fig)
+        
+        # ---------------------------------------------------------
+        # PASO 1: GESTIONAR LA QUE ENTREGO (La Repetida)
+        # ---------------------------------------------------------
+        # Buscamos la figurita repetida exacta
         resp = supabase.table("inventory").select("*").eq("user_id", user_id).eq("sticker_num", given_fig).eq("status", "repetida").execute()
         
-        if resp.data:
-            row = resp.data[0]
-            current_qty = row.get('quantity', 1) or 1
+        if not resp.data:
+            return False, f"Error: No encontramos la figurita #{given_fig} en tus repetidas."
             
-            if current_qty > 1:
-                # Restar cantidad
-                supabase.table("inventory").update({"quantity": current_qty - 1}).eq("id", row['id']).execute()
-            else:
-                # Borrar fila (desaparece de repetidas)
-                supabase.table("inventory").delete().eq("id", row['id']).execute()
+        row = resp.data[0]
+        row_id = row['id']
+        # Si quantity es None (datos viejos), asumimos 1.
+        current_qty = int(row.get('quantity') or 1)
         
-        # B. GESTIONAR LA QUE RECIBO (NUEVA)
+        if current_qty > 1:
+            # Si hay más de 1, restamos y guardamos
+            new_qty = current_qty - 1
+            supabase.table("inventory").update({"quantity": new_qty}).eq("id", row_id).execute()
+        else:
+            # Si es 1 (o menos), la borramos definitivamente
+            supabase.table("inventory").delete().eq("id", row_id).execute()
+
+        # ---------------------------------------------------------
+        # PASO 2: GESTIONAR LA QUE RECIBO (La Nueva)
+        # ---------------------------------------------------------
+        # Verificamos si ya existe como 'tengo' para no duplicar
         check = supabase.table("inventory").select("*").eq("user_id", user_id).eq("sticker_num", received_fig).eq("status", "tengo").execute()
         
         if not check.data:
-            # La agrego a mi álbum
+            # Insertamos la nueva figurita en verde (Tengo)
             supabase.table("inventory").insert({
-                "user_id": user_id, "sticker_num": received_fig,
-                "status": "tengo", "price": 0, "quantity": 1
+                "user_id": user_id, 
+                "sticker_num": received_fig,
+                "status": "tengo", 
+                "price": 0, 
+                "quantity": 1
             }).execute()
+        else:
+            # Si ya la tenías (raro, pero posible), no hacemos nada o podrías sumar cantidad.
+            # Por ahora asumimos que solo quieres marcarla como tenida.
+            pass
             
-        return True, f"¡Hecho! Entregaste la #{given_fig} y ya marcamos la #{received_fig} en tu álbum."
+        return True, f"¡Canje exitoso! Entregaste la #{given_fig} y se guardó la #{received_fig}."
+
     except Exception as e:
-        return False, str(e)
+        return False, f"Error en el proceso: {str(e)}"
 
 # --- MERCADO ---
 def fetch_market(user_id):
