@@ -1,21 +1,34 @@
 import streamlit as st
 import pandas as pd
 import time
-from urllib.parse import quote # <--- IMPORTANTE: Para codificar el mensaje de WhatsApp
+from urllib.parse import quote
 import config
 import database as db
 
 # --- CONFIGURACIÓN UI ---
 st.set_page_config(page_title="Figus 26 | Colección", layout="wide", page_icon="⚽")
 
+# --- ESTILOS CSS (INCLUYE AJUSTE DE SIDEBAR) ---
 st.markdown("""
     <style>
+    /* 1. Estilo para adelgazar el Sidebar */
+    section[data-testid="stSidebar"] {
+        min-width: 240px !important; /* Ancho mínimo forzado */
+        max-width: 240px !important; /* Ancho máximo forzado */
+    }
+
+    /* 2. Estilos de Pills (Botones de selección) */
     div[data-testid="stPills"] span[aria-selected="true"] {
         background-color: #2e7d32 !important; color: white !important; border-color: #2e7d32 !important;
     }
     div[data-testid="stPills"] button[aria-selected="true"] {
         background-color: #2e7d32 !important; color: white !important; border-color: #2e7d32 !important;
     }
+    div[data-testid="stPills"] span:hover, div[data-testid="stPills"] button:hover {
+        border-color: #66bb6a !important; color: #2e7d32 !important;
+    }
+    
+    /* 3. Botones secundarios redondeados */
     button[kind="secondary"] { border-radius: 20px; }
     </style>
 """, unsafe_allow_html=True)
