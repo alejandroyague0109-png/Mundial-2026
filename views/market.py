@@ -6,7 +6,7 @@ import locations
 import utils
 import config
 
-ITEMS_POR_PAGINA = 15
+ITEMS_POR_PAGINA = 10 # <--- CAMBIO A 10 ITEMS
 
 def reset_pagination():
     st.session_state.page_canjes = 1
@@ -34,11 +34,11 @@ def modal_seguridad(target_id, user):
         if no_volver_a_mostrar: st.session_state.skip_security_modal = True
         
         if db.check_contact_limit(user):
-            # AGREGADO SPINNER AQUÍ
+            # SPINNER AQUÍ
             with utils.spinner_futbolero():
                 db.consume_credit(user)
                 st.session_state.unlocked_users.add(target_id)
-                time.sleep(1) # Pequeña pausa dramática para que se lea la frase
+                time.sleep(1)
             st.rerun()
         else:
             st.error("Error: Te quedaste sin créditos por hoy.")
@@ -97,7 +97,6 @@ def render_card(item, tipo, user):
             if phone_target: c2.link_button("🟢 Abrir Chat", link_wa, use_container_width=True)
             if tipo == 'canje':
                 with c1.expander("⚙️ Confirmar"):
-                    st.caption("Solo si ya hicieron el cambio:")
                     if st.button(f"✅ Registrar #{fig_recibo}", key=f"swap_{fig_recibo}_{target_id}"):
                         with utils.spinner_futbolero():
                             ok, msg = db.register_exchange(user['id'], fig_entrego, fig_recibo)
