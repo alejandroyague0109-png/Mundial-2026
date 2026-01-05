@@ -8,7 +8,7 @@ import database as db
 # --- CONFIGURACIÓN UI ---
 st.set_page_config(page_title="Figus 26 | Colección", layout="wide", page_icon="⚽")
 
-# --- ESTILOS CSS (VERSIÓN ESTABLE) ---
+# --- ESTILOS CSS ---
 st.markdown("""
     <style>
     /* 0. ELIMINAR ENLACES DE TÍTULOS */
@@ -111,6 +111,7 @@ def mostrar_barrera_entrada():
     st.warning("🔞 Esta aplicación es para mayores de 18 años.")
     st.info("🤝 Facilitamos el contacto entre coleccionistas, pero no intervenimos en los canjes. No nos hacemos responsables de las reuniones pactadas por los usuarios ni de las transacciones realizadas.")
     st.markdown("**Al continuar, declaras bajo juramento que eres mayor de edad.**")
+    
     if st.button("✅ Entendido, soy +18", type="primary", use_container_width=True):
         st.session_state.barrera_superada = True
         st.rerun()
@@ -161,8 +162,6 @@ user = st.session_state.user
 
 # --- VERIFICACIÓN DIARIA (RESET) ---
 if db.verify_daily_reset(user):
-    # Si la función devuelve True, es que cambió el día.
-    # Borramos la lista de desbloqueados para "re-bloquear" a todos.
     st.session_state.unlocked_users = set()
     st.toast("📅 ¡Nuevo día! Tus contactos diarios se han renovado.", icon="☀️")
 

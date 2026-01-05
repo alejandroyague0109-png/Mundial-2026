@@ -198,8 +198,7 @@ def verify_daily_reset(user):
 def check_contact_limit(user):
     # Aseguramos que la fecha esté actualizada primero
     if verify_daily_reset(user):
-        # Si se reseteó, seguro tiene crédito
-        return True
+        return True # Si reseteó, tiene crédito
     
     if user.get('is_premium', False): return True
     return user.get('daily_contacts_count', 0) < 1
