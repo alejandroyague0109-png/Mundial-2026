@@ -3,6 +3,7 @@ import pandas as pd
 import time
 import config
 import database as db
+import utils # Importamos utils para usar el spinner en la carga masiva
 
 # Importamos las vistas
 from views import auth, inventory, market
@@ -10,18 +11,25 @@ from views import auth, inventory, market
 # --- CONFIGURACIÓN UI ---
 st.set_page_config(page_title="Figus 26 | Colección", layout="wide", page_icon="⚽")
 
-# --- ESTILOS CSS ---
+# --- ESTILOS CSS (CORREGIDO) ---
 st.markdown("""
     <style>
     .stHeading a { display: none !important; }
     [data-testid="stHeaderActionElements"] { display: none !important; }
     section[data-testid="stSidebar"] { min-width: 350px !important; max-width: 350px !important; }
     section[data-testid="stSidebar"] .block-container { padding-top: 2rem !important; padding-bottom: 2rem !important; }
+    
+    /* Pills Verdes */
     div[data-testid="stPills"] span[aria-selected="true"] { background-color: #2e7d32 !important; border-color: #2e7d32 !important; color: white !important; }
     div[data-testid="stPills"] button[aria-selected="true"] { background-color: #2e7d32 !important; border-color: #2e7d32 !important; color: white !important; }
+    
+    /* Botones Redondeados (Mantenemos el estilo lindo, pero sin afectar el tamaño) */
     button[kind="secondary"] { border-radius: 20px; }
+    
+    /* Centrar contenido de columnas (útil para paginación) */
     div[data-testid="column"] { text-align: center; }
-    div.stButton > button:first-child { min-height: 0px; padding-top: 0px; padding-bottom: 0px; }
+    
+    /* --- ELIMINADO EL CSS QUE APLASTABA LOS BOTONES --- */
     </style>
 """, unsafe_allow_html=True)
 
@@ -80,7 +88,7 @@ else:
     start, end = config.ALBUM_PAGES[seleccion_pais]
     total_album = sum([(v[1] - v[0] + 1) for v in config.ALBUM_PAGES.values()])
     
-    # Obtener totales para barra de progreso
+    # Obtener totales
     _, _, df_full = db.get_inventory_status(user['id'], start, end)
     try: tengo_total = df_full[df_full['status'] == 'tengo'].shape[0]
     except: tengo_total = 0
@@ -102,7 +110,9 @@ else:
             col_b.download_button("⬇️ Plantilla", df_plantilla.to_csv(index=False).encode('utf-8'), "plantilla.csv", "text/csv")
             up = st.file_uploader("Subí tu CSV", type="csv")
             if up and st.button("🚀 Procesar", type="primary"):
-                ok, msg = db.process_csv_upload(pd.read_csv(up), user['id'])
+                # Usamos el spinner aquí también
+                with utils.spinner_futbolero():
+                    ok, msg = db.process_csv_upload(pd.read_csv(up), user['id'])
                 if ok: st.toast("¡Cargado!", icon="📦"); st.success(msg); time.sleep(1); st.rerun()
                 else: st.error(msg)
                 
@@ -115,7 +125,9 @@ else:
             with st.expander("Validar Pago"):
                 op = st.text_input("ID Op")
                 if op and st.button("Validar"):
-                    ok, msg = db.verificar_pago_mp(op, user['id'])
+                    # Spinner al validar pago
+                    with utils.spinner_futbolero():
+                        ok, msg = db.verificar_pago_mp(op, user['id'])
                     if ok: st.toast("¡Premium!", icon="💎"); st.rerun()
                     else: st.error(msg)
                     
