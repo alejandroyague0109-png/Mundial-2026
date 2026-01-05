@@ -23,23 +23,36 @@ st.markdown("""
 if 'unlocked_users' not in st.session_state: st.session_state.unlocked_users = set()
 
 # --- MODALES ---
+
+# 1. MODAL PREMIUM (Actualizado con Triangulaciones)
 @st.dialog("💎 Pásate a Premium", width="small")
 def mostrar_modal_premium():
     st.markdown(f"""
     ### 🚀 Límite Alcanzado
-    Tienes **1 contacto gratis por día**.
+    Actualmente tienes **1 contacto gratis por día**.
+    
     **Con Premium obtienes:**
-    * 🔓 Contactos Ilimitados
-    * 🌍 Un pago único (todo el mundial)
-    ### Precio: **${config.PRECIO_PREMIUM}**
+    * 🔓 **Contactos Ilimitados:** Habla con todos sin restricciones.
+    * 📐 **Triangulaciones:** Acceso a cadenas de cambio inteligentes.
+    * 🌍 **Un pago único:** Dura todo el mundial (no es mensual).
+    * ⭐ **Destacado:** Tu nombre aparecerá con confianza.
+    
+    ---
+    ### Precio Final: **${config.PRECIO_PREMIUM}**
     """)
     st.link_button("👉 Pagar con Mercado Pago", config.MP_LINK, type="primary", use_container_width=True)
     st.caption("Luego pega tu ID de operación en el menú lateral.")
 
-@st.dialog("⚠️ Bienvenido")
+# 2. MODAL BIENVENIDA (Texto Recuperado)
+@st.dialog("⚠️ Bienvenido a Figus 26")
 def mostrar_barrera_entrada():
-    st.warning("🔞 App para mayores de 18 años.")
-    st.info("No nos hacemos responsables de las reuniones pactadas.")
+    st.warning("🔞 Esta aplicación es para mayores de 18 años.")
+    
+    # Texto legal completo recuperado
+    st.info("🤝 Facilitamos el contacto entre coleccionistas, pero no intervenimos en los canjes. No nos hacemos responsables de las reuniones pactadas por los usuarios ni de las transacciones realizadas.")
+    
+    st.markdown("**Al continuar, declaras bajo juramento que eres mayor de edad.**")
+    
     if st.button("✅ Entendido, soy +18", type="primary", use_container_width=True):
         st.session_state.barrera_superada = True
         st.rerun()
@@ -100,7 +113,7 @@ ids_tengo_db, repetidas_info, df_full = db.get_inventory_status(user['id'], star
 key_pills = f"pills_tengo_{seleccion_pais}"
 ids_tengo_live = st.session_state.get(key_pills, ids_tengo_db)
 
-# Cálculo Global Recuperado
+# Cálculo Global
 try: tengo_db_total = df_full[df_full['status'] == 'tengo'].shape[0]
 except: tengo_db_total = 0
 tengo_db_esta_seccion = len(ids_tengo_db)
@@ -118,14 +131,14 @@ with st.sidebar:
     st.progress(progreso, text="🏆 Mi Álbum")
     st.caption(f"Tienes **{tengo_global_live}** de {total_album}.")
     
-    # Carga Masiva (RECUPERADA Y MEJORADA)
+    # Carga Masiva
     st.divider()
     with st.expander("📤 Carga Masiva (CSV)"):
         st.caption("Carga rápida de inventario.")
         col_a, col_b = st.columns(2)
         if col_a.button("❓ Ayuda", use_container_width=True): mostrar_instrucciones_csv()
         
-        # Generar Plantilla para descargar
+        # Generar Plantilla
         df_plantilla = pd.DataFrame([{"num": 10, "status": "tengo", "price": 0}, {"num": 25, "status": "repetida", "price": 500}])
         csv_plantilla = df_plantilla.to_csv(index=False).encode('utf-8')
         col_b.download_button("⬇️ Plantilla", data=csv_plantilla, file_name="plantilla.csv", mime="text/csv", use_container_width=True)
