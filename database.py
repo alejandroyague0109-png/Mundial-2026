@@ -152,4 +152,55 @@ def votar_usuario(voter_id, target_id):
     try:
         supabase.table("votes").insert({"voter_id": voter_id, "target_id": target_id}).execute()
         curr_rep = supabase.table("users").select("reputation").eq("id", target_id).execute().data[0]['reputation'] or 0
-        supabase.table("
+        supabase.table("users").update({"reputation": curr_rep + 1}).eq("id", target_id).execute()
+        return True, "¡Recomendación enviada!"
+    except Exception as e: return False, str(e)
+
+# --- CONTROL DE LÍMITES Y CSV ---
+
+def check_contact_limit(user):
+    """Verifica si puede contactar. Resetea día si hace falta."""
+    if user.get('is_premium', False): return True
+    
+    hoy = str(date.today())
+    last_date = str(user.get('last_contact_date', ''))
+    
+    if last_date != hoy:
+        supabase.table("users").update({
+            "last_contact_date": hoy, 
+            "daily_contacts_count": 0
+        }).eq("id", user['id']).execute()
+        user['daily_contacts_count'] = 0
+        user['last_contact_date'] = hoy
+        return True
+        
+    return user.get('daily_contacts_count', 0) < 1
+
+def consume_credit(user):
+    """Descuenta 1 crédito"""
+    if not user.get('is_premium', False):
+        nuevo = user.get('daily_contacts_count', 0) + 1
+        supabase.table("users").update({"daily_contacts_count": nuevo}).eq("id", user['id']).execute()
+        if 'user' in st.session_state:
+            st.session_state.user['daily_contacts_count'] = nuevo
+
+def process_csv_upload(df, user_id):
+    try:
+        df.columns = [c.lower().strip() for c in df.columns]
+        expected_cols = ['num', 'status', 'price']
+        if not all(col in df.columns for col in expected_cols): return False, "CSV inválido."
+        rows_to_insert = []
+        for _, row in df.iterrows():
+            st_val = str(row['status']).lower().strip()
+            if st_val not in ['tengo', 'repetida']: st_val = 'tengo'
+            rows_to_insert.append({
+                "user_id": user_id, "sticker_num": int(row['num']),
+                "status": st_val, "price": int(row['price']) if pd.notnull(row['price']) else 0
+            })
+        if rows_to_insert:
+            nums = [r['sticker_num'] for r in rows_to_insert]
+            supabase.table("inventory").delete().eq("user_id", user_id).in_("sticker_num", nums).execute()
+            supabase.table("inventory").insert(rows_to_insert).execute()
+            return True, f"Cargadas {len(rows_to_insert)}."
+        return False, "CSV vacío."
+    except Exception as e: return False, str(e)
