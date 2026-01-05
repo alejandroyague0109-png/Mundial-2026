@@ -1,5 +1,4 @@
 import streamlit as st
-import streamlit.components.v1 as components # Necesario para el truco de JS
 import pandas as pd
 import time
 import config
@@ -23,12 +22,6 @@ st.markdown("""
     button[kind="secondary"] { border-radius: 20px; }
     </style>
 """, unsafe_allow_html=True)
-
-# --- FUNCIÓN MÁGICA DE REDIRECCIÓN (JS) ---
-def abrir_whatsapp_js(url):
-    """Abre una URL en una nueva pestaña usando JavaScript puro"""
-    js = f"window.open('{url}', '_blank').focus();"
-    components.html(f"<script>{js}</script>", height=0, width=0)
 
 # --- MODALES ---
 
@@ -104,10 +97,7 @@ if not st.session_state.user:
     st.stop()
 
 # --- APP LOGIC ---
-# Asegurar reset diario
-# (Nota: db.ensure_daily_quota_reset no existe en el database.py anterior simplificado, 
-# usamos check_contact_limit que hace el reset dentro)
-user = st.session_state.user 
+user = st.session_state.user
 
 # Lógica de progreso
 seleccion_pais = st.session_state.get("seleccion_pais_key", list(config.ALBUM_PAGES.keys())[0])
@@ -155,8 +145,8 @@ with st.sidebar:
     else: 
         st.info("👤 CUENTA GRATIS")
         
-        # Leemos directo de la base de datos para tener el dato fresco
-        # (O usamos el session state si confiamos en él, pero mejor DB para límites)
+        # Leemos directo de la base de datos para asegurar el límite real
+        can_contact = db.check_contact_limit(user)
         
         if st.button("💎 Ver Beneficios Premium", type="primary", use_container_width=True):
             mostrar_modal_premium()
@@ -204,8 +194,9 @@ st.subheader("🔍 Mercado")
 market_df = db.fetch_market(user['id'])
 matches, ventas = db.find_matches(user['id'], market_df)
 
-# Calculamos permiso localmente para la UI
-has_permission = user.get('is_premium', False) or (user.get('daily_contacts_count', 0) < 1)
+# VERIFICAMOS PERMISO ANTES DEL BUCLE
+# Esto define qué tipo de botón se dibuja
+has_credit = db.check_contact_limit(user)
 
 t1, t2 = st.tabs([f"Canjes ({len(matches)})", f"Ventas ({len(ventas)})"])
 
@@ -216,17 +207,19 @@ with t1:
             c1, c2, c3 = st.columns([3, 1, 1])
             c1.markdown(f"🔄 **{m['nick']}** (⭐{m['reputation']}) cambia **#{m['figu']}** por tu **#{m['te_pide']}**")
             
-            # --- BOTÓN WHATSAPP INTELIGENTE ---
-            # Usamos un botón normal de Streamlit
-            if c2.button("WhatsApp", key=f"c_{m['figu']}_{m['target_id']}"):
-                # Al hacer clic, verificamos el límite EN EL SERVIDOR
-                if db.check_contact_limit(user): 
-                    # Si tiene permiso:
-                    db.consume_credit(user) # Descontamos
-                    # Y lanzamos el JS para abrir la pestaña
-                    abrir_whatsapp_js(f"https://wa.me/549{m['phone']}")
-                else: 
-                    # Si NO tiene permiso:
+            # --- LÓGICA DE BOTÓN SEGURA ---
+            if has_credit:
+                # Dibuja un ENLACE REAL (No lo bloquea el navegador)
+                # Al hacer clic, ejecuta db.consume_credit(user)
+                c2.link_button(
+                    "WhatsApp", 
+                    f"https://wa.me/549{m['phone']}", 
+                    on_click=db.consume_credit, 
+                    args=(user,) # <--- ESTO FALTABA (pasamos el usuario como argumento)
+                )
+            else:
+                # Dibuja un botón normal que abre el modal
+                if c2.button("WhatsApp", key=f"no_cred_c_{m['figu']}_{m['target_id']}"):
                     mostrar_modal_premium()
             
             if c3.button("👍", key=f"v_{m['target_id']}_{m['figu']}"):
@@ -240,11 +233,15 @@ with t2:
             c1, c2, c3 = st.columns([3, 1, 1])
             c1.markdown(f"💰 **{v['nick']}** (⭐{v['reputation']}) vende **#{v['figu']}** a **${v['price']}**")
             
-            if c2.button("WhatsApp", key=f"ve_{v['figu']}_{v['target_id']}"):
-                if db.check_contact_limit(user): 
-                    db.consume_credit(user)
-                    abrir_whatsapp_js(f"https://wa.me/549{v['phone']}")
-                else: 
+            if has_credit:
+                c2.link_button(
+                    "WhatsApp", 
+                    f"https://wa.me/549{v['phone']}", 
+                    on_click=db.consume_credit, 
+                    args=(user,)
+                )
+            else:
+                if c2.button("WhatsApp", key=f"no_cred_v_{v['figu']}_{v['target_id']}"):
                     mostrar_modal_premium()
             
             if c3.button("👍", key=f"vv_{v['target_id']}_{v['figu']}"):
