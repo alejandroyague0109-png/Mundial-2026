@@ -27,15 +27,22 @@ def login_user(phone, password):
     if utils.check_password(password, user['password']): return user, "OK"
     else: return None, "Contraseña incorrecta."
 
-def register_user(nick, phone, zone, password):
+def register_user(nick, phone, province, zone, password):
     clean_phone = utils.limpiar_telefono(phone)
     if not utils.validar_formato_telefono(clean_phone): return None, "Teléfono inválido."
-    if not nick or not password: return None, "Falta datos."
+    
+    # --- VALIDACIÓN OBLIGATORIA DE CAMPOS ---
+    if not nick or not password or not province or not zone: 
+        return None, "Faltan datos obligatorios (Provincia/Zona)."
+        
     if supabase.table("users").select("*").eq("phone", clean_phone).execute().data: return None, "Ya registrado."
     try:
         hashed_pw = utils.hash_password(password)
         data = {
-            "nick": nick, "phone": clean_phone, "zone": zone, 
+            "nick": nick, 
+            "phone": clean_phone, 
+            "province": province, 
+            "zone": zone, 
             "password": hashed_pw, 
             "is_admin": (clean_phone == config.ADMIN_PHONE), 
             "reputation": 0, "daily_contacts_count": 0, "last_contact_date": str(date.today())
@@ -44,7 +51,7 @@ def register_user(nick, phone, zone, password):
         return response.data[0], "OK"
     except Exception as e: return None, str(e)
 
-# --- INVENTARIO ---
+# --- INVENTARIO (SIN CAMBIOS) ---
 def get_inventory_status(user_id, start, end):
     response = supabase.table("inventory").select("*").eq("user_id", user_id).execute()
     df = pd.DataFrame(response.data)
@@ -70,10 +77,8 @@ def save_inventory_positive(user_id, start, end, ui_owned_list, ui_repe_df):
     page_numbers = list(range(start, end + 1))
     supabase.table("inventory").delete().eq("user_id", user_id).in_("sticker_num", page_numbers).execute()
     new_rows = []
-    
     for num in ui_owned_list:
         new_rows.append({"user_id": user_id, "sticker_num": num, "status": "tengo", "price": 0, "quantity": 1})
-        
     if not ui_repe_df.empty:
         for _, row in ui_repe_df.iterrows():
             es_venta = "Venta" in str(row['Modo'])
@@ -85,38 +90,29 @@ def save_inventory_positive(user_id, start, end, ui_owned_list, ui_repe_df):
             })
     if new_rows: supabase.table("inventory").insert(new_rows).execute()
 
-# --- INTERCAMBIO ---
+# --- INTERCAMBIO (SIN CAMBIOS) ---
 def register_exchange(user_id, given_fig, received_fig):
     try:
         given_fig = int(given_fig)
         received_fig = int(received_fig)
-        
-        # 1. Gestionar ENTREGA
         resp = supabase.table("inventory").select("*").eq("user_id", user_id).eq("sticker_num", given_fig).eq("status", "repetida").execute()
         if not resp.data: return False, f"Error: No tienes la #{given_fig} repetida."
-            
         row = resp.data[0]
         current_qty = int(row.get('quantity') or 1)
-        
         if current_qty > 1:
             supabase.table("inventory").update({"quantity": current_qty - 1}).eq("id", row['id']).execute()
         else:
             supabase.table("inventory").delete().eq("id", row['id']).execute()
-        
-        # 2. Gestionar RECEPCIÓN
         check = supabase.table("inventory").select("*").eq("user_id", user_id).eq("sticker_num", received_fig).eq("status", "tengo").execute()
         if not check.data:
-            supabase.table("inventory").insert({
-                "user_id": user_id, "sticker_num": received_fig, "status": "tengo", "price": 0, "quantity": 1
-            }).execute()
-            
+            supabase.table("inventory").insert({"user_id": user_id, "sticker_num": received_fig, "status": "tengo", "price": 0, "quantity": 1}).execute()
         return True, f"¡Canje exitoso! Entregaste la #{given_fig} y se guardó la #{received_fig}."
     except Exception as e:
         return False, str(e)
 
-# --- MERCADO ---
+# --- MERCADO (SIN CAMBIOS) ---
 def fetch_market(user_id):
-    resp = supabase.table("inventory").select("*, users(nick, zone, phone, reputation)").neq("user_id", user_id).execute()
+    resp = supabase.table("inventory").select("*, users(nick, province, zone, phone, reputation)").neq("user_id", user_id).execute()
     return pd.DataFrame(resp.data)
 
 def find_matches(user_id, market_df):
@@ -126,18 +122,21 @@ def find_matches(user_id, market_df):
     mis_repes_set = set(item['sticker_num'] for item in resp_r.data)
     directos, ventas = [], []
     if market_df.empty: return [], []
+    
     market_df['nick'] = market_df['users'].apply(lambda x: x['nick'])
+    market_df['province'] = market_df['users'].apply(lambda x: x.get('province', 'Mendoza'))
     market_df['zone'] = market_df['users'].apply(lambda x: x['zone'])
     market_df['phone'] = market_df['users'].apply(lambda x: x['phone'])
     market_df['reputation'] = market_df['users'].apply(lambda x: x.get('reputation', 0))
     market_df['other_id'] = market_df['users'].apply(lambda x: x.get('id', 0))
+    
     ofertas = market_df[market_df['status'] == 'repetida']
     for _, row in ofertas.iterrows():
         figu = row['sticker_num']
         if figu not in mis_tengo_set:
             match = {
-                'nick': row['nick'], 'zone': row['zone'], 'phone': row['phone'], 
-                'figu': figu, 'price': row['price'], 
+                'nick': row['nick'], 'province': row['province'], 'zone': row['zone'], 
+                'phone': row['phone'], 'figu': figu, 'price': row['price'], 
                 'reputation': row['reputation'], 'target_id': row['user_id']
             }
             if row['price'] > 0: ventas.append(match)
@@ -150,6 +149,7 @@ def find_matches(user_id, market_df):
                     directos.append(match)
     return directos, ventas
 
+# --- PAGOS, VOTOS, CSV Y UTILS (SIN CAMBIOS) ---
 def verificar_pago_mp(payment_id, user_id):
     try:
         if supabase.table("payments_log").select("*").eq("payment_id", payment_id).execute().data: return False, "Comprobante ya usado."
@@ -174,32 +174,19 @@ def votar_usuario(voter_id, target_id):
         return True, "¡Recomendación enviada!"
     except Exception as e: return False, str(e)
 
-# --- GESTIÓN DE CRÉDITOS DIARIOS ---
-
 def verify_daily_reset(user):
-    """Verifica si cambió el día. Si es así, resetea contadores y devuelve True."""
     if not user: return False
     hoy = str(date.today())
     last_date = str(user.get('last_contact_date', ''))
-    
     if last_date != hoy:
-        # Reset DB
-        supabase.table("users").update({
-            "last_contact_date": hoy, 
-            "daily_contacts_count": 0
-        }).eq("id", user['id']).execute()
-        
-        # Reset Local
+        supabase.table("users").update({"last_contact_date": hoy, "daily_contacts_count": 0}).eq("id", user['id']).execute()
         user['last_contact_date'] = hoy
         user['daily_contacts_count'] = 0
         return True
     return False
 
 def check_contact_limit(user):
-    # Aseguramos que la fecha esté actualizada primero
-    if verify_daily_reset(user):
-        return True # Si reseteó, tiene crédito
-    
+    if verify_daily_reset(user): return True
     if user.get('is_premium', False): return True
     return user.get('daily_contacts_count', 0) < 1
 
@@ -220,11 +207,7 @@ def process_csv_upload(df, user_id):
             if st_val not in ['tengo', 'repetida']: st_val = 'tengo'
             qty = 1
             if 'quantity' in df.columns and pd.notnull(row['quantity']): qty = int(row['quantity'])
-            rows_to_insert.append({
-                "user_id": user_id, "sticker_num": int(row['num']),
-                "status": st_val, "price": int(row['price']) if pd.notnull(row['price']) else 0,
-                "quantity": qty
-            })
+            rows_to_insert.append({"user_id": user_id, "sticker_num": int(row['num']), "status": st_val, "price": int(row['price']) if pd.notnull(row['price']) else 0, "quantity": qty})
         if rows_to_insert:
             nums = [r['sticker_num'] for r in rows_to_insert]
             supabase.table("inventory").delete().eq("user_id", user_id).in_("sticker_num", nums).execute()
