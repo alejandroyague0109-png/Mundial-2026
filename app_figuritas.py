@@ -76,7 +76,6 @@ def mostrar_barrera_entrada():
     st.info("🤝 Facilitamos el contacto entre coleccionistas, pero no intervenimos en los canjes. No nos hacemos responsables de las reuniones pactadas por los usuarios ni de las transacciones realizadas.")
     st.markdown("**Al continuar, declarás bajo juramento que sos mayor de edad.**")
     
-    # FIX 2026: width="stretch"
     if st.button("✅ Entendido, soy +18", type="primary", width="stretch"):
         st.session_state.barrera_superada = True
         st.rerun()
@@ -89,7 +88,7 @@ def mostrar_instrucciones_csv():
     1. **num**: Número de la figurita (ej: 10, 150).
     2. **status**: Escribí `tengo` o `repetida`.
     3. **price**: Precio de venta (0 si es para canje).
-    *(Opcional: 'quantity' para definir cantidad exacta)*
+    *(Opcional: 'quantity')*
     """)
 
 # --- FLUJO LÓGICO ---
@@ -103,49 +102,40 @@ if not st.session_state.user:
 else:
     user = st.session_state.user
     
-    # Check diario
     if db.verify_daily_reset(user):
         st.session_state.unlocked_users = set()
         st.toast("📅 ¡Nuevo día! Se renovaron tus créditos.", icon="☀️")
 
-    # Cálculos Sidebar
     seleccion_pais = st.session_state.get("seleccion_pais_key", list(config.ALBUM_PAGES.keys())[0])
     start, end = config.ALBUM_PAGES[seleccion_pais]
     total_album = sum([(v[1] - v[0] + 1) for v in config.ALBUM_PAGES.values()])
     
-    _, _, df_full = db.get_inventory_status(user['id'], start, end)
+    # --- CORRECCIÓN CRÍTICA: Desempaquetar 4 valores (el 4to es el DataFrame completo) ---
+    _, _, _, df_full = db.get_inventory_status(user['id'], start, end)
+    
     try: tengo_total = df_full[df_full['status'] == 'tengo'].shape[0]
     except: tengo_total = 0
     
-    # --- SIDEBAR ---
     with st.sidebar:
         st.title(f"Hola {user['nick']}")
         st.caption(f"📍 {user.get('province', '')} - {user.get('zone', '')}")
         st.caption(f"⭐ Reputación: {user.get('reputation', 0)}")
-        
         st.divider()
         st.progress(min(tengo_total / total_album, 1.0), text="🏆 Mi Álbum")
         st.caption(f"Tenés **{tengo_total}** de {total_album}.")
-        
         st.divider()
         with st.expander("📤 Carga Masiva (CSV)"):
             col_a, col_b = st.columns(2)
-            # FIX 2026: width="stretch"
             if col_a.button("❓ Ayuda", width="stretch"): mostrar_instrucciones_csv()
-            
             df_plantilla = pd.DataFrame([{"num": 10, "status": "tengo", "price": 0}, {"num": 25, "status": "repetida", "price": 500}])
             col_b.download_button("⬇️ Plantilla", df_plantilla.to_csv(index=False).encode('utf-8'), "plantilla.csv", "text/csv", width="stretch")
-            
             up = st.file_uploader("Subí tu CSV", type="csv")
-            # FIX 2026: width="stretch"
             if up and st.button("🚀 Procesar", type="primary", width="stretch"):
                 with utils.spinner_futbolero():
                     ok, msg = db.process_csv_upload(pd.read_csv(up), user['id'])
                 if ok: st.toast("¡Cargado!", icon="📦"); st.success(msg); time.sleep(1); st.rerun()
                 else: st.error(msg)
-        
         st.divider()
-        
         if user.get('is_premium', False): 
             st.success("💎 PREMIUM")
         else:
@@ -154,7 +144,6 @@ else:
             if contacts >= 1: st.progress(1.0, text="Límite: 1/1 (Agotado)")
             else: st.progress(0.0, text="Límite: 0/1 (Disponible)")
             
-            # FIX 2026: width="stretch"
             if st.button("💎 Hacete Premium", width="stretch"): 
                 market.mostrar_modal_premium()
             
@@ -165,13 +154,10 @@ else:
                         ok, msg = db.verificar_pago_mp(op, user['id'])
                     if ok: st.toast("¡Premium!", icon="💎"); st.rerun()
                     else: st.error(msg)
-                    
         if st.button("Chau / Salir"): st.session_state.user = None; st.rerun()
 
-    # --- APP PRINCIPAL ---
     st.header("📖 Mi Álbum")
     st.selectbox("Sección:", list(config.ALBUM_PAGES.keys()), key="seleccion_pais_key")
-    
     inventory.render_inventory(user, start, end, seleccion_pais)
     st.divider()
     market.render_market(user)
