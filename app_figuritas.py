@@ -3,7 +3,7 @@ import pandas as pd
 import time
 import config
 import database as db
-import utils # Importamos utils para usar el spinner en la carga masiva
+import utils 
 
 # Importamos las vistas
 from views import auth, inventory, market
@@ -11,25 +11,18 @@ from views import auth, inventory, market
 # --- CONFIGURACIÓN UI ---
 st.set_page_config(page_title="Figus 26 | Colección", layout="wide", page_icon="⚽")
 
-# --- ESTILOS CSS (CORREGIDO) ---
+# --- ESTILOS CSS ---
 st.markdown("""
     <style>
     .stHeading a { display: none !important; }
     [data-testid="stHeaderActionElements"] { display: none !important; }
     section[data-testid="stSidebar"] { min-width: 350px !important; max-width: 350px !important; }
     section[data-testid="stSidebar"] .block-container { padding-top: 2rem !important; padding-bottom: 2rem !important; }
-    
-    /* Pills Verdes */
     div[data-testid="stPills"] span[aria-selected="true"] { background-color: #2e7d32 !important; border-color: #2e7d32 !important; color: white !important; }
     div[data-testid="stPills"] button[aria-selected="true"] { background-color: #2e7d32 !important; border-color: #2e7d32 !important; color: white !important; }
-    
-    /* Botones Redondeados (Mantenemos el estilo lindo, pero sin afectar el tamaño) */
     button[kind="secondary"] { border-radius: 20px; }
-    
-    /* Centrar contenido de columnas (útil para paginación) */
     div[data-testid="column"] { text-align: center; }
-    
-    /* --- ELIMINADO EL CSS QUE APLASTABA LOS BOTONES --- */
+    div.stButton > button:first-child { min-height: 0px; padding-top: 0px; padding-bottom: 0px; }
     </style>
 """, unsafe_allow_html=True)
 
@@ -40,12 +33,16 @@ if 'page_canjes' not in st.session_state: st.session_state.page_canjes = 1
 if 'page_ventas' not in st.session_state: st.session_state.page_ventas = 1
 if 'barrera_superada' not in st.session_state: st.session_state.barrera_superada = False
 
-# --- MODAL BIENVENIDA ---
+# --- MODAL BIENVENIDA (TEXTO CORREGIDO) ---
 @st.dialog("⚠️ Bienvenido a Figus 26")
 def mostrar_barrera_entrada():
     st.warning("🔞 Esta aplicación es para mayores de 18 años.")
-    st.info("🤝 Facilitamos el contacto entre coleccionistas, pero no intervenimos en los canjes.")
+    
+    # TEXTO RECUPERADO COMPLETO:
+    st.info("🤝 Facilitamos el contacto entre coleccionistas, pero no intervenimos en los canjes. No nos hacemos responsables de las reuniones pactadas por los usuarios ni de las transacciones realizadas.")
+    
     st.markdown("**Al continuar, declarás bajo juramento que sos mayor de edad.**")
+    
     if st.button("✅ Entendido, soy +18", type="primary", use_container_width=True):
         st.session_state.barrera_superada = True
         st.rerun()
@@ -88,7 +85,7 @@ else:
     start, end = config.ALBUM_PAGES[seleccion_pais]
     total_album = sum([(v[1] - v[0] + 1) for v in config.ALBUM_PAGES.values()])
     
-    # Obtener totales
+    # Obtener totales para barra de progreso
     _, _, df_full = db.get_inventory_status(user['id'], start, end)
     try: tengo_total = df_full[df_full['status'] == 'tengo'].shape[0]
     except: tengo_total = 0
@@ -98,11 +95,12 @@ else:
         st.title(f"Hola {user['nick']}")
         st.caption(f"📍 {user.get('province', '')} - {user.get('zone', '')}")
         st.caption(f"⭐ Reputación: {user.get('reputation', 0)}")
+        
         st.divider()
         st.progress(min(tengo_total / total_album, 1.0), text="🏆 Mi Álbum")
         st.caption(f"Tenés **{tengo_total}** de {total_album}.")
-        st.divider()
         
+        st.divider()
         with st.expander("📤 Carga Masiva (CSV)"):
             col_a, col_b = st.columns(2)
             if col_a.button("❓ Ayuda"): mostrar_instrucciones_csv()
@@ -110,22 +108,30 @@ else:
             col_b.download_button("⬇️ Plantilla", df_plantilla.to_csv(index=False).encode('utf-8'), "plantilla.csv", "text/csv")
             up = st.file_uploader("Subí tu CSV", type="csv")
             if up and st.button("🚀 Procesar", type="primary"):
-                # Usamos el spinner aquí también
                 with utils.spinner_futbolero():
                     ok, msg = db.process_csv_upload(pd.read_csv(up), user['id'])
                 if ok: st.toast("¡Cargado!", icon="📦"); st.success(msg); time.sleep(1); st.rerun()
                 else: st.error(msg)
                 
         st.divider()
-        if user.get('is_premium', False): st.success("💎 PREMIUM")
+        
+        if user.get('is_premium', False): 
+            st.success("💎 PREMIUM")
         else:
             st.info("👤 GRATIS")
+            
+            contacts = user.get('daily_contacts_count', 0)
+            if contacts >= 1: 
+                st.progress(1.0, text="Límite: 1/1 (Agotado)")
+            else: 
+                st.progress(0.0, text="Límite: 0/1 (Disponible)")
+            
             if st.button("💎 Hacete Premium", use_container_width=True): 
                 market.mostrar_modal_premium()
+            
             with st.expander("Validar Pago"):
                 op = st.text_input("ID Op")
                 if op and st.button("Validar"):
-                    # Spinner al validar pago
                     with utils.spinner_futbolero():
                         ok, msg = db.verificar_pago_mp(op, user['id'])
                     if ok: st.toast("¡Premium!", icon="💎"); st.rerun()
