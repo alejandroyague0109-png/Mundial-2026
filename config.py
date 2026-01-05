@@ -8,7 +8,7 @@ except:
     ADMIN_PHONE = "0000000000" # Fallback por seguridad
 
 PRECIO_PREMIUM = 5000 
-MP_LINK = "https://link.mercadopago.com.ar/..." 
+MP_LINK = "https://mpago.la/1DR8e6S" 
 
 # --- ESTRUCTURA DEL ÁLBUM ---
 ALBUM_PAGES = {
