@@ -28,13 +28,13 @@ if 'unlocked_users' not in st.session_state: st.session_state.unlocked_users = s
 def mostrar_modal_premium():
     st.markdown(f"""
     ### 🚀 Límite Alcanzado
-    Actualmente tienes **1 contacto gratis por día**.
+    Tienes **1 contacto gratis por día**.
     
     **Con Premium obtienes:**
-    * 🔓 **Contactos Ilimitados:** Habla con todos sin restricciones.
-    * 📐 **Triangulaciones:** Acceso a cadenas de cambio inteligentes.
-    * 🌍 **Un pago único:** Dura todo el mundial (no es mensual).
-    * ⭐ **Destacado:** Tu nombre aparecerá con confianza.
+    * 🔓 **Ilimitado:** Contacta sin restricciones.
+    * 📐 **Triangulaciones:** Acceso a cadenas de cambio.
+    * 🌍 **Un pago único:** Todo el mundial.
+    * ⭐ **Destacado:** Perfil verificado.
     
     ---
     ### Precio Final: **${config.PRECIO_PREMIUM}**
@@ -45,8 +45,12 @@ def mostrar_modal_premium():
 @st.dialog("⚠️ Bienvenido a Figus 26")
 def mostrar_barrera_entrada():
     st.warning("🔞 Esta aplicación es para mayores de 18 años.")
+    
+    # --- TEXTO LEGAL RECUPERADO ---
     st.info("🤝 Facilitamos el contacto entre coleccionistas, pero no intervenimos en los canjes. No nos hacemos responsables de las reuniones pactadas por los usuarios ni de las transacciones realizadas.")
+    
     st.markdown("**Al continuar, declaras bajo juramento que eres mayor de edad.**")
+    
     if st.button("✅ Entendido, soy +18", type="primary", use_container_width=True):
         st.session_state.barrera_superada = True
         st.rerun()
@@ -62,6 +66,8 @@ def mostrar_instrucciones_csv():
     1. **num**: Número de la figurita (ej: 10, 150).
     2. **status**: Escribe `tengo` o `repetida`.
     3. **price**: Precio de venta (0 si es para canje).
+    
+    *(Opcional: puedes agregar una columna 'quantity' para la cantidad)*
     """)
 
 # --- LOGIN / REGISTRO ---
@@ -73,18 +79,14 @@ if not st.session_state.user:
     st.title("🏆 Figus 26")
     t1, t2 = st.tabs(["Ingresar", "Registrarse"])
     with t1:
-        p = st.text_input("Teléfono", key="login_tel")
-        pw = st.text_input("Contraseña", type="password", key="login_pass")
+        p = st.text_input("Teléfono", key="l_p")
+        pw = st.text_input("Contraseña", type="password", key="l_pw")
         if st.button("Entrar", type="primary"):
             u, m = db.login_user(p, pw)
-            if u: 
-                st.session_state.user = u
-                st.rerun()
+            if u: st.session_state.user = u; st.rerun()
             else: st.error(m)
     with t2:
-        n = st.text_input("Nick")
-        ph = st.text_input("Teléfono", key="reg_tel")
-        pw2 = st.text_input("Pass", type="password", key="reg_pass")
+        n = st.text_input("Nick"); ph = st.text_input("Teléfono", key="r_p"); pw2 = st.text_input("Crear Pass", type="password", key="r_pw")
         z = st.selectbox("Zona", ["Centro", "Godoy Cruz", "Guaymallén", "Las Heras"])
         st.divider()
         if st.button("Legales", type="secondary"): ver_contrato()
@@ -129,7 +131,8 @@ with st.sidebar:
         col_a, col_b = st.columns(2)
         if col_a.button("❓ Ayuda", use_container_width=True): mostrar_instrucciones_csv()
         
-        df_plantilla = pd.DataFrame([{"num": 10, "status": "tengo", "price": 0}, {"num": 25, "status": "repetida", "price": 500}])
+        # Plantilla Descargable
+        df_plantilla = pd.DataFrame([{"num": 10, "status": "tengo", "price": 0, "quantity": 1}, {"num": 25, "status": "repetida", "price": 500, "quantity": 2}])
         csv_plantilla = df_plantilla.to_csv(index=False).encode('utf-8')
         col_b.download_button("⬇️ Plantilla", data=csv_plantilla, file_name="plantilla.csv", mime="text/csv", use_container_width=True)
         
@@ -171,36 +174,30 @@ posibles_repes = sorted(seleccion_tengo) if seleccion_tengo else []
 ids_repes_val = [k for k in repetidas_info.keys() if k in posibles_repes]
 seleccion_repes = st.pills("Repetidas", posibles_repes, default=ids_repes_val, selection_mode="multi", key=f"repes_{seleccion_pais}")
 
-edited_df = pd.DataFrame()
 if seleccion_repes:
-    # --- CAMBIO VISUAL PARA NOTAR EL MENÚ DESPLEGABLE ---
-    st.info("👇 **Tip:** Haz doble clic en la celda de 'Modo' para cambiar entre **Canje** y **Venta**.")
-    
+    st.info("👇 **Tip:** Doble clic en 'Modo' para cambiar entre **Canje** y **Venta**. Ajusta la 'Cantidad' si tienes varias.")
     data = []
     for n in seleccion_repes:
-        precio_actual = repetidas_info.get(n,{}).get('price',0)
-        # Usamos EMOJIS para que resalte
-        modo_actual = "💰 Venta" if precio_actual > 0 else "🔄 Canje"
-        data.append({"Figurita": n, "Modo": modo_actual, "Precio": precio_actual})
+        info = repetidas_info.get(n, {})
+        precio = info.get('price', 0)
+        qty = info.get('quantity', 1)
+        modo = "💰 Venta" if precio > 0 else "🔄 Canje"
+        data.append({"Figurita": n, "Cantidad": qty, "Modo": modo, "Precio": precio})
         
     edited_df = st.data_editor(
         pd.DataFrame(data), 
         column_config={
             "Figurita": st.column_config.NumberColumn(disabled=True),
-            "Modo": st.column_config.SelectboxColumn(
-                options=["🔄 Canje", "💰 Venta"], # Opciones con Emojis
-                required=True,
-                help="Elige si quieres cambiarla por otra o venderla."
-            ),
+            "Cantidad": st.column_config.NumberColumn(min_value=1, step=1, help="Copias disponibles"),
+            "Modo": st.column_config.SelectboxColumn(options=["🔄 Canje", "💰 Venta"], required=True),
             "Precio": st.column_config.NumberColumn(min_value=0, step=100)
         }, 
-        hide_index=True, 
-        use_container_width=True
+        hide_index=True, use_container_width=True
     )
-
-if st.button("💾 GUARDAR CAMBIOS", type="primary", use_container_width=True):
-    db.save_inventory_positive(user['id'], start, end, seleccion_tengo, edited_df)
-    st.toast("Guardado", icon="✅"); time.sleep(0.5); st.rerun()
+    
+    if st.button("💾 GUARDAR CAMBIOS", type="primary", use_container_width=True):
+        db.save_inventory_positive(user['id'], start, end, seleccion_tengo, edited_df)
+        st.toast("Guardado", icon="✅"); time.sleep(0.5); st.rerun()
 
 # --- MERCADO ---
 st.divider()
@@ -210,34 +207,29 @@ matches, ventas = db.find_matches(user['id'], market_df)
 
 t1, t2 = st.tabs([f"Canjes ({len(matches)})", f"Ventas ({len(ventas)})"])
 
-def render_market_card(item, type_card):
+def render_card(item, tipo):
     with st.container(border=True):
         c1, c2, c3 = st.columns([3, 1, 1])
-        if type_card == 'canje':
-            c1.markdown(f"🔄 **{item['nick']}** (⭐{item['reputation']}) cambia **#{item['figu']}** por tu **#{item['te_pide']}**")
-        else:
-            c1.markdown(f"💰 **{item['nick']}** (⭐{item['reputation']}) vende **#{item['figu']}** a **${item['price']}**")
-        
         target_id = item['target_id']
-        is_unlocked = target_id in st.session_state.unlocked_users
+        fig_recibo = item['figu']
         
-        if is_unlocked:
-            c2.link_button("🟢 Abrir Chat", f"https://wa.me/549{item['phone']}", use_container_width=True)
+        if tipo == 'canje':
+            fig_entrego = item['te_pide']
+            c1.markdown(f"🔄 **{item['nick']}** (⭐{item['reputation']}) cambia **#{fig_recibo}** por tu **#{fig_entrego}**")
+            
+            # --- CONFIRMACIÓN DE CANJE ---
+            with st.expander("⚙️ Opciones"):
+                st.caption("Si ya hiciste el intercambio:")
+                if st.button(f"✅ Confirmar Canje #{fig_recibo}", key=f"swap_{fig_recibo}_{target_id}"):
+                    ok, msg = db.register_exchange(user['id'], fig_entrego, fig_recibo)
+                    if ok: st.balloons(); st.success(msg); time.sleep(3); st.rerun()
+                    else: st.error(msg)
         else:
-            if c2.button("🔓 Contactar", key=f"ul_{type_card}_{item['figu']}_{target_id}", use_container_width=True):
-                if db.check_contact_limit(user):
-                    db.consume_credit(user)
-                    st.session_state.unlocked_users.add(target_id)
-                    st.rerun()
-                else: mostrar_modal_premium()
-        
-        if c3.button("👍", key=f"vt_{type_card}_{item['figu']}_{target_id}"):
-            ok, msg = db.votar_usuario(user['id'], target_id)
-            st.toast(msg)
+            c1.markdown(f"💰 **{item['nick']}** (⭐{item['reputation']}) vende **#{fig_recibo}** a **${item['price']}**")
 
-with t1:
-    if not matches: st.info("No hay canjes.")
-    for m in matches: render_market_card(m, 'canje')
-with t2:
-    if not ventas: st.info("No hay ventas.")
-    for v in ventas: render_market_card(v, 'venta')
+        # Botón Contacto
+        is_unlocked = target_id in st.session_state.unlocked_users
+        if is_unlocked:
+            c2.link_button("🟢 Chat WhatsApp", f"https://wa.me/549{item['phone']}", use_container_width=True)
+        else:
+            if c2.button("🔓 Contactar", key=f"ul_{tipo}_{fig_recibo}_{target
