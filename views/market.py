@@ -15,19 +15,16 @@ def reset_pagination():
 def change_page(key, delta):
     st.session_state[key] += delta
 
-# --- MODAL SEGURIDAD (TEXTO ORIGINAL RESTAURADO) ---
+# --- MODAL SEGURIDAD ---
 @st.dialog("🛡️ Consejos de Seguridad")
 def modal_seguridad(target_id, user):
     st.markdown("### ⚠️ Antes de contactar:")
     st.info("Para jugar tranquilo en este mercado:")
-    
-    # Texto original:
     st.markdown("""
     * 🏢 **Campo Neutral:** Juntate siempre en zonas públicas y concurridas.
     * 👀 **VAR:** Revisá el estado de las figus antes de entregar las tuyas.
     * 💰 **Sin Adelantos:** No mandes plata antes del encuentro.
     """)
-    
     st.divider()
     st.caption("Si confirmás, usás 1 crédito diario (si no sos Premium) para ver el número.")
     
@@ -45,6 +42,7 @@ def modal_seguridad(target_id, user):
         else:
             st.error("Error: Te quedaste sin créditos por hoy.")
 
+# --- MODAL PREMIUM ---
 @st.dialog("💎 Pasate a Premium", width="small")
 def mostrar_modal_premium():
     st.markdown(f"""
@@ -94,15 +92,20 @@ def render_card(item, tipo, user):
 
         with col_actions:
             if is_unlocked:
-                if phone_target: st.link_button("💬 Chat", link_wa, type="primary", use_container_width=True)
+                # BOTÓN VERDE WHATSAPP
+                if phone_target: 
+                    st.link_button("🟢 WhatsApp", link_wa, type="primary", use_container_width=True)
+                
+                # BOTÓN FICHAJE CERRADO
                 if tipo == 'canje':
-                    if st.button("✅ Fin", key=f"sw_{fig_recibo}_{target_id}", help="Marcar como intercambiada", use_container_width=True):
+                    if st.button("✅ Fichaje cerrado", key=f"sw_{fig_recibo}_{target_id}", help="Marcar como intercambiada", use_container_width=True):
                         with utils.spinner_futbolero():
                             ok, msg = db.register_exchange(user['id'], fig_entrego, fig_recibo)
-                        if ok: st.toast("¡Golazo!", icon="⚽"); time.sleep(2); st.rerun()
+                        if ok: st.toast("¡Golazo!", icon="⚽"); st.success(msg); time.sleep(3); st.rerun()
                         else: st.error(msg)
             else:
-                if st.button("🔒 Ver", key=f"ul_{tipo}_{fig_recibo}_{target_id}", type="secondary", use_container_width=True):
+                # BOTÓN DESBLOQUEAR
+                if st.button("🔓 Desbloquear", key=f"ul_{tipo}_{fig_recibo}_{target_id}", type="secondary", use_container_width=True):
                     if db.check_contact_limit(user):
                         if st.session_state.skip_security_modal:
                             with utils.spinner_futbolero():
@@ -112,13 +115,14 @@ def render_card(item, tipo, user):
                             st.rerun()
                         else: modal_seguridad(target_id, user)
                     else: mostrar_modal_premium()
+            
             if st.button("👍", key=f"vt_{tipo}_{fig_recibo}_{target_id}", help="Recomendar usuario", use_container_width=True):
                 ok, m = db.votar_usuario(user['id'], target_id)
                 st.toast(m)
 
 def paginar_y_mostrar(lista_items, tipo_key, tipo_card, user):
     if not lista_items:
-        st.info("No hay resultados con estos filtros.")
+        st.info("No hay resultados visibles.")
         return
     total_items = len(lista_items)
     total_pages = (total_items - 1) // ITEMS_POR_PAGINA + 1
@@ -165,7 +169,6 @@ def render_market(user):
     matches_filtrados = aplicar(matches)
     ventas_filtradas = aplicar(ventas)
 
-    # Diagnóstico inteligente
     total_raw_c = len(matches)
     total_raw_v = len(ventas)
     visibles_c = len(matches_filtrados)
