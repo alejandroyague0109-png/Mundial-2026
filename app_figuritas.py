@@ -34,7 +34,7 @@ if 'page_canjes' not in st.session_state: st.session_state.page_canjes = 1
 if 'page_ventas' not in st.session_state: st.session_state.page_ventas = 1
 if 'barrera_superada' not in st.session_state: st.session_state.barrera_superada = False
 
-# --- MODAL BIENVENIDA (TEXTO ORIGINAL RESTAURADO) ---
+# --- MODAL BIENVENIDA ---
 @st.dialog("⚠️ Bienvenido a Figus 26")
 def mostrar_barrera_entrada():
     st.warning("🔞 Esta aplicación es para mayores de 18 años.")
@@ -45,15 +45,16 @@ def mostrar_barrera_entrada():
         st.session_state.barrera_superada = True
         st.rerun()
 
-# --- MODAL AYUDA CSV ---
+# --- MODAL AYUDA CSV (TEXTO COMPLETADO) ---
 @st.dialog("📤 Ayuda CSV")
 def mostrar_instrucciones_csv():
     st.markdown("""
     ### Formato del Archivo
     Debe tener 3 columnas obligatorias:
-    1. **num**: Número de la figurita.
-    2. **status**: `tengo` o `repetida`.
+    1. **num**: Número de la figurita (ej: 10, 150).
+    2. **status**: Escribí `tengo` o `repetida`.
     3. **price**: Precio de venta (0 si es para canje).
+    *(Opcional: 'quantity' para definir cantidad exacta)*
     """)
 
 # --- FLUJO LÓGICO ---
