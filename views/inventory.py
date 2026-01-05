@@ -2,20 +2,20 @@ import streamlit as st
 import pandas as pd
 import time
 import database as db
-import config
+import utils # <--- Importamos utils
 
 def render_inventory(user, start, end, seleccion_pais):
     st.header("📖 Mi Álbum")
     
-    # Cálculos locales
+    # Spinner al cargar tus figus
+    # Nota: No cacheamos esto porque queremos ver cambios instantáneos,
+    # pero es tan rápido que quizás ni se vea el spinner.
     ids_tengo_db, repetidas_info, _ = db.get_inventory_status(user['id'], start, end)
     key_pills = f"pills_tengo_{seleccion_pais}"
 
-    # Inicializar estado si no existe
     if key_pills not in st.session_state:
         st.session_state[key_pills] = ids_tengo_db
 
-    # --- SECCIÓN 1: TUS FIGUS ---
     col_head_1, col_btn_all, col_btn_none = st.columns([4, 1, 1])
     col_head_1.markdown("### 1️⃣ Tus Figus")
 
@@ -29,7 +29,6 @@ def render_inventory(user, start, end, seleccion_pais):
 
     seleccion_tengo = st.pills("Tengo", list(range(start, end + 1)), selection_mode="multi", key=key_pills, label_visibility="collapsed")
 
-    # --- SECCIÓN 2: REPETIDAS ---
     st.markdown("### 2️⃣ Repes")
     posibles_repes = sorted(seleccion_tengo) if seleccion_tengo else []
     ids_repes_val = [k for k in repetidas_info.keys() if k in posibles_repes]
@@ -57,5 +56,10 @@ def render_inventory(user, start, end, seleccion_pais):
         )
         
         if st.button("💾 GUARDAR CAMBIOS", type="primary", use_container_width=True):
-            db.save_inventory_positive(user['id'], start, end, seleccion_tengo, edited_df)
-            st.toast("Joyas guardadas", icon="💾"); time.sleep(0.5); st.rerun()
+            # AQUI ESTA EL FEEDBACK VISUAL
+            with utils.spinner_futbolero():
+                db.save_inventory_positive(user['id'], start, end, seleccion_tengo, edited_df)
+            
+            st.toast("Joyas guardadas", icon="💾")
+            time.sleep(0.5)
+            st.rerun()
