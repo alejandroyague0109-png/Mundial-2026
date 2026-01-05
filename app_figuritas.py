@@ -8,7 +8,7 @@ import database as db
 # --- CONFIGURACIÓN UI ---
 st.set_page_config(page_title="Figus 26 | Colección", layout="wide", page_icon="⚽")
 
-# --- ESTILOS CSS (VERSIÓN ESTABLE) ---
+# --- ESTILOS CSS ---
 st.markdown("""
     <style>
     /* 1. SIDEBAR: Ancho (350px) y Compacto Verticalmente */
@@ -47,6 +47,13 @@ st.markdown("""
 
     /* 3. Botones secundarios redondeados */
     button[kind="secondary"] { border-radius: 20px; }
+    
+    /* 4. Ajuste para centrar imágenes de avatar verticalmente */
+    [data-testid="stImage"] {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
     </style>
 """, unsafe_allow_html=True)
 
@@ -55,6 +62,14 @@ if 'unlocked_users' not in st.session_state: st.session_state.unlocked_users = s
 
 # --- CONSTANTES ---
 ZONAS_DISPONIBLES = ["Centro", "Godoy Cruz", "Guaymallén", "Las Heras"]
+
+# --- FUNCIÓN DE AVATAR (NUEVO) ---
+def get_avatar_url(nick):
+    """Genera un avatar único y consistente basado en el nombre."""
+    # Usamos el estilo 'avataaars' que son personajes, o 'initials' para letras.
+    # 'avataaars' da una sensación más de red social.
+    safe_nick = quote(str(nick).strip())
+    return f"https://api.dicebear.com/9.x/avataaars/svg?seed={safe_nick}&backgroundColor=b6e3f4,c0aede,d1d4f9"
 
 # --- MODALES ---
 
@@ -102,15 +117,11 @@ def mostrar_instrucciones_csv():
 
 # --- LOGIN / REGISTRO ---
 
-# Control de acceso +18
 if 'barrera_superada' not in st.session_state: st.session_state.barrera_superada = False
 
-# Si no ha superado la barrera, mostramos el modal.
-# Si lo cierra sin aceptar, la variable sigue en False.
 if not st.session_state.barrera_superada:
     mostrar_barrera_entrada()
 
-# Variable para bloquear los botones de ingreso
 is_locked = not st.session_state.barrera_superada
 
 if 'user' not in st.session_state: st.session_state.user = None
@@ -121,8 +132,6 @@ if not st.session_state.user:
     with t1:
         p = st.text_input("Teléfono", key="l_p")
         pw = st.text_input("Contraseña", type="password", key="l_pw")
-        
-        # Botón bloqueado si no aceptó +18
         if st.button("Entrar", type="primary", disabled=is_locked):
             u, m = db.login_user(p, pw)
             if u: st.session_state.user = u; st.rerun()
@@ -135,7 +144,6 @@ if not st.session_state.user:
         if st.button("Legales", type="secondary"): ver_contrato()
         acepto = st.checkbox("Acepto términos")
         
-        # Botón bloqueado si no aceptó +18 O no aceptó términos
         if st.button("Crear Cuenta", disabled=(is_locked or not acepto)):
             u, m = db.register_user(n, ph, z, pw2)
             if u: st.success("Creado!"); st.balloons()
@@ -163,8 +171,13 @@ tengo_global_live = (tengo_db_total - tengo_db_esta_seccion) + tengo_live_count
 
 # --- SIDEBAR ---
 with st.sidebar:
-    st.title(f"Hola {user['nick']}")
-    st.caption(f"⭐ Reputación: {user.get('reputation', 0)}")
+    # CABECERA DE PERFIL CON AVATAR
+    col_av, col_info = st.columns([1, 2])
+    with col_av:
+        st.image(get_avatar_url(user['nick']), use_container_width=True)
+    with col_info:
+        st.title(f"Hola {user['nick']}")
+        st.caption(f"⭐ Reputación: {user.get('reputation', 0)}")
     
     st.divider()
     progreso = min(tengo_global_live / total_album, 1.0)
@@ -272,32 +285,42 @@ t1, t2 = st.tabs([f"Canjes ({len(matches_filtrados)})", f"Ventas ({len(ventas_fi
 
 def render_card(item, tipo):
     with st.container(border=True):
-        c1, c2, c3 = st.columns([3, 1, 1])
+        # AÑADIMOS COLUMNA C0 PARA EL AVATAR
+        # c0: Avatar, c1: Info, c2: Acción, c3: Voto
+        c0, c1, c2, c3 = st.columns([0.8, 3, 1.2, 0.5])
+        
         target_id = item['target_id']
         fig_recibo = item['figu']
         
-        # MENSAJE WHATSAPP
-        phone_target = item['phone']
-        if tipo == 'canje':
-            fig_entrego = item['te_pide']
-            texto_base = f"Hola! Vi en Figus 26 que cambias la figurita #{fig_recibo} por la #{fig_entrego}. ¿Hacemos canje?"
-            c1.markdown(f"🔄 **{item['nick']}** ({item['zone']}) cambia **#{fig_recibo}** por tu **#{fig_entrego}**")
-        else:
-            precio = item['price']
-            texto_base = f"Hola! Vi en Figus 26 que vendes la figurita #{fig_recibo} a ${precio}. ¿La tienes disponible?"
-            c1.markdown(f"💰 **{item['nick']}** ({item['zone']}) vende **#{fig_recibo}** a **${precio}**")
+        # COLUMNA 0: AVATAR DEL USUARIO
+        with c0:
+            st.image(get_avatar_url(item['nick']), use_container_width=True)
+
+        # COLUMNA 1: INFO
+        with c1:
+            # GENERADOR DE MENSAJE WHATSAPP
+            phone_target = item['phone']
+            if tipo == 'canje':
+                fig_entrego = item['te_pide']
+                texto_base = f"Hola! Vi en Figus 26 que cambias la figurita #{fig_recibo} por la #{fig_entrego}. ¿Hacemos canje?"
+                st.markdown(f"🔄 **{item['nick']}** ({item['zone']})")
+                st.markdown(f"Cambia **#{fig_recibo}** por tu **#{fig_entrego}**")
+            else:
+                precio = item['price']
+                texto_base = f"Hola! Vi en Figus 26 que vendes la figurita #{fig_recibo} a ${precio}. ¿La tienes disponible?"
+                st.markdown(f"💰 **{item['nick']}** ({item['zone']})")
+                st.markdown(f"Vende **#{fig_recibo}** a **${precio}**")
 
         mensaje_encoded = quote(texto_base)
         link_wa = f"https://wa.me/549{phone_target}?text={mensaje_encoded}"
 
-        # ACCIÓN
+        # COLUMNA 2: ACCIÓN
         is_unlocked = target_id in st.session_state.unlocked_users
         
         if is_unlocked:
             c2.link_button("🟢 Abrir Chat", link_wa, use_container_width=True)
             if tipo == 'canje':
-                with c1.expander("⚙️ Confirmar Canje"):
-                    st.caption("Solo si ya realizaste el intercambio:")
+                with c1.expander("⚙️ Confirmar"):
                     if st.button(f"✅ Registrar #{fig_recibo}", key=f"swap_{fig_recibo}_{target_id}"):
                         ok, msg = db.register_exchange(user['id'], fig_entrego, fig_recibo)
                         if ok: st.balloons(); st.success(msg); time.sleep(3); st.rerun()
@@ -310,6 +333,7 @@ def render_card(item, tipo):
                     st.rerun()
                 else: mostrar_modal_premium()
         
+        # COLUMNA 3: VOTO
         if c3.button("👍", key=f"vt_{tipo}_{fig_recibo}_{target_id}"):
             ok, m = db.votar_usuario(user['id'], target_id)
             st.toast(m)
