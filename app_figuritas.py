@@ -40,14 +40,12 @@ st.markdown("""
     /* Centrar Paginación */
     div[data-testid="column"] { text-align: center; }
 
-    /* --- CORRECCIÓN BOTONES (MISMA ALTURA Y ALINEACIÓN) --- */
     div.stButton > button, div.stDownloadButton > button { 
         min-height: 45px !important; 
         height: 45px !important;
         margin-top: 0px !important;
     } 
 
-    /* ESTILO PARA BOTÓN WHATSAPP (Secundario = Fondo Blanco) */
     a[kind="secondary"] {
         background-color: #ffffff !important;
         color: #000000 !important;
@@ -106,11 +104,27 @@ else:
         st.session_state.unlocked_users = set()
         st.toast("📅 ¡Nuevo día! Se renovaron tus créditos.", icon="☀️")
 
+    # --- LÓGICA DE NOTIFICACIONES PREMIUM (WISHLIST) ---
+    if user.get('is_premium', False) and 'wishlist_notified' not in st.session_state:
+        # Escaneo silencioso del mercado
+        m_df = db.fetch_market(user['id'])
+        # find_matches ya tiene la lógica is_wishlist
+        matches, ventas = db.find_matches(user['id'], m_df)
+        
+        # Filtramos las que son Wishlist
+        wish_hits = [x for x in matches + ventas if x.get('is_wishlist', False)]
+        
+        if wish_hits:
+            qty = len(wish_hits)
+            st.toast(f"🔔 ¡Atención! Hay {qty} figuritas de tu Wishlist disponibles en el mercado.", icon="🎉")
+        
+        # Marcamos como notificado para no spamear en cada click
+        st.session_state.wishlist_notified = True
+
     seleccion_pais = st.session_state.get("seleccion_pais_key", list(config.ALBUM_PAGES.keys())[0])
     start, end = config.ALBUM_PAGES[seleccion_pais]
     total_album = sum([(v[1] - v[0] + 1) for v in config.ALBUM_PAGES.values()])
     
-    # --- CORRECCIÓN CRÍTICA: Desempaquetar 4 valores (el 4to es el DataFrame completo) ---
     _, _, _, df_full = db.get_inventory_status(user['id'], start, end)
     
     try: tengo_total = df_full[df_full['status'] == 'tengo'].shape[0]
