@@ -38,6 +38,7 @@ def modal_seguridad(target_id, user):
         if db.check_contact_limit(user):
             with utils.spinner_futbolero():
                 db.consume_credit(user)
+                # GUARDAR EN DB
                 db.log_unlock(user['id'], target_id)
                 st.session_state.unlocked_users.add(target_id)
                 time.sleep(1)
@@ -62,6 +63,9 @@ def mostrar_modal_premium():
     st.link_button("👉 Pagá con Mercado Pago", config.MP_LINK, type="primary", use_container_width=True)
 
 def render_card(item, tipo, user, is_pending_view=False):
+    # SOLUCIÓN DUPLICATE KEY: Creamos un sufijo único según la vista
+    view_tag = "pend" if is_pending_view else "market"
+    
     with st.container(border=True):
         col_info, col_actions = st.columns([0.75, 0.25])
         target_id = item['target_id']
@@ -120,8 +124,10 @@ def render_card(item, tipo, user, is_pending_view=False):
                 if phone_target: 
                     st.link_button("🟢 WhatsApp", link_wa, type="secondary", use_container_width=True)
                 
+                # Botones exclusivos de Pendientes
                 if is_pending_view:
-                    if st.button("✅ Fichaje cerrado", key=f"pd_ok_{fig_recibo}_{target_id}", help="Concretar y quitar de pendientes", width="stretch"):
+                    # Agregamos view_tag a la key para evitar colisiones
+                    if st.button("✅ Fichaje cerrado", key=f"pd_ok_{fig_recibo}_{target_id}_{view_tag}", help="Concretar y quitar de pendientes", width="stretch"):
                         with utils.spinner_futbolero():
                             if tipo == 'canje':
                                 ok, msg = db.register_exchange(user['id'], fig_entrego, fig_recibo, target_id_to_remove=target_id)
@@ -133,13 +139,15 @@ def render_card(item, tipo, user, is_pending_view=False):
                             st.toast("¡Golazo!", icon="⚽"); st.success(msg); time.sleep(3); st.rerun()
                         else: st.error(msg)
                     
-                    if st.button("❌ Ocultar", key=f"pd_no_{fig_recibo}_{target_id}", width="stretch"):
+                    if st.button("❌ Ocultar", key=f"pd_no_{fig_recibo}_{target_id}_{view_tag}", width="stretch"):
                          db.remove_unlock(user['id'], target_id)
                          st.session_state.unlocked_users.discard(target_id)
                          st.rerun()
 
             else:
-                if st.button("🔓 Desbloquear", key=f"ul_{tipo}_{fig_recibo}_{target_id}", type="secondary", width="stretch"):
+                # Botón de Desbloquear (Solo en Market/Global)
+                # Agregamos view_tag por seguridad aunque no debería aparecer en pendientes
+                if st.button("🔓 Desbloquear", key=f"ul_{tipo}_{fig_recibo}_{target_id}_{view_tag}", type="secondary", width="stretch"):
                     if db.check_contact_limit(user):
                         if st.session_state.skip_security_modal:
                             with utils.spinner_futbolero():
@@ -151,7 +159,8 @@ def render_card(item, tipo, user, is_pending_view=False):
                         else: modal_seguridad(target_id, user)
                     else: mostrar_modal_premium()
             
-            if st.button("⭐ Recomendar", key=f"vt_{tipo}_{fig_recibo}_{target_id}", help="Dar voto positivo", width="stretch"):
+            # Botón Recomendar (Aparece en ambos lados, este era el culpable del error)
+            if st.button("⭐ Recomendar", key=f"vt_{tipo}_{fig_recibo}_{target_id}_{view_tag}", help="Dar voto positivo", width="stretch"):
                 ok, m = db.votar_usuario(user['id'], target_id)
                 st.toast(m)
 
@@ -176,7 +185,6 @@ def paginar_y_mostrar(lista_items, tipo_key, tipo_card, user, is_pending_view=Fa
     total_items = len(lista_items)
     total_pages = (total_items - 1) // ITEMS_POR_PAGINA + 1
     
-    # FIX: ASEGURAR QUE LA KEY EXISTA ANTES DE USARLA
     if tipo_key not in st.session_state: 
         st.session_state[tipo_key] = 1
         
@@ -217,7 +225,7 @@ def render_market(user):
     
     matches, ventas = db.find_matches(user['id'], market_df)
 
-    # Lógica Pendientes
+    # Pendientes
     unlocked_ids = st.session_state.unlocked_users
     pendientes_total = []
     if unlocked_ids:
