@@ -136,8 +136,20 @@ def render_card(item, tipo, user):
                 st.toast(m)
 
 def paginar_y_mostrar(lista_items, tipo_key, tipo_card, user):
-    # Scroll automático al tope de la lista
-    components.html("""<script>window.parent.scrollTo({top: 0, behavior: "smooth"});</script>""", height=0)
+    # --- SCROLL ROBUSTO ---
+    # Buscamos el contenedor específico de la App de Streamlit y lo subimos a 0
+    js = """
+    <script>
+        var body = window.parent.document.querySelector(".main");
+        var viewContainer = window.parent.document.querySelector('[data-testid="stAppViewContainer"]');
+        if (viewContainer) {
+            viewContainer.scrollTo({top: 0, behavior: 'smooth'});
+        } else if (body) {
+            body.scrollTop = 0;
+        }
+    </script>
+    """
+    components.html(js, height=0)
     
     if not lista_items:
         st.info("No hay resultados visibles.")
