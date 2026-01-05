@@ -1,6 +1,7 @@
 import streamlit as st
 import pandas as pd
 import time
+from urllib.parse import quote # <--- IMPORTANTE: Para codificar el mensaje de WhatsApp
 import config
 import database as db
 
@@ -197,26 +198,19 @@ if seleccion_repes:
 st.divider()
 st.subheader("🔍 Mercado")
 
-# --- NUEVO: FILTROS DE BÚSQUEDA ---
 with st.expander("🔎 Filtros de Búsqueda", expanded=True):
     col_f1, col_f2 = st.columns(2)
-    # Por defecto seleccionamos la zona del usuario
     filtro_zonas = col_f1.multiselect("Filtrar por Zona:", ZONAS_DISPONIBLES, default=[user['zone']])
     filtro_num = col_f2.text_input("Buscar Figurita #:", placeholder="Ej: 10")
 
 market_df = db.fetch_market(user['id'])
 matches, ventas = db.find_matches(user['id'], market_df)
 
-# --- APLICAR FILTROS ---
 def aplicar_filtros(lista_items):
     filtrados = []
     for item in lista_items:
-        # 1. Filtro Zona (Si no hay zonas seleccionadas, muestra todo)
-        if filtro_zonas and item['zone'] not in filtro_zonas:
-            continue
-        # 2. Filtro Número
-        if filtro_num and str(item['figu']) != filtro_num:
-            continue
+        if filtro_zonas and item['zone'] not in filtro_zonas: continue
+        if filtro_num and str(item['figu']) != filtro_num: continue
         filtrados.append(item)
     return filtrados
 
@@ -231,19 +225,28 @@ def render_card(item, tipo):
         target_id = item['target_id']
         fig_recibo = item['figu']
         
-        # COLUMNA 1: INFO
+        # --- GENERADOR DE MENSAJE WHATSAPP ---
+        phone_target = item['phone']
         if tipo == 'canje':
             fig_entrego = item['te_pide']
+            texto_base = f"Hola! Vi en Figus 26 que cambias la figurita #{fig_recibo} por la #{fig_entrego}. ¿Hacemos canje?"
             c1.markdown(f"🔄 **{item['nick']}** ({item['zone']}) cambia **#{fig_recibo}** por tu **#{fig_entrego}**")
         else:
-            c1.markdown(f"💰 **{item['nick']}** ({item['zone']}) vende **#{fig_recibo}** a **${item['price']}**")
+            precio = item['price']
+            texto_base = f"Hola! Vi en Figus 26 que vendes la figurita #{fig_recibo} a ${precio}. ¿La tienes disponible?"
+            c1.markdown(f"💰 **{item['nick']}** ({item['zone']}) vende **#{fig_recibo}** a **${precio}**")
+
+        # Codificamos el mensaje para URL
+        mensaje_encoded = quote(texto_base)
+        link_wa = f"https://wa.me/549{phone_target}?text={mensaje_encoded}"
 
         # COLUMNA 2: ACCIÓN
         is_unlocked = target_id in st.session_state.unlocked_users
         
         if is_unlocked:
-            # DESBLOQUEADO
-            c2.link_button("🟢 Abrir Chat", f"https://wa.me/549{item['phone']}", use_container_width=True)
+            # BOTÓN VERDE CON MENSAJE PREDEFINIDO
+            c2.link_button("🟢 Abrir Chat", link_wa, use_container_width=True)
+            
             if tipo == 'canje':
                 with c1.expander("⚙️ Confirmar Canje"):
                     st.caption("Solo si ya realizaste el intercambio:")
@@ -252,7 +255,6 @@ def render_card(item, tipo):
                         if ok: st.balloons(); st.success(msg); time.sleep(3); st.rerun()
                         else: st.error(msg)
         else:
-            # BLOQUEADO
             if c2.button("🔓 Contactar", key=f"ul_{tipo}_{fig_recibo}_{target_id}", use_container_width=True):
                 if db.check_contact_limit(user):
                     db.consume_credit(user)
@@ -260,7 +262,6 @@ def render_card(item, tipo):
                     st.rerun()
                 else: mostrar_modal_premium()
         
-        # COLUMNA 3: VOTO
         if c3.button("👍", key=f"vt_{tipo}_{fig_recibo}_{target_id}"):
             ok, m = db.votar_usuario(user['id'], target_id)
             st.toast(m)
