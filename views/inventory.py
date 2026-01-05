@@ -5,8 +5,6 @@ import database as db
 import utils 
 
 def render_inventory(user, start, end, seleccion_pais):
-    # (Ya NO hay header aquí, está en app_figuritas.py)
-    
     ids_tengo_db, repetidas_info, _ = db.get_inventory_status(user['id'], start, end)
     key_pills = f"pills_tengo_{seleccion_pais}"
 
@@ -16,11 +14,13 @@ def render_inventory(user, start, end, seleccion_pais):
     col_head_1, col_btn_all, col_btn_none = st.columns([4, 1, 1])
     col_head_1.markdown("### 1️⃣ Tus Figus")
 
-    if col_btn_all.button("Todas", use_container_width=True, key=f"all_{seleccion_pais}"):
+    # FIX 2026: width="stretch"
+    if col_btn_all.button("Todas", width="stretch", key=f"all_{seleccion_pais}"):
         st.session_state[key_pills] = list(range(start, end + 1))
         st.rerun()
 
-    if col_btn_none.button("Ninguna", use_container_width=True, key=f"none_{seleccion_pais}"):
+    # FIX 2026: width="stretch"
+    if col_btn_none.button("Ninguna", width="stretch", key=f"none_{seleccion_pais}"):
         st.session_state[key_pills] = []
         st.rerun()
 
@@ -52,7 +52,8 @@ def render_inventory(user, start, end, seleccion_pais):
             hide_index=True, use_container_width=True
         )
         
-        if st.button("💾 GUARDAR CAMBIOS", type="primary", use_container_width=True):
+        # FIX 2026: width="stretch"
+        if st.button("💾 GUARDAR CAMBIOS", type="primary", width="stretch"):
             with utils.spinner_futbolero():
                 db.save_inventory_positive(user['id'], start, end, seleccion_tengo, edited_df)
             

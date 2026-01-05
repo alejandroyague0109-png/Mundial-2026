@@ -7,8 +7,6 @@ import utils
 
 def mostrar_login():
     st.title("🏆 Figus 26")
-    
-    # Lógica de Bloqueo: Si no aceptó el +18, bloqueamos botones
     is_locked = not st.session_state.get('barrera_superada', False)
     
     t1, t2 = st.tabs(["Ingresar", "Registrarse"])
@@ -17,8 +15,8 @@ def mostrar_login():
         p = st.text_input("Teléfono", key="l_p", placeholder="Ej: 2604...")
         pw = st.text_input("Contraseña", type="password", key="l_pw")
         
-        # Botón deshabilitado si está bloqueado
-        if st.button("Entrar", type="primary", disabled=is_locked, use_container_width=True):
+        # FIX 2026: width="stretch"
+        if st.button("Entrar", type="primary", disabled=is_locked, width="stretch"):
             with utils.spinner_futbolero():
                 u, m = db.login_user(p, pw)
             if u: 
@@ -44,13 +42,14 @@ def mostrar_login():
              def _dialog(): st.markdown(config.TEXTO_LEGAL_COMPLETO)
              _dialog()
 
-        col_legales.button("📄 Leer Legales", type="secondary", on_click=ver_contrato, use_container_width=True)
+        # FIX 2026: width="stretch"
+        col_legales.button("📄 Leer Legales", type="secondary", on_click=ver_contrato, width="stretch")
         acepto = col_check.checkbox("Acepto términos y condiciones")
         
         campos_completos = n and ph and pw2 and reg_prov and reg_zone and acepto
         
-        # Botón bloqueado si no hay +18 OR faltan datos
-        if st.button("Registrarme", type="primary", disabled=(is_locked or not campos_completos), use_container_width=True):
+        # FIX 2026: width="stretch"
+        if st.button("Registrarme", type="primary", disabled=(is_locked or not campos_completos), width="stretch"):
             with utils.spinner_futbolero():
                 u, m = db.register_user(n, ph, reg_prov, reg_zone, pw2)
             if u: 
