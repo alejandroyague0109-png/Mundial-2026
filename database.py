@@ -3,7 +3,7 @@ import pandas as pd
 from supabase import create_client, Client
 import mercadopago
 from datetime import date
-import time # Importamos time para las esperas
+import time
 import config 
 import utils
 
@@ -21,28 +21,26 @@ except Exception as e:
 # --- USUARIOS ---
 def login_user(phone, password):
     clean_phone = utils.limpiar_telefono(phone)
-    if not clean_phone: return None, "Ingresa un teléfono."
+    if not clean_phone: return None, "Che, poné un teléfono válido."
     try:
         response = supabase.table("users").select("*").eq("phone", clean_phone).execute()
-        if not response.data: return None, "Usuario no encontrado."
+        if not response.data: return None, "No te tengo registrado. ¿Te creaste la cuenta?"
         user = response.data[0]
         if utils.check_password(password, user['password']): return user, "OK"
-        else: return None, "Contraseña incorrecta."
+        else: return None, "La contraseña no va. Probá de nuevo."
     except Exception as e:
-        return None, "Error de conexión. Intenta de nuevo."
+        return None, "Se cayó la conexión. Probá en un toque."
 
 def register_user(nick, phone, province, zone, password):
     clean_phone = utils.limpiar_telefono(phone)
-    if not utils.validar_formato_telefono(clean_phone): return None, "Teléfono inválido."
+    if not utils.validar_formato_telefono(clean_phone): return None, "El teléfono está mal escrito."
     
-    # Validación campos obligatorios
     if not nick or not password or not province or not zone: 
         return None, "Faltan datos obligatorios (Provincia/Zona)."
         
     try:
-        # Verificamos si existe
         if supabase.table("users").select("*").eq("phone", clean_phone).execute().data: 
-            return None, "Ya registrado."
+            return None, "Ese número ya está registrado, crack."
             
         hashed_pw = utils.hash_password(password)
         data = {
@@ -81,32 +79,25 @@ def get_inventory_status(user_id, start, end):
                 
         return db_tengo, db_repetidas_info, df
     except Exception:
-        # Si falla la carga, devolvemos vacíos para no romper la app
         return [], {}, pd.DataFrame()
 
 def save_inventory_positive(user_id, start, end, ui_owned_list, ui_repe_df):
-    """
-    Guarda el inventario con lógica de reintentos (Retry) para evitar
-    errores de httpx.ReadError por inestabilidad de red.
-    """
     page_numbers = list(range(start, end + 1))
     
-    # PASO 1: Intentar borrar lo anterior (Con 3 intentos)
+    # Reintentos de borrado
     max_retries = 3
     for attempt in range(max_retries):
         try:
             supabase.table("inventory").delete().eq("user_id", user_id).in_("sticker_num", page_numbers).execute()
-            break # Si funciona, salimos del bucle
+            break 
         except Exception as e:
             if attempt < max_retries - 1:
-                time.sleep(1) # Esperamos 1 seg antes de reintentar
+                time.sleep(1)
                 continue
             else:
-                # Si falló 3 veces, lanzamos el error
-                st.error("Error de conexión al guardar. Por favor intenta de nuevo.")
+                st.error("Error de conexión. No pudimos guardar, intentá de nuevo.")
                 raise e
 
-    # PASO 2: Preparar nuevos datos
     new_rows = []
     for num in ui_owned_list:
         new_rows.append({"user_id": user_id, "sticker_num": num, "status": "tengo", "price": 0, "quantity": 1})
@@ -121,25 +112,22 @@ def save_inventory_positive(user_id, start, end, ui_owned_list, ui_repe_df):
                 "quantity": qty
             })
     
-    # PASO 3: Insertar nuevos datos (También con reintentos)
     if new_rows:
         for attempt in range(max_retries):
             try:
                 supabase.table("inventory").insert(new_rows).execute()
                 break
             except Exception as e:
-                if attempt < max_retries - 1:
-                    time.sleep(1)
-                else:
-                    raise e
+                if attempt < max_retries - 1: time.sleep(1)
+                else: raise e
 
-# --- INTERCAMBIO (SIN CAMBIOS MAYORES) ---
+# --- INTERCAMBIO ---
 def register_exchange(user_id, given_fig, received_fig):
     try:
         given_fig = int(given_fig)
         received_fig = int(received_fig)
         resp = supabase.table("inventory").select("*").eq("user_id", user_id).eq("sticker_num", given_fig).eq("status", "repetida").execute()
-        if not resp.data: return False, f"Error: No tienes la #{given_fig} repetida."
+        if not resp.data: return False, f"Error: No tenés la #{given_fig} repetida para entregar."
         row = resp.data[0]
         current_qty = int(row.get('quantity') or 1)
         if current_qty > 1:
@@ -149,7 +137,7 @@ def register_exchange(user_id, given_fig, received_fig):
         check = supabase.table("inventory").select("*").eq("user_id", user_id).eq("sticker_num", received_fig).eq("status", "tengo").execute()
         if not check.data:
             supabase.table("inventory").insert({"user_id": user_id, "sticker_num": received_fig, "status": "tengo", "price": 0, "quantity": 1}).execute()
-        return True, f"¡Canje exitoso! Entregaste la #{given_fig} y se guardó la #{received_fig}."
+        return True, f"¡Golazo! Entregaste la #{given_fig} y te guardaste la #{received_fig}."
     except Exception as e:
         return False, f"Error de red: {str(e)}"
 
@@ -159,7 +147,7 @@ def fetch_market(user_id):
         resp = supabase.table("inventory").select("*, users(nick, province, zone, phone, reputation)").neq("user_id", user_id).execute()
         return pd.DataFrame(resp.data)
     except:
-        return pd.DataFrame() # Retorna vacío si falla la red
+        return pd.DataFrame()
 
 def find_matches(user_id, market_df):
     try:
@@ -202,26 +190,26 @@ def find_matches(user_id, market_df):
 # --- PAGOS, VOTOS, CSV Y UTILS ---
 def verificar_pago_mp(payment_id, user_id):
     try:
-        if supabase.table("payments_log").select("*").eq("payment_id", payment_id).execute().data: return False, "Comprobante ya usado."
+        if supabase.table("payments_log").select("*").eq("payment_id", payment_id).execute().data: return False, "Ese comprobante ya se usó."
         payment_info = sdk.payment().get(payment_id)
-        if payment_info["status"] == 404: return False, "ID no encontrado."
+        if payment_info["status"] == 404: return False, "No encuentro ese ID de pago."
         resp = payment_info["response"]
         if resp.get("status") == "approved" and resp.get("transaction_amount") >= config.PRECIO_PREMIUM:
             supabase.table("payments_log").insert({"payment_id": str(payment_id), "user_id": user_id, "amount": resp.get("transaction_amount"), "status": "approved"}).execute()
             supabase.table("users").update({"is_premium": True}).eq("id", user_id).execute()
-            return True, "¡Premium Activado!"
-        else: return False, "Pago no aprobado."
+            return True, "¡Ya sos Premium! A disfrutar."
+        else: return False, "El pago no está aprobado."
     except Exception as e: return False, str(e)
 
 def votar_usuario(voter_id, target_id):
-    if voter_id == target_id: return False, "No autovoto."
+    if voter_id == target_id: return False, "No te podés votar a vos mismo."
     try:
         check = supabase.table("votes").select("*").eq("voter_id", voter_id).eq("target_id", target_id).execute()
-        if check.data: return False, "Ya votaste."
+        if check.data: return False, "Ya votaste a este usuario."
         supabase.table("votes").insert({"voter_id": voter_id, "target_id": target_id}).execute()
         curr_rep = supabase.table("users").select("reputation").eq("id", target_id).execute().data[0]['reputation'] or 0
         supabase.table("users").update({"reputation": curr_rep + 1}).eq("id", target_id).execute()
-        return True, "¡Recomendación enviada!"
+        return True, "¡Buena onda! Recomendación enviada."
     except Exception as e: return False, str(e)
 
 def verify_daily_reset(user):
@@ -234,7 +222,7 @@ def verify_daily_reset(user):
             user['last_contact_date'] = hoy
             user['daily_contacts_count'] = 0
             return True
-    except: pass # Si falla la conexión, no reseteamos visualmente para no bloquear
+    except: pass
     return False
 
 def check_contact_limit(user):
@@ -254,7 +242,7 @@ def process_csv_upload(df, user_id):
     try:
         df.columns = [c.lower().strip() for c in df.columns]
         expected_cols = ['num', 'status', 'price']
-        if not all(col in df.columns for col in expected_cols): return False, "CSV inválido."
+        if not all(col in df.columns for col in expected_cols): return False, "El CSV está mal armado."
         rows_to_insert = []
         for _, row in df.iterrows():
             st_val = str(row['status']).lower().strip()
@@ -264,9 +252,8 @@ def process_csv_upload(df, user_id):
             rows_to_insert.append({"user_id": user_id, "sticker_num": int(row['num']), "status": st_val, "price": int(row['price']) if pd.notnull(row['price']) else 0, "quantity": qty})
         if rows_to_insert:
             nums = [r['sticker_num'] for r in rows_to_insert]
-            # También protegemos el borrado masivo
             supabase.table("inventory").delete().eq("user_id", user_id).in_("sticker_num", nums).execute()
             supabase.table("inventory").insert(rows_to_insert).execute()
-            return True, f"Cargadas {len(rows_to_insert)}."
-        return False, "CSV vacío."
+            return True, f"Cargamos {len(rows_to_insert)} figus."
+        return False, "El CSV estaba vacío."
     except Exception as e: return False, str(e)

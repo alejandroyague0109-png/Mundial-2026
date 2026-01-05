@@ -32,44 +32,44 @@ if 'skip_security_modal' not in st.session_state: st.session_state.skip_security
 @st.dialog("🛡️ Consejos de Seguridad")
 def modal_seguridad(target_id):
     st.markdown("### ⚠️ Antes de contactar:")
-    st.info("Para jugar seguro en este mercado:")
+    st.info("Para jugar tranquilo en este mercado:")
     st.markdown("""
-    * 🏢 **Campo Neutral:** Reúnete siempre en zonas públicas y concurridas.
-    * 👀 **VAR:** Revisa el estado de las figuritas antes de entregar las tuyas.
-    * 💰 **Sin Adelantos:** No envíes dinero antes del encuentro.
+    * 🏢 **Campo Neutral:** Juntate siempre en zonas públicas y concurridas.
+    * 👀 **VAR:** Revisá el estado de las figus antes de entregar las tuyas.
+    * 💰 **Sin Adelantos:** No mandes plata antes del encuentro.
     """)
     st.divider()
-    st.caption("Al confirmar, usarás 1 crédito diario (si no eres Premium) para ver el teléfono.")
-    no_volver_a_mostrar = st.checkbox("No volver a mostrar este mensaje", key="chk_skip_sec")
-    if st.button("✅ Entendido, Ver Contacto", type="primary", use_container_width=True):
+    st.caption("Si confirmás, usás 1 crédito diario (si no sos Premium) para ver el número.")
+    no_volver_a_mostrar = st.checkbox("No me mostrés esto de nuevo", key="chk_skip_sec")
+    if st.button("✅ Dale, Ver Contacto", type="primary", use_container_width=True):
         if no_volver_a_mostrar: st.session_state.skip_security_modal = True
         if db.check_contact_limit(st.session_state.user):
             db.consume_credit(st.session_state.user)
             st.session_state.unlocked_users.add(target_id)
             st.rerun()
-        else: st.error("Error: No tienes créditos suficientes.")
+        else: st.error("Error: Te quedaste sin créditos por hoy.")
 
-@st.dialog("💎 Pásate a Premium", width="small")
+@st.dialog("💎 Pasate a Premium", width="small")
 def mostrar_modal_premium():
     st.markdown(f"""
     ### 🚀 Límite Alcanzado
-    Tienes **1 contacto gratis por día**.
-    **Juega en Primera con Premium:**
-    * 🔓 **Ilimitado:** Contacta sin restricciones.
+    **Tenés** 1 contacto gratis por día.
+    **Jugá en Primera con Premium:**
+    * 🔓 **Ilimitado:** Contactá sin restricciones.
     * 📐 **Triangulaciones:** Acceso a cadenas de cambio.
     * 🌍 **Un pago único:** Todo el mundial.
-    * ⭐ **Destacado:** Aparecerás primero en las listas.
+    * ⭐ **Destacado:** Aparecés primero en las listas.
     ---
     ### Precio Final: **${config.PRECIO_PREMIUM}**
     """)
-    st.link_button("👉 Pagar con Mercado Pago", config.MP_LINK, type="primary", use_container_width=True)
-    st.caption("Luego pega tu ID de operación en el menú lateral.")
+    st.link_button("👉 Pagá con Mercado Pago", config.MP_LINK, type="primary", use_container_width=True)
+    st.caption("Después pegá tu ID de operación en el menú.")
 
 @st.dialog("⚠️ Bienvenido a Figus 26")
 def mostrar_barrera_entrada():
     st.warning("🔞 Esta aplicación es para mayores de 18 años.")
     st.info("🤝 Facilitamos el contacto entre coleccionistas, pero no intervenimos en los canjes. No nos hacemos responsables de las reuniones pactadas por los usuarios ni de las transacciones realizadas.")
-    st.markdown("**Al continuar, declaras bajo juramento que eres mayor de edad.**")
+    st.markdown("**Al continuar, declarás bajo juramento que sos mayor de edad.**")
     if st.button("✅ Entendido, soy +18", type="primary", use_container_width=True):
         st.session_state.barrera_superada = True
         st.rerun()
@@ -83,7 +83,7 @@ def mostrar_instrucciones_csv():
     ### Formato del Archivo
     Debe tener 3 columnas obligatorias:
     1. **num**: Número de la figurita (ej: 10, 150).
-    2. **status**: Escribe `tengo` o `repetida`.
+    2. **status**: Escribí `tengo` o `repetida`.
     3. **price**: Precio de venta (0 si es para canje).
     *(Opcional: 'quantity')*
     """)
@@ -101,7 +101,7 @@ if not st.session_state.user:
     with t1:
         p = st.text_input("Teléfono", key="l_p", placeholder="Ej: 2604...")
         pw = st.text_input("Contraseña", type="password", key="l_pw")
-        if st.button("Iniciar Sesión", type="primary", disabled=is_locked, use_container_width=True):
+        if st.button("Entrar", type="primary", disabled=is_locked, use_container_width=True):
             u, m = db.login_user(p, pw)
             if u: st.session_state.user = u; st.rerun()
             else: st.error(m)
@@ -111,39 +111,23 @@ if not st.session_state.user:
         ph = st.text_input("Teléfono", key="r_p", placeholder="Ej: 2604...")
         pw2 = st.text_input("Contraseña", type="password", key="r_pw")
         
-        # --- SELECCIÓN DE ZONA EN CASCADA (OBLIGATORIA) ---
         col_prov, col_dep = st.columns(2)
-        
-        # 1. Elegir Provincia (index=None fuerza a elegir)
-        reg_prov = col_prov.selectbox(
-            "Provincia", 
-            list(locations.ARGENTINA.keys()), 
-            index=None, 
-            placeholder="Selecciona Provincia..."
-        )
-        
-        # 2. Elegir Departamento (Solo aparece si hay provincia)
+        reg_prov = col_prov.selectbox("Provincia", list(locations.ARGENTINA.keys()), index=None, placeholder="Seleccioná Provincia...")
         opciones_deptos = locations.ARGENTINA.get(reg_prov, []) if reg_prov else []
-        reg_zone = col_dep.selectbox(
-            "Departamento / Barrio", 
-            opciones_deptos, 
-            index=None, 
-            placeholder="Selecciona Zona..."
-        )
+        reg_zone = col_dep.selectbox("Departamento / Barrio", opciones_deptos, index=None, placeholder="Seleccioná Zona...")
         
         st.divider()
         col_legales, col_check = st.columns([1, 2])
         col_legales.button("📄 Leer Legales", type="secondary", on_click=ver_contrato, use_container_width=True)
         acepto = col_check.checkbox("Acepto términos y condiciones")
         
-        # Validación visual para habilitar el botón solo si todo está completo
         campos_completos = n and ph and pw2 and reg_prov and reg_zone and acepto
         
         if st.button("Registrarme", type="primary", disabled=(is_locked or not campos_completos), use_container_width=True):
             u, m = db.register_user(n, ph, reg_prov, reg_zone, pw2)
             if u: 
-                st.toast("¡Fichaje Exitoso! Bienvenido al equipo.", icon="⚽")
-                st.success("Usuario creado correctamente. Por favor, inicia sesión.")
+                st.toast("¡Alta incorporación! Bienvenido al equipo.", icon="⚽")
+                st.success("Te creaste la cuenta. Ahora entrá.")
                 time.sleep(2)
             else: st.error(m)
     st.stop()
@@ -152,7 +136,7 @@ user = st.session_state.user
 
 if db.verify_daily_reset(user):
     st.session_state.unlocked_users = set()
-    st.toast("📅 ¡Nuevo día! Tus créditos diarios se han renovado.", icon="☀️")
+    st.toast("📅 ¡Nuevo día! Se renovaron tus créditos.", icon="☀️")
 
 seleccion_pais = st.session_state.get("seleccion_pais_key", list(config.ALBUM_PAGES.keys())[0])
 start, end = config.ALBUM_PAGES[seleccion_pais]
@@ -177,7 +161,7 @@ with st.sidebar:
     st.divider()
     progreso = min(tengo_global_live / total_album, 1.0)
     st.progress(progreso, text="🏆 Mi Álbum")
-    st.caption(f"Tienes **{tengo_global_live}** de {total_album}.")
+    st.caption(f"Tenés **{tengo_global_live}** de {total_album}.")
     
     st.divider()
     with st.expander("📤 Carga Masiva (CSV)"):
@@ -187,8 +171,8 @@ with st.sidebar:
         df_plantilla = pd.DataFrame([{"num": 10, "status": "tengo", "price": 0, "quantity": 1}, {"num": 25, "status": "repetida", "price": 500, "quantity": 2}])
         csv_plantilla = df_plantilla.to_csv(index=False).encode('utf-8')
         col_b.download_button("⬇️ Plantilla", data=csv_plantilla, file_name="plantilla.csv", mime="text/csv", use_container_width=True)
-        up = st.file_uploader("Subir CSV", type="csv")
-        if up and st.button("🚀 Procesar Carga", type="primary", use_container_width=True):
+        up = st.file_uploader("Subí tu CSV", type="csv")
+        if up and st.button("🚀 Procesar", type="primary", use_container_width=True):
             ok, msg = db.process_csv_upload(pd.read_csv(up), user['id'])
             if ok: 
                 st.toast("¡Inventario actualizado!", icon="📦")
@@ -205,25 +189,25 @@ with st.sidebar:
         contacts = user.get('daily_contacts_count', 0)
         if contacts >= 1: st.progress(1.0, text="Límite: 1/1 (Agotado)")
         else: st.progress(0.0, text="Límite: 0/1 (Disponible)")
-        if st.button("💎 Ser Premium", use_container_width=True): mostrar_modal_premium()
+        if st.button("💎 Hacete Premium", use_container_width=True): mostrar_modal_premium()
         with st.expander("Validar Pago"):
             op = st.text_input("ID Op")
             if op and st.button("Validar"):
                 ok, msg = db.verificar_pago_mp(op, user['id'])
-                if ok: st.success(msg); st.toast("¡Bienvenido a Premium!", icon="💎"); time.sleep(2); st.rerun()
+                if ok: st.success(msg); st.toast("¡Ya sos Premium!", icon="💎"); time.sleep(2); st.rerun()
                 else: st.error(msg)
-    if st.button("Salir"): st.session_state.user = None; st.rerun()
+    if st.button("Chau / Salir"): st.session_state.user = None; st.rerun()
 
 st.header("📖 Mi Álbum")
 seleccion_pais = st.selectbox("Sección:", list(config.ALBUM_PAGES.keys()), key="seleccion_pais_key")
-st.markdown("### 1️⃣ Tus Figuritas")
+st.markdown("### 1️⃣ Tus Figus")
 seleccion_tengo = st.pills("Tengo", list(range(start, end + 1)), default=ids_tengo_live, selection_mode="multi", key=key_pills)
-st.markdown("### 2️⃣ Repetidas")
+st.markdown("### 2️⃣ Repes")
 posibles_repes = sorted(seleccion_tengo) if seleccion_tengo else []
 ids_repes_val = [k for k in repetidas_info.keys() if k in posibles_repes]
-seleccion_repes = st.pills("Repetidas", posibles_repes, default=ids_repes_val, selection_mode="multi", key=f"repes_{seleccion_pais}")
+seleccion_repes = st.pills("Repes", posibles_repes, default=ids_repes_val, selection_mode="multi", key=f"repes_{seleccion_pais}")
 if seleccion_repes:
-    st.info("👇 **Tip:** Doble clic en 'Modo' para cambiar entre **Canje** y **Venta**. Ajusta la 'Cantidad'.")
+    st.info("👇 **Data:** Hacé doble clic en 'Modo' para cambiar entre **Canje** y **Venta**. Ajustá la 'Cantidad'.")
     data = []
     for n in seleccion_repes:
         info = repetidas_info.get(n, {})
@@ -234,26 +218,20 @@ if seleccion_repes:
     edited_df = st.data_editor(pd.DataFrame(data), column_config={"Figurita": st.column_config.NumberColumn(disabled=True), "Cantidad": st.column_config.NumberColumn(min_value=1, step=1, help="Copias disponibles"), "Modo": st.column_config.SelectboxColumn(options=["🔄 Canje", "💰 Venta"], required=True), "Precio": st.column_config.NumberColumn(min_value=0, step=100)}, hide_index=True, use_container_width=True)
     if st.button("💾 GUARDAR CAMBIOS", type="primary", use_container_width=True):
         db.save_inventory_positive(user['id'], start, end, seleccion_tengo, edited_df)
-        st.toast("Álbum guardado correctamente", icon="💾"); time.sleep(0.5); st.rerun()
+        st.toast("Joyas guardadas", icon="💾"); time.sleep(0.5); st.rerun()
 
 st.divider()
 st.subheader("🔍 Mercado")
 
-# --- FILTROS DE MERCADO ---
-with st.expander("🔎 Filtros de Búsqueda", expanded=True):
+with st.expander("🔎 Filtros", expanded=True):
     col_f1, col_f2, col_f3 = st.columns(3)
-    
-    # Filtro 1: Provincia (Default: la del usuario)
     filtro_prov = col_f1.multiselect("Provincia:", list(locations.ARGENTINA.keys()), default=[user.get('province', 'Mendoza')])
-    
-    # Filtro 2: Departamentos (Solo los de las provincias seleccionadas)
     avail_zones = []
     if filtro_prov:
         for p in filtro_prov:
             avail_zones.extend(locations.ARGENTINA.get(p, []))
-            
     filtro_zonas = col_f2.multiselect("Depto / Barrio:", avail_zones)
-    filtro_num = col_f3.text_input("Figurita #:", placeholder="Ej: 10")
+    filtro_num = col_f3.text_input("Buscá por número:", placeholder="Ej: 10")
 
 market_df = db.fetch_market(user['id'])
 matches, ventas = db.find_matches(user['id'], market_df)
@@ -282,13 +260,13 @@ def render_card(item, tipo):
         
         if tipo == 'canje':
             fig_entrego = item['te_pide']
-            texto_base = f"Hola! Vi en Figus 26 que cambias la figurita #{fig_recibo} por la #{fig_entrego}. ¿Hacemos canje?"
+            texto_base = f"Hola! Vi en Figus 26 que cambiás la #{fig_recibo} por la #{fig_entrego}. ¿Hacemo cambio?"
             c1.markdown(f"🔄 **{item['nick']}**")
             c1.caption(f"📍 {loc_str}")
             c1.markdown(f"Cambia **#{fig_recibo}** por tu **#{fig_entrego}**")
         else:
             precio = item['price']
-            texto_base = f"Hola! Vi en Figus 26 que vendes la figurita #{fig_recibo} a ${precio}. ¿La tienes disponible?"
+            texto_base = f"Hola! Vi en Figus 26 que vendés la #{fig_recibo} a ${precio}. ¿La tenés?"
             c1.markdown(f"💰 **{item['nick']}**")
             c1.caption(f"📍 {loc_str}")
             c1.markdown(f"Vende **#{fig_recibo}** a **${precio}**")
@@ -300,8 +278,8 @@ def render_card(item, tipo):
         if is_unlocked:
             c2.link_button("🟢 Abrir Chat", link_wa, use_container_width=True)
             if tipo == 'canje':
-                with c1.expander("⚙️ Confirmar Canje"):
-                    st.caption("Solo si ya realizaste el intercambio:")
+                with c1.expander("⚙️ Confirmar"):
+                    st.caption("Solo si ya hicieron el cambio:")
                     if st.button(f"✅ Registrar #{fig_recibo}", key=f"swap_{fig_recibo}_{target_id}"):
                         ok, msg = db.register_exchange(user['id'], fig_entrego, fig_recibo)
                         if ok: 
