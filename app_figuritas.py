@@ -11,18 +11,36 @@ from views import auth, inventory, market
 # --- CONFIGURACIÓN UI ---
 st.set_page_config(page_title="Figus 26 | Colección", layout="wide", page_icon="⚽")
 
-# --- ESTILOS CSS ---
+# --- ESTILOS CSS (PROFESIONAL) ---
 st.markdown("""
     <style>
+    /* Ocultar enlaces de títulos */
     .stHeading a { display: none !important; }
     [data-testid="stHeaderActionElements"] { display: none !important; }
+    
+    /* Sidebar Ajustado */
     section[data-testid="stSidebar"] { min-width: 350px !important; max-width: 350px !important; }
     section[data-testid="stSidebar"] .block-container { padding-top: 2rem !important; padding-bottom: 2rem !important; }
+    
+    /* Espaciados */
+    section[data-testid="stSidebar"] hr, 
+    section[data-testid="stSidebar"] .stMarkdown p, 
+    section[data-testid="stSidebar"] .stButton, 
+    section[data-testid="stSidebar"] .stProgress { 
+        margin-bottom: 0.5rem !important; margin-top: 0.2rem !important; 
+    }
+    section[data-testid="stSidebar"] h1 { font-size: 2rem !important; padding-bottom: 0.5rem !important; }
+    
+    /* Pills Verdes */
     div[data-testid="stPills"] span[aria-selected="true"] { background-color: #2e7d32 !important; border-color: #2e7d32 !important; color: white !important; }
     div[data-testid="stPills"] button[aria-selected="true"] { background-color: #2e7d32 !important; border-color: #2e7d32 !important; color: white !important; }
+    
+    /* Botones Redondeados y con altura correcta */
     button[kind="secondary"] { border-radius: 20px; }
+    div.stButton > button { min-height: 45px !important; } /* Fuerza altura para evitar aplastamiento */
+    
+    /* Centrar Paginación */
     div[data-testid="column"] { text-align: center; }
-    div.stButton > button:first-child { min-height: 0px; padding-top: 0px; padding-bottom: 0px; }
     </style>
 """, unsafe_allow_html=True)
 
@@ -33,16 +51,12 @@ if 'page_canjes' not in st.session_state: st.session_state.page_canjes = 1
 if 'page_ventas' not in st.session_state: st.session_state.page_ventas = 1
 if 'barrera_superada' not in st.session_state: st.session_state.barrera_superada = False
 
-# --- MODAL BIENVENIDA (TEXTO CORREGIDO) ---
+# --- MODAL BIENVENIDA ---
 @st.dialog("⚠️ Bienvenido a Figus 26")
 def mostrar_barrera_entrada():
     st.warning("🔞 Esta aplicación es para mayores de 18 años.")
-    
-    # TEXTO RECUPERADO COMPLETO:
     st.info("🤝 Facilitamos el contacto entre coleccionistas, pero no intervenimos en los canjes. No nos hacemos responsables de las reuniones pactadas por los usuarios ni de las transacciones realizadas.")
-    
     st.markdown("**Al continuar, declarás bajo juramento que sos mayor de edad.**")
-    
     if st.button("✅ Entendido, soy +18", type="primary", use_container_width=True):
         st.session_state.barrera_superada = True
         st.rerun()
