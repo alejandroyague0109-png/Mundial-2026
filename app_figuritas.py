@@ -24,6 +24,18 @@ st.markdown("""
     button[kind="secondary"] { border-radius: 20px; }
     div.stButton > button { min-height: 45px !important; } 
     div[data-testid="column"] { text-align: center; }
+
+    /* ESTILO PARA BOTÓN WHATSAPP (Secundario = Fondo Blanco) */
+    a[kind="secondary"] {
+        background-color: #ffffff !important;
+        color: #000000 !important;
+        border: 1px solid #cccccc !important;
+    }
+    a[kind="secondary"]:hover {
+        background-color: #f0f0f0 !important;
+        border-color: #999999 !important;
+        color: #000000 !important;
+    }
     </style>
 """, unsafe_allow_html=True)
 
@@ -34,50 +46,43 @@ if 'page_canjes' not in st.session_state: st.session_state.page_canjes = 1
 if 'page_ventas' not in st.session_state: st.session_state.page_ventas = 1
 if 'barrera_superada' not in st.session_state: st.session_state.barrera_superada = False
 
-# --- MODAL BIENVENIDA ---
+# --- MODALES ---
 @st.dialog("⚠️ Bienvenido a Figus 26")
 def mostrar_barrera_entrada():
     st.warning("🔞 Esta aplicación es para mayores de 18 años.")
     st.info("🤝 Facilitamos el contacto entre coleccionistas, pero no intervenimos en los canjes. No nos hacemos responsables de las reuniones pactadas por los usuarios ni de las transacciones realizadas.")
     st.markdown("**Al continuar, declarás bajo juramento que sos mayor de edad.**")
-    
     if st.button("✅ Entendido, soy +18", type="primary", use_container_width=True):
         st.session_state.barrera_superada = True
         st.rerun()
 
-# --- MODAL AYUDA CSV (TEXTO COMPLETADO) ---
 @st.dialog("📤 Ayuda CSV")
 def mostrar_instrucciones_csv():
     st.markdown("""
     ### Formato del Archivo
     Debe tener 3 columnas obligatorias:
-    1. **num**: Número de la figurita (ej: 10, 150).
-    2. **status**: Escribí `tengo` o `repetida`.
+    1. **num**: Número de la figurita.
+    2. **status**: `tengo` o `repetida`.
     3. **price**: Precio de venta (0 si es para canje).
-    *(Opcional: 'quantity' para definir cantidad exacta)*
+    *(Opcional: 'quantity')*
     """)
 
 # --- FLUJO LÓGICO ---
-
-# 1. Barrera
 if not st.session_state.barrera_superada:
     mostrar_barrera_entrada()
 
-# 2. Sesión
 if 'user' not in st.session_state: st.session_state.user = None
 
-# 3. Router
 if not st.session_state.user:
-    # Login / Registro
     auth.mostrar_login()
 else:
-    # App Principal
     user = st.session_state.user
     
     if db.verify_daily_reset(user):
         st.session_state.unlocked_users = set()
         st.toast("📅 ¡Nuevo día! Se renovaron tus créditos.", icon="☀️")
 
+    # Cálculos Sidebar
     seleccion_pais = st.session_state.get("seleccion_pais_key", list(config.ALBUM_PAGES.keys())[0])
     start, end = config.ALBUM_PAGES[seleccion_pais]
     total_album = sum([(v[1] - v[0] + 1) for v in config.ALBUM_PAGES.values()])
@@ -106,7 +111,6 @@ else:
                 if ok: st.toast("¡Cargado!", icon="📦"); st.success(msg); time.sleep(1); st.rerun()
                 else: st.error(msg)
         st.divider()
-        
         if user.get('is_premium', False): 
             st.success("💎 PREMIUM")
         else:
@@ -125,10 +129,20 @@ else:
                         ok, msg = db.verificar_pago_mp(op, user['id'])
                     if ok: st.toast("¡Premium!", icon="💎"); st.rerun()
                     else: st.error(msg)
-                    
         if st.button("Chau / Salir"): st.session_state.user = None; st.rerun()
 
+    # --- APP PRINCIPAL ---
+    
+    # 1. Título ARRIBA DE TODO
+    st.header("📖 Mi Álbum")
+    
+    # 2. Selector luego del título
     st.selectbox("Sección:", list(config.ALBUM_PAGES.keys()), key="seleccion_pais_key")
+    
+    # 3. Renderizar Inventario
     inventory.render_inventory(user, start, end, seleccion_pais)
+    
     st.divider()
+    
+    # 4. Mercado
     market.render_market(user)
