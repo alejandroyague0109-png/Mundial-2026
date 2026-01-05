@@ -11,7 +11,7 @@ from views import auth, inventory, market
 # --- CONFIGURACIÓN UI ---
 st.set_page_config(page_title="Figus 26 | Colección", layout="wide", page_icon="⚽")
 
-# --- ESTILOS CSS (PROFESIONAL Y CORREGIDO) ---
+# --- ESTILOS CSS ---
 st.markdown("""
     <style>
     /* Ocultar enlaces de títulos */
@@ -35,7 +35,7 @@ st.markdown("""
     div[data-testid="stPills"] span[aria-selected="true"] { background-color: #2e7d32 !important; border-color: #2e7d32 !important; color: white !important; }
     div[data-testid="stPills"] button[aria-selected="true"] { background-color: #2e7d32 !important; border-color: #2e7d32 !important; color: white !important; }
     
-    /* Botones Redondeados y con altura correcta (Evita que se vean aplastados) */
+    /* Botones Redondeados y con altura correcta */
     button[kind="secondary"] { border-radius: 20px; }
     div.stButton > button { min-height: 45px !important; } 
     
@@ -51,7 +51,7 @@ if 'page_canjes' not in st.session_state: st.session_state.page_canjes = 1
 if 'page_ventas' not in st.session_state: st.session_state.page_ventas = 1
 if 'barrera_superada' not in st.session_state: st.session_state.barrera_superada = False
 
-# --- MODAL BIENVENIDA Y LEGALES ---
+# --- MODAL BIENVENIDA Y LEGALES (CORREGIDO) ---
 @st.dialog("⚠️ Bienvenido a Figus 26")
 def mostrar_barrera_entrada():
     st.error("🔞 Aplicación exclusiva para mayores de 18 años.")
@@ -66,17 +66,15 @@ def mostrar_barrera_entrada():
     Al continuar, aceptás los **Términos y Condiciones** completos y declarás ser mayor de edad.
     """)
     
-    col_b1, col_b2 = st.columns([1, 1])
-    with col_b1:
-        if st.button("📄 Leer Términos", use_container_width=True):
-             @st.dialog("Términos Legales", width="large")
-             def leer(): st.markdown(config.TEXTO_LEGAL_COMPLETO)
-             leer()
-             
-    with col_b2:
-        if st.button("✅ Acepto y Entro", type="primary", use_container_width=True):
-            st.session_state.barrera_superada = True
-            st.rerun()
+    # SOLUCIÓN: Usamos un expander en lugar de intentar abrir otro modal
+    with st.expander("📄 Ver Términos y Condiciones Completos"):
+        st.markdown(config.TEXTO_LEGAL_COMPLETO)
+        
+    st.divider()
+    
+    if st.button("✅ Entendido, Acepto y Entro", type="primary", use_container_width=True):
+        st.session_state.barrera_superada = True
+        st.rerun()
 
 # --- MODAL AYUDA CSV ---
 @st.dialog("📤 Ayuda CSV")
