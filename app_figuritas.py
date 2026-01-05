@@ -11,6 +11,14 @@ st.set_page_config(page_title="Figus 26 | Colección", layout="wide", page_icon=
 # --- ESTILOS CSS ---
 st.markdown("""
     <style>
+    /* 0. ELIMINAR ENLACES (ANCLAJES) AL LADO DE LOS TÍTULOS */
+    .stHeading a {
+        display: none !important;
+    }
+    [data-testid="stHeaderActionElements"] {
+        display: none !important;
+    }
+
     /* 1. SIDEBAR: Ancho (350px) y Compacto Verticalmente */
     section[data-testid="stSidebar"] {
         min-width: 350px !important;
@@ -74,7 +82,6 @@ def modal_seguridad(target_id):
     st.caption("Al confirmar, usarás 1 crédito diario (si no eres Premium) para ver el teléfono.")
     
     if st.button("✅ Entendido, Ver Contacto", type="primary", use_container_width=True):
-        # LÓGICA DE DESBLOQUEO
         if db.check_contact_limit(st.session_state.user):
             db.consume_credit(st.session_state.user)
             st.session_state.unlocked_users.add(target_id)
@@ -147,7 +154,6 @@ if not st.session_state.user:
         p = st.text_input("Teléfono", key="l_p")
         pw = st.text_input("Contraseña", type="password", key="l_pw")
         
-        # Botón bloqueado si no aceptó +18
         if st.button("Entrar", type="primary", disabled=is_locked):
             u, m = db.login_user(p, pw)
             if u: st.session_state.user = u; st.rerun()
@@ -160,7 +166,6 @@ if not st.session_state.user:
         if st.button("Legales", type="secondary"): ver_contrato()
         acepto = st.checkbox("Acepto términos")
         
-        # Botón bloqueado si no aceptó +18 O no aceptó términos
         if st.button("Crear Cuenta", disabled=(is_locked or not acepto)):
             u, m = db.register_user(n, ph, z, pw2)
             if u: st.success("Creado!"); st.balloons()
