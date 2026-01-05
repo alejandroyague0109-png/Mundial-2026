@@ -232,4 +232,20 @@ def render_card(item, tipo):
         if is_unlocked:
             c2.link_button("🟢 Chat WhatsApp", f"https://wa.me/549{item['phone']}", use_container_width=True)
         else:
-            if c2.button("🔓 Contactar", key=f"ul_{tipo}_{fig_recibo}_{target
+            if c2.button("🔓 Contactar", key=f"ul_{tipo}_{fig_recibo}_{target_id}", use_container_width=True):
+                if db.check_contact_limit(user):
+                    db.consume_credit(user)
+                    st.session_state.unlocked_users.add(target_id)
+                    st.rerun()
+                else: mostrar_modal_premium()
+        
+        if c3.button("👍", key=f"vt_{tipo}_{fig_recibo}_{target_id}"):
+            ok, m = db.votar_usuario(user['id'], target_id)
+            st.toast(m)
+
+with t1:
+    if not matches: st.info("Sin canjes.")
+    for m in matches: render_card(m, 'canje')
+with t2:
+    if not ventas: st.info("Sin ventas.")
+    for v in ventas: render_card(v, 'venta')
