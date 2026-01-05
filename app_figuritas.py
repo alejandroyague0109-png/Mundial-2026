@@ -24,15 +24,15 @@ st.markdown("""
         padding-bottom: 2rem !important;
     }
     /* Reducir márgenes entre elementos (dividers, texto, botones, barras) */
-    section[data-testid="stSidebar"] hr, /* Dividers */
-    section[data-testid="stSidebar"] .stMarkdown p, /* Texto normal */
-    section[data-testid="stSidebar"] .stButton, /* Botones */
-    section[data-testid="stSidebar"] .stProgress /* Barras de progreso */
+    section[data-testid="stSidebar"] hr, 
+    section[data-testid="stSidebar"] .stMarkdown p,
+    section[data-testid="stSidebar"] .stButton,
+    section[data-testid="stSidebar"] .stProgress 
     {
         margin-bottom: 0.5rem !important;
         margin-top: 0.2rem !important;
     }
-    /* Reducir un poco el título principal del sidebar */
+    /* Reducir el título principal del sidebar */
     section[data-testid="stSidebar"] h1 {
         font-size: 2rem !important;
         padding-bottom: 0.5rem !important;
@@ -45,8 +45,13 @@ st.markdown("""
         color: white !important;
     }
     div[data-testid="stPills"] span[aria-selected="true"]:hover {
-        background-color: #1b5e20 !important; /* Verde Oscuro al pasar mouse */
+        background-color: #1b5e20 !important;
         border-color: #1b5e20 !important;
+    }
+    div[data-testid="stPills"] button[aria-selected="true"] {
+        background-color: #2e7d32 !important;
+        border-color: #2e7d32 !important;
+        color: white !important;
     }
 
     /* 4. Botones secundarios redondeados */
@@ -90,8 +95,8 @@ def mostrar_barrera_entrada():
     # --- CHECKBOX OBLIGATORIO ---
     acepta_edad = st.checkbox("Declaro bajo juramento que soy mayor de edad.")
     
-    # El botón solo se habilita si marca el checkbox. Al ser "primary", será ROJO por defecto.
-    if st.button("Ingresar", type="primary", disabled=not acepto_edad, use_container_width=True):
+    # CORRECCIÓN AQUÍ: Usamos la misma variable 'acepta_edad'
+    if st.button("Ingresar", type="primary", disabled=not acepta_edad, use_container_width=True):
         st.session_state.barrera_superada = True
         st.rerun()
 
