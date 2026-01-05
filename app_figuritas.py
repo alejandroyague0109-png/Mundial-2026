@@ -24,7 +24,6 @@ if 'unlocked_users' not in st.session_state: st.session_state.unlocked_users = s
 
 # --- MODALES ---
 
-# 1. MODAL PREMIUM (Actualizado con Triangulaciones)
 @st.dialog("💎 Pásate a Premium", width="small")
 def mostrar_modal_premium():
     st.markdown(f"""
@@ -43,16 +42,11 @@ def mostrar_modal_premium():
     st.link_button("👉 Pagar con Mercado Pago", config.MP_LINK, type="primary", use_container_width=True)
     st.caption("Luego pega tu ID de operación en el menú lateral.")
 
-# 2. MODAL BIENVENIDA (Texto Recuperado)
 @st.dialog("⚠️ Bienvenido a Figus 26")
 def mostrar_barrera_entrada():
     st.warning("🔞 Esta aplicación es para mayores de 18 años.")
-    
-    # Texto legal completo recuperado
     st.info("🤝 Facilitamos el contacto entre coleccionistas, pero no intervenimos en los canjes. No nos hacemos responsables de las reuniones pactadas por los usuarios ni de las transacciones realizadas.")
-    
     st.markdown("**Al continuar, declaras bajo juramento que eres mayor de edad.**")
-    
     if st.button("✅ Entendido, soy +18", type="primary", use_container_width=True):
         st.session_state.barrera_superada = True
         st.rerun()
@@ -113,7 +107,6 @@ ids_tengo_db, repetidas_info, df_full = db.get_inventory_status(user['id'], star
 key_pills = f"pills_tengo_{seleccion_pais}"
 ids_tengo_live = st.session_state.get(key_pills, ids_tengo_db)
 
-# Cálculo Global
 try: tengo_db_total = df_full[df_full['status'] == 'tengo'].shape[0]
 except: tengo_db_total = 0
 tengo_db_esta_seccion = len(ids_tengo_db)
@@ -125,20 +118,17 @@ with st.sidebar:
     st.title(f"Hola {user['nick']}")
     st.caption(f"⭐ Reputación: {user.get('reputation', 0)}")
     
-    # Progreso Global
     st.divider()
     progreso = min(tengo_global_live / total_album, 1.0)
     st.progress(progreso, text="🏆 Mi Álbum")
     st.caption(f"Tienes **{tengo_global_live}** de {total_album}.")
     
-    # Carga Masiva
     st.divider()
     with st.expander("📤 Carga Masiva (CSV)"):
         st.caption("Carga rápida de inventario.")
         col_a, col_b = st.columns(2)
         if col_a.button("❓ Ayuda", use_container_width=True): mostrar_instrucciones_csv()
         
-        # Generar Plantilla
         df_plantilla = pd.DataFrame([{"num": 10, "status": "tengo", "price": 0}, {"num": 25, "status": "repetida", "price": 500}])
         csv_plantilla = df_plantilla.to_csv(index=False).encode('utf-8')
         col_b.download_button("⬇️ Plantilla", data=csv_plantilla, file_name="plantilla.csv", mime="text/csv", use_container_width=True)
@@ -183,8 +173,30 @@ seleccion_repes = st.pills("Repetidas", posibles_repes, default=ids_repes_val, s
 
 edited_df = pd.DataFrame()
 if seleccion_repes:
-    data = [{"Figurita": n, "Modo": "Venta" if repetidas_info.get(n,{}).get('price',0)>0 else "Canje", "Precio": repetidas_info.get(n,{}).get('price',0)} for n in seleccion_repes]
-    edited_df = st.data_editor(pd.DataFrame(data), hide_index=True, use_container_width=True)
+    # --- CAMBIO VISUAL PARA NOTAR EL MENÚ DESPLEGABLE ---
+    st.info("👇 **Tip:** Haz doble clic en la celda de 'Modo' para cambiar entre **Canje** y **Venta**.")
+    
+    data = []
+    for n in seleccion_repes:
+        precio_actual = repetidas_info.get(n,{}).get('price',0)
+        # Usamos EMOJIS para que resalte
+        modo_actual = "💰 Venta" if precio_actual > 0 else "🔄 Canje"
+        data.append({"Figurita": n, "Modo": modo_actual, "Precio": precio_actual})
+        
+    edited_df = st.data_editor(
+        pd.DataFrame(data), 
+        column_config={
+            "Figurita": st.column_config.NumberColumn(disabled=True),
+            "Modo": st.column_config.SelectboxColumn(
+                options=["🔄 Canje", "💰 Venta"], # Opciones con Emojis
+                required=True,
+                help="Elige si quieres cambiarla por otra o venderla."
+            ),
+            "Precio": st.column_config.NumberColumn(min_value=0, step=100)
+        }, 
+        hide_index=True, 
+        use_container_width=True
+    )
 
 if st.button("💾 GUARDAR CAMBIOS", type="primary", use_container_width=True):
     db.save_inventory_positive(user['id'], start, end, seleccion_tengo, edited_df)
@@ -206,7 +218,6 @@ def render_market_card(item, type_card):
         else:
             c1.markdown(f"💰 **{item['nick']}** (⭐{item['reputation']}) vende **#{item['figu']}** a **${item['price']}**")
         
-        # Desbloqueo Seguro
         target_id = item['target_id']
         is_unlocked = target_id in st.session_state.unlocked_users
         
