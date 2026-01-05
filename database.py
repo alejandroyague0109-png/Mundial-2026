@@ -22,8 +22,12 @@ except Exception as e:
 def login_user(phone, password):
     clean_phone = utils.limpiar_telefono(phone)
     if not clean_phone: return None, "Che, poné un teléfono válido."
+    
+    # Buscamos por HASH (Seguridad)
+    phone_hash = utils.hash_phone_searchable(phone)
+    
     try:
-        response = supabase.table("users").select("*").eq("phone", clean_phone).execute()
+        response = supabase.table("users").select("*").eq("phone_hash", phone_hash).execute()
         if not response.data: return None, "No te tengo registrado. ¿Te creaste la cuenta?"
         user = response.data[0]
         if utils.check_password(password, user['password']): return user, "OK"
@@ -32,24 +36,27 @@ def login_user(phone, password):
         return None, "Se cayó la conexión. Probá en un toque."
 
 def register_user(nick, phone, province, zone, password):
-    clean_phone = utils.limpiar_telefono(phone)
-    if not utils.validar_formato_telefono(clean_phone): return None, "El teléfono está mal escrito."
-    
+    if not utils.validar_formato_telefono(phone): return None, "El teléfono está mal escrito."
     if not nick or not password or not province or not zone: 
         return None, "Faltan datos obligatorios (Provincia/Zona)."
+    
+    # Generamos Hash (Búsqueda) y Encriptado (Recuperación)
+    p_hash = utils.hash_phone_searchable(phone)
+    p_enc = utils.encrypt_phone(phone)
         
     try:
-        if supabase.table("users").select("*").eq("phone", clean_phone).execute().data: 
+        if supabase.table("users").select("*").eq("phone_hash", p_hash).execute().data: 
             return None, "Ese número ya está registrado, crack."
             
         hashed_pw = utils.hash_password(password)
         data = {
             "nick": nick, 
-            "phone": clean_phone, 
+            "phone_hash": p_hash,
+            "phone_encrypted": p_enc,
             "province": province, 
             "zone": zone, 
             "password": hashed_pw, 
-            "is_admin": (clean_phone == config.ADMIN_PHONE), 
+            "is_admin": (utils.limpiar_telefono(phone) == config.ADMIN_PHONE), 
             "reputation": 0, "daily_contacts_count": 0, "last_contact_date": str(date.today())
         }
         response = supabase.table("users").insert(data).execute()
@@ -58,7 +65,7 @@ def register_user(nick, phone, province, zone, password):
 
 # --- INVENTARIO ---
 def get_inventory_status(user_id, start, end):
-    # NO CACHEAMOS ESTO: El usuario necesita ver sus cambios al instante al hacer clic.
+    # Sin caché para que el usuario vea sus propios cambios al instante
     try:
         response = supabase.table("inventory").select("*").eq("user_id", user_id).execute()
         df = pd.DataFrame(response.data)
@@ -85,19 +92,15 @@ def get_inventory_status(user_id, start, end):
 def save_inventory_positive(user_id, start, end, ui_owned_list, ui_repe_df):
     page_numbers = list(range(start, end + 1))
     
-    # Reintentos de borrado
+    # Retry Logic (Reintentos) para evitar errores de red
     max_retries = 3
     for attempt in range(max_retries):
         try:
             supabase.table("inventory").delete().eq("user_id", user_id).in_("sticker_num", page_numbers).execute()
             break 
         except Exception as e:
-            if attempt < max_retries - 1:
-                time.sleep(1)
-                continue
-            else:
-                st.error("Error de conexión. No pudimos guardar, intentá de nuevo.")
-                raise e
+            if attempt < max_retries - 1: time.sleep(1); continue
+            else: st.error("Error de conexión. No pudimos guardar, intentá de nuevo."); raise e
 
     new_rows = []
     for num in ui_owned_list:
@@ -122,7 +125,7 @@ def save_inventory_positive(user_id, start, end, ui_owned_list, ui_repe_df):
                 if attempt < max_retries - 1: time.sleep(1)
                 else: raise e
     
-    # IMPORTANTE: Al guardar, limpiamos la caché del mercado para que otros vean mis cambios pronto.
+    # Limpiamos caché del mercado
     fetch_market.clear()
 
 # --- INTERCAMBIO ---
@@ -142,30 +145,23 @@ def register_exchange(user_id, given_fig, received_fig):
         if not check.data:
             supabase.table("inventory").insert({"user_id": user_id, "sticker_num": received_fig, "status": "tengo", "price": 0, "quantity": 1}).execute()
             
-        # Limpiamos caché porque el stock del mercado cambió
         fetch_market.clear()
-        
         return True, f"¡Golazo! Entregaste la #{given_fig} y te guardaste la #{received_fig}."
     except Exception as e:
         return False, f"Error de red: {str(e)}"
 
-# --- MERCADO (CON CACHÉ) ---
-# TTL = 60 segundos. Los datos del mercado se refrescan cada minuto.
-# show_spinner=False evita que aparezca el "Cargando..." molesto a cada rato.
+# --- MERCADO (CON CACHÉ Y SEGURIDAD) ---
 @st.cache_data(ttl=60, show_spinner=False)
 def fetch_market(user_id):
     try:
-        # Traemos TODO el inventario que no sea mío
-        resp = supabase.table("inventory").select("*, users(nick, province, zone, phone, reputation)").neq("user_id", user_id).execute()
+        # Traemos phone_encrypted
+        resp = supabase.table("inventory").select("*, users(nick, province, zone, phone_encrypted, reputation)").neq("user_id", user_id).execute()
         return pd.DataFrame(resp.data)
     except:
         return pd.DataFrame()
 
 def find_matches(user_id, market_df):
-    # Esta función procesa datos en memoria (Pandas), es muy rápida, no requiere caché extra
-    # si market_df ya viene cacheado.
     try:
-        # Traemos mis datos frescos (sin caché)
         resp = supabase.table("inventory").select("sticker_num").eq("user_id", user_id).eq("status", "tengo").execute()
         mis_tengo_set = set(item['sticker_num'] for item in resp.data)
         resp_r = supabase.table("inventory").select("sticker_num").eq("user_id", user_id).eq("status", "repetida").execute()
@@ -176,11 +172,11 @@ def find_matches(user_id, market_df):
     directos, ventas = [], []
     if market_df.empty: return [], []
     
-    # Procesamiento Vectorizado (Más eficiente que iterrows, pero mantenemos iterrows por legibilidad si no hay millones)
+    # Procesamos los datos cacheados
     market_df['nick'] = market_df['users'].apply(lambda x: x['nick'])
     market_df['province'] = market_df['users'].apply(lambda x: x.get('province', 'Mendoza'))
     market_df['zone'] = market_df['users'].apply(lambda x: x['zone'])
-    market_df['phone'] = market_df['users'].apply(lambda x: x['phone'])
+    market_df['phone_encrypted'] = market_df['users'].apply(lambda x: x.get('phone_encrypted', ''))
     market_df['reputation'] = market_df['users'].apply(lambda x: x.get('reputation', 0))
     market_df['other_id'] = market_df['users'].apply(lambda x: x.get('id', 0))
     
@@ -190,7 +186,8 @@ def find_matches(user_id, market_df):
         if figu not in mis_tengo_set:
             match = {
                 'nick': row['nick'], 'province': row['province'], 'zone': row['zone'], 
-                'phone': row['phone'], 'figu': figu, 'price': row['price'], 
+                'phone_encrypted': row['phone_encrypted'], 
+                'figu': figu, 'price': row['price'], 
                 'reputation': row['reputation'], 'target_id': row['user_id']
             }
             if row['price'] > 0: ventas.append(match)
@@ -203,7 +200,7 @@ def find_matches(user_id, market_df):
                     directos.append(match)
     return directos, ventas
 
-# --- PAGOS, VOTOS, CSV Y UTILS ---
+# --- UTILS VARIOS ---
 def verificar_pago_mp(payment_id, user_id):
     try:
         if supabase.table("payments_log").select("*").eq("payment_id", payment_id).execute().data: return False, "Ese comprobante ya se usó."
@@ -270,10 +267,7 @@ def process_csv_upload(df, user_id):
             nums = [r['sticker_num'] for r in rows_to_insert]
             supabase.table("inventory").delete().eq("user_id", user_id).in_("sticker_num", nums).execute()
             supabase.table("inventory").insert(rows_to_insert).execute()
-            
-            # Limpiamos caché al cargar masivamente
             fetch_market.clear()
-            
             return True, f"Cargamos {len(rows_to_insert)} figus."
         return False, "El CSV estaba vacío."
     except Exception as e: return False, str(e)

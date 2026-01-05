@@ -1,5 +1,6 @@
-streamlit>=1.38.0
-supabase
+streamlit
 pandas
+supabase
 mercadopago
+cryptography
 bcrypt
