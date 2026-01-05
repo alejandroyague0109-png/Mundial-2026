@@ -44,7 +44,7 @@ def register_user(nick, phone, zone, password):
         return response.data[0], "OK"
     except Exception as e: return None, str(e)
 
-# --- INVENTARIO ---
+# --- INVENTARIO (CON CANTIDADES) ---
 def get_inventory_status(user_id, start, end):
     response = supabase.table("inventory").select("*").eq("user_id", user_id).execute()
     df = pd.DataFrame(response.data)
@@ -56,56 +56,50 @@ def get_inventory_status(user_id, start, end):
     if not df.empty:
         mask = (df['sticker_num'] >= start) & (df['sticker_num'] <= end)
         df_page = df[mask]
-        # Tengo simple
+        
+        # Lista simple de lo que tengo
         db_tengo = df_page[df_page['status'] == 'tengo']['sticker_num'].tolist()
-        # Repetidas con cantidad
+        
+        # Diccionario detallado de repetidas
         for _, row in df_page[df_page['status'] == 'repetida'].iterrows():
             qty = row.get('quantity', 1)
-            # Si quantity es null (por datos viejos), asumimos 1
             if pd.isna(qty): qty = 1
             db_repetidas_info[row['sticker_num']] = {'price': row['price'], 'quantity': int(qty)}
             
-            # Aseguramos que esté en 'tengo' visualmente si es repe
+            # Si es repetida, también cuenta como "Tengo" visualmente
             if row['sticker_num'] not in db_tengo: db_tengo.append(row['sticker_num'])
             
     return db_tengo, db_repetidas_info, df
 
 def save_inventory_positive(user_id, start, end, ui_owned_list, ui_repe_df):
     page_numbers = list(range(start, end + 1))
-    # Borramos todo el rango para reescribir limpio (evita duplicados fantasma)
     supabase.table("inventory").delete().eq("user_id", user_id).in_("sticker_num", page_numbers).execute()
     new_rows = []
     
-    # 1. Guardar las que TENGO (Cantidad 1 por defecto)
+    # 1. Guardar TENGO
     for num in ui_owned_list:
         new_rows.append({"user_id": user_id, "sticker_num": num, "status": "tengo", "price": 0, "quantity": 1})
         
-    # 2. Guardar las REPETIDAS (Con su cantidad real)
+    # 2. Guardar REPETIDAS (Sobreescribe si estaba en tengo)
     if not ui_repe_df.empty:
         for _, row in ui_repe_df.iterrows():
             es_venta = "Venta" in str(row['Modo'])
             qty = int(row.get('Cantidad', 1))
-            if qty < 1: qty = 1 # Seguridad
-            
             new_rows.append({
-                "user_id": user_id, 
-                "sticker_num": row['Figurita'], 
-                "status": "repetida", 
-                "price": int(row['Precio']) if es_venta else 0,
+                "user_id": user_id, "sticker_num": row['Figurita'], 
+                "status": "repetida", "price": int(row['Precio']) if es_venta else 0,
                 "quantity": qty
             })
-            
     if new_rows: supabase.table("inventory").insert(new_rows).execute()
 
-# --- NUEVA FUNCIÓN: REGISTRAR CANJE ---
+# --- INTERCAMBIO (Lógica Core) ---
 def register_exchange(user_id, given_fig, received_fig):
     """
-    Descuenta 1 de la figurita que entregas.
-    Agrega la figurita que recibes como 'tengo'.
+    1. Resta 1 a la repetida que entregas. Si llega a 0, la borra.
+    2. Agrega la nueva como 'tengo' (verde).
     """
     try:
-        # 1. Gestionar la que ENTREGO (Repetida)
-        # Buscamos la repetida específica
+        # A. GESTIONAR LA QUE ENTREGO (REPETIDA)
         resp = supabase.table("inventory").select("*").eq("user_id", user_id).eq("sticker_num", given_fig).eq("status", "repetida").execute()
         
         if resp.data:
@@ -113,27 +107,23 @@ def register_exchange(user_id, given_fig, received_fig):
             current_qty = row.get('quantity', 1) or 1
             
             if current_qty > 1:
-                # Si tengo más de 1, solo resto cantidad
+                # Restar cantidad
                 supabase.table("inventory").update({"quantity": current_qty - 1}).eq("id", row['id']).execute()
             else:
-                # Si tengo solo 1, la borro de repetidas (ya no la tengo repe)
+                # Borrar fila (desaparece de repetidas)
                 supabase.table("inventory").delete().eq("id", row['id']).execute()
         
-        # 2. Gestionar la que RECIBO (Nueva)
-        # Verificamos si ya la tengo (raro, pero posible)
+        # B. GESTIONAR LA QUE RECIBO (NUEVA)
         check = supabase.table("inventory").select("*").eq("user_id", user_id).eq("sticker_num", received_fig).eq("status", "tengo").execute()
         
         if not check.data:
-            # Si no la tengo, la agrego
+            # La agrego a mi álbum
             supabase.table("inventory").insert({
-                "user_id": user_id,
-                "sticker_num": received_fig,
-                "status": "tengo",
-                "price": 0,
-                "quantity": 1
+                "user_id": user_id, "sticker_num": received_fig,
+                "status": "tengo", "price": 0, "quantity": 1
             }).execute()
             
-        return True, f"¡Canje registrado! Entregaste #{given_fig} y recibiste #{received_fig}."
+        return True, f"¡Hecho! Entregaste la #{given_fig} y ya marcamos la #{received_fig} en tu álbum."
     except Exception as e:
         return False, str(e)
 
@@ -143,52 +133,36 @@ def fetch_market(user_id):
     return pd.DataFrame(resp.data)
 
 def find_matches(user_id, market_df):
-    # Optimización: Sets para búsqueda O(1)
     resp = supabase.table("inventory").select("sticker_num").eq("user_id", user_id).eq("status", "tengo").execute()
     mis_tengo_set = set(item['sticker_num'] for item in resp.data)
-    
     resp_r = supabase.table("inventory").select("sticker_num").eq("user_id", user_id).eq("status", "repetida").execute()
     mis_repes_set = set(item['sticker_num'] for item in resp_r.data)
-    
     directos, ventas = [], []
     if market_df.empty: return [], []
-    
-    # Pre-procesamiento
     market_df['nick'] = market_df['users'].apply(lambda x: x['nick'])
     market_df['zone'] = market_df['users'].apply(lambda x: x['zone'])
     market_df['phone'] = market_df['users'].apply(lambda x: x['phone'])
     market_df['reputation'] = market_df['users'].apply(lambda x: x.get('reputation', 0))
     market_df['other_id'] = market_df['users'].apply(lambda x: x.get('id', 0))
-    
     ofertas = market_df[market_df['status'] == 'repetida']
-    
     for _, row in ofertas.iterrows():
         figu = row['sticker_num']
-        # Si NO la tengo
         if figu not in mis_tengo_set:
             match = {
                 'nick': row['nick'], 'zone': row['zone'], 'phone': row['phone'], 
                 'figu': figu, 'price': row['price'], 
                 'reputation': row['reputation'], 'target_id': row['user_id']
             }
-            if row['price'] > 0: 
-                ventas.append(match)
+            if row['price'] > 0: ventas.append(match)
             else:
-                # Buscamos Match Inverso (Qué tiene él y qué tengo yo)
                 sus_tengo_list = market_df[(market_df['user_id'] == row['user_id']) & (market_df['status'] == 'tengo')]['sticker_num'].tolist()
                 sus_tengo_set = set(sus_tengo_list)
-                
-                # Figuritas mías repetidas que él NO tiene
                 sirven = [r for r in mis_repes_set if r not in sus_tengo_set]
-                
                 if sirven:
-                    # Tomamos la primera coincidencia (podría haber varias)
                     match['te_pide'] = sirven[0]
                     directos.append(match)
-                    
     return directos, ventas
 
-# --- PAGOS & LÓGICA ---
 def verificar_pago_mp(payment_id, user_id):
     try:
         if supabase.table("payments_log").select("*").eq("payment_id", payment_id).execute().data: return False, "Comprobante ya usado."
@@ -239,11 +213,8 @@ def process_csv_upload(df, user_id):
         for _, row in df.iterrows():
             st_val = str(row['status']).lower().strip()
             if st_val not in ['tengo', 'repetida']: st_val = 'tengo'
-            # Leemos cantidad si existe en CSV, sino 1
             qty = 1
-            if 'quantity' in df.columns and pd.notnull(row['quantity']):
-                qty = int(row['quantity'])
-            
+            if 'quantity' in df.columns and pd.notnull(row['quantity']): qty = int(row['quantity'])
             rows_to_insert.append({
                 "user_id": user_id, "sticker_num": int(row['num']),
                 "status": st_val, "price": int(row['price']) if pd.notnull(row['price']) else 0,

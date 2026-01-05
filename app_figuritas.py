@@ -32,7 +32,7 @@ def mostrar_modal_premium():
     
     **Con Premium obtienes:**
     * 🔓 **Ilimitado:** Contacta sin restricciones.
-    * 📐 **Triangulaciones:** Acceso a cadenas de cambio.
+    * 📐 **Triangulaciones:** Acceso a cadenas de cambio inteligentes.
     * 🌍 **Un pago único:** Todo el mundial.
     * ⭐ **Destacado:** Perfil verificado.
     
@@ -45,12 +45,8 @@ def mostrar_modal_premium():
 @st.dialog("⚠️ Bienvenido a Figus 26")
 def mostrar_barrera_entrada():
     st.warning("🔞 Esta aplicación es para mayores de 18 años.")
-    
-    # --- TEXTO LEGAL RECUPERADO ---
     st.info("🤝 Facilitamos el contacto entre coleccionistas, pero no intervenimos en los canjes. No nos hacemos responsables de las reuniones pactadas por los usuarios ni de las transacciones realizadas.")
-    
     st.markdown("**Al continuar, declaras bajo juramento que eres mayor de edad.**")
-    
     if st.button("✅ Entendido, soy +18", type="primary", use_container_width=True):
         st.session_state.barrera_superada = True
         st.rerun()
@@ -67,7 +63,7 @@ def mostrar_instrucciones_csv():
     2. **status**: Escribe `tengo` o `repetida`.
     3. **price**: Precio de venta (0 si es para canje).
     
-    *(Opcional: puedes agregar una columna 'quantity' para la cantidad)*
+    *(Opcional: puedes agregar una columna 'quantity')*
     """)
 
 # --- LOGIN / REGISTRO ---
@@ -125,13 +121,14 @@ with st.sidebar:
     st.progress(progreso, text="🏆 Mi Álbum")
     st.caption(f"Tienes **{tengo_global_live}** de {total_album}.")
     
+    # Carga Masiva
     st.divider()
     with st.expander("📤 Carga Masiva (CSV)"):
         st.caption("Carga rápida de inventario.")
         col_a, col_b = st.columns(2)
         if col_a.button("❓ Ayuda", use_container_width=True): mostrar_instrucciones_csv()
         
-        # Plantilla Descargable
+        # Plantilla
         df_plantilla = pd.DataFrame([{"num": 10, "status": "tengo", "price": 0, "quantity": 1}, {"num": 25, "status": "repetida", "price": 500, "quantity": 2}])
         csv_plantilla = df_plantilla.to_csv(index=False).encode('utf-8')
         col_b.download_button("⬇️ Plantilla", data=csv_plantilla, file_name="plantilla.csv", mime="text/csv", use_container_width=True)
@@ -169,13 +166,14 @@ seleccion_pais = st.selectbox("Sección:", list(config.ALBUM_PAGES.keys()), key=
 
 st.markdown("### 1️⃣ Tus Figuritas")
 seleccion_tengo = st.pills("Tengo", list(range(start, end + 1)), default=ids_tengo_live, selection_mode="multi", key=key_pills)
+
 st.markdown("### 2️⃣ Repetidas")
 posibles_repes = sorted(seleccion_tengo) if seleccion_tengo else []
 ids_repes_val = [k for k in repetidas_info.keys() if k in posibles_repes]
 seleccion_repes = st.pills("Repetidas", posibles_repes, default=ids_repes_val, selection_mode="multi", key=f"repes_{seleccion_pais}")
 
 if seleccion_repes:
-    st.info("👇 **Tip:** Doble clic en 'Modo' para cambiar entre **Canje** y **Venta**. Ajusta la 'Cantidad' si tienes varias.")
+    st.info("👇 **Tip:** Doble clic en 'Modo' para cambiar entre **Canje** y **Venta**. Ajusta la 'Cantidad'.")
     data = []
     for n in seleccion_repes:
         info = repetidas_info.get(n, {})
@@ -213,25 +211,30 @@ def render_card(item, tipo):
         target_id = item['target_id']
         fig_recibo = item['figu']
         
+        # COLUMNA 1: INFO
         if tipo == 'canje':
             fig_entrego = item['te_pide']
             c1.markdown(f"🔄 **{item['nick']}** (⭐{item['reputation']}) cambia **#{fig_recibo}** por tu **#{fig_entrego}**")
-            
-            # --- CONFIRMACIÓN DE CANJE ---
-            with st.expander("⚙️ Opciones"):
-                st.caption("Si ya hiciste el intercambio:")
-                if st.button(f"✅ Confirmar Canje #{fig_recibo}", key=f"swap_{fig_recibo}_{target_id}"):
-                    ok, msg = db.register_exchange(user['id'], fig_entrego, fig_recibo)
-                    if ok: st.balloons(); st.success(msg); time.sleep(3); st.rerun()
-                    else: st.error(msg)
         else:
             c1.markdown(f"💰 **{item['nick']}** (⭐{item['reputation']}) vende **#{fig_recibo}** a **${item['price']}**")
 
-        # Botón Contacto
+        # COLUMNA 2: ACCIÓN
         is_unlocked = target_id in st.session_state.unlocked_users
+        
         if is_unlocked:
-            c2.link_button("🟢 Chat WhatsApp", f"https://wa.me/549{item['phone']}", use_container_width=True)
+            # DESBLOQUEADO
+            c2.link_button("🟢 Abrir Chat", f"https://wa.me/549{item['phone']}", use_container_width=True)
+            
+            # CONFIRMACIÓN (SOLO SI ES CANJE Y YA ESTÁ DESBLOQUEADO)
+            if tipo == 'canje':
+                with c1.expander("⚙️ Confirmar Canje"):
+                    st.caption("Solo si ya realizaste el intercambio:")
+                    if st.button(f"✅ Registrar #{fig_recibo}", key=f"swap_{fig_recibo}_{target_id}"):
+                        ok, msg = db.register_exchange(user['id'], fig_entrego, fig_recibo)
+                        if ok: st.balloons(); st.success(msg); time.sleep(3); st.rerun()
+                        else: st.error(msg)
         else:
+            # BLOQUEADO
             if c2.button("🔓 Contactar", key=f"ul_{tipo}_{fig_recibo}_{target_id}", use_container_width=True):
                 if db.check_contact_limit(user):
                     db.consume_credit(user)
@@ -239,6 +242,7 @@ def render_card(item, tipo):
                     st.rerun()
                 else: mostrar_modal_premium()
         
+        # COLUMNA 3: VOTO
         if c3.button("👍", key=f"vt_{tipo}_{fig_recibo}_{target_id}"):
             ok, m = db.votar_usuario(user['id'], target_id)
             st.toast(m)
