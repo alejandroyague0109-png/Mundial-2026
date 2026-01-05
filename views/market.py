@@ -5,6 +5,7 @@ import database as db
 import locations
 import utils
 import config
+import streamlit.components.v1 as components 
 
 ITEMS_POR_PAGINA = 10
 
@@ -79,18 +80,15 @@ def render_card(item, tipo, user):
                 link_wa = f"https://wa.me/549{phone_target}?text={mensaje_encoded}"
             else: st.error("Error al desencriptar.")
 
-        # --- COLUMNA IZQUIERDA: DISEÑO LIMPIO Y GRANDE ---
+        # --- COLUMNA INFO (HTML GRANDE) ---
         with col_info:
-            # 1. Encabezado: Nick Grande + Zona Pequeña
-            # Usamos HTML para controlar el tamaño exacto sin usar cabeceras H1/H2 que ocupan mucho margen
             st.markdown(f"""
                 <div style="line-height: 1.2;">
                     <span style="font-size: 1.25em; font-weight: bold;">{item['nick']}</span>
                     <span style="color: grey; font-size: 0.9em; margin-left: 8px;">📍 {item['zone']}</span>
                 </div>
             """, unsafe_allow_html=True)
-
-            # 2. La Oferta: Texto mediano-grande con espaciado
+            
             if tipo == 'canje':
                 fig_entrego = item.get('te_pide', '?')
                 st.markdown(f"""
@@ -106,13 +104,13 @@ def render_card(item, tipo, user):
                 </div>
                 """, unsafe_allow_html=True)
             
-            # 3. Reputación (Pie de tarjeta)
             st.caption(f"⭐ Reputación: {item.get('reputation', 0)}")
 
-        # --- COLUMNA DERECHA: BOTONES ---
+        # --- COLUMNA ACCIONES ---
         with col_actions:
             if is_unlocked:
                 if phone_target: 
+                    # El type="secondary" lo hace blanco gracias al CSS global
                     st.link_button("🟢 WhatsApp", link_wa, type="secondary", use_container_width=True)
                 
                 if tipo == 'canje':
@@ -133,17 +131,21 @@ def render_card(item, tipo, user):
                         else: modal_seguridad(target_id, user)
                     else: mostrar_modal_premium()
             
-            # BOTÓN RECOMENDAR (TEXTO)
             if st.button("⭐ Recomendar", key=f"vt_{tipo}_{fig_recibo}_{target_id}", help="Dar voto positivo", use_container_width=True):
                 ok, m = db.votar_usuario(user['id'], target_id)
                 st.toast(m)
 
 def paginar_y_mostrar(lista_items, tipo_key, tipo_card, user):
+    # Scroll automático al tope de la lista
+    components.html("""<script>window.parent.scrollTo({top: 0, behavior: "smooth"});</script>""", height=0)
+    
     if not lista_items:
         st.info("No hay resultados visibles.")
         return
+    
     total_items = len(lista_items)
     total_pages = (total_items - 1) // ITEMS_POR_PAGINA + 1
+    
     if st.session_state[tipo_key] > total_pages: st.session_state[tipo_key] = 1
     curr_page = st.session_state[tipo_key]
     start_idx = (curr_page - 1) * ITEMS_POR_PAGINA
@@ -152,6 +154,7 @@ def paginar_y_mostrar(lista_items, tipo_key, tipo_card, user):
     
     for item in batch: render_card(item, tipo_card, user)
     st.divider()
+    
     col_p1, col_p2, col_p3 = st.columns([1, 2, 1])
     with col_p1:
         if curr_page > 1: st.button("⬅️", key=f"prev_{tipo_key}", on_click=change_page, args=(tipo_key, -1), use_container_width=True)
@@ -187,6 +190,7 @@ def render_market(user):
     matches_filtrados = aplicar(matches)
     ventas_filtradas = aplicar(ventas)
 
+    # Diagnóstico
     total_raw_c = len(matches)
     total_raw_v = len(ventas)
     visibles_c = len(matches_filtrados)
