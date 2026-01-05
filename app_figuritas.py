@@ -67,11 +67,11 @@ ZONAS_DISPONIBLES = ["Centro", "Godoy Cruz", "Guaymallén", "Las Heras"]
 @st.dialog("🛡️ Consejos de Seguridad")
 def modal_seguridad(target_id):
     st.markdown("### ⚠️ Antes de contactar:")
-    st.info("Para realizar un intercambio seguro, te recomendamos:")
+    st.info("Para jugar seguro en este mercado:")
     st.markdown("""
-    * 🏢 **Lugar Público:** Reúnete siempre en zonas concurridas.
-    * 👀 **Verificación:** Revisa las figuritas antes de entregar las tuyas.
-    * 💰 **Dinero:** No envíes dinero por adelantado.
+    * 🏢 **Campo Neutral:** Reúnete siempre en zonas públicas y concurridas.
+    * 👀 **VAR:** Revisa el estado de las figuritas antes de entregar las tuyas.
+    * 💰 **Sin Adelantos:** No envíes dinero antes del encuentro.
     """)
     st.divider()
     st.caption("Al confirmar, usarás 1 crédito diario (si no eres Premium) para ver el teléfono.")
@@ -89,14 +89,14 @@ def modal_seguridad(target_id):
         else:
             st.error("Error: No tienes créditos suficientes.")
 
-# 2. MODAL PREMIUM (TEXTO ACTUALIZADO)
+# 2. MODAL PREMIUM
 @st.dialog("💎 Pásate a Premium", width="small")
 def mostrar_modal_premium():
     st.markdown(f"""
     ### 🚀 Límite Alcanzado
     Tienes **1 contacto gratis por día**.
     
-    **Con Premium obtienes:**
+    **Juega en Primera con Premium:**
     * 🔓 **Ilimitado:** Contacta sin restricciones.
     * 📐 **Triangulaciones:** Acceso a cadenas de cambio.
     * 🌍 **Un pago único:** Todo el mundial.
@@ -142,22 +142,36 @@ if 'user' not in st.session_state: st.session_state.user = None
 if not st.session_state.user:
     st.title("🏆 Figus 26")
     t1, t2 = st.tabs(["Ingresar", "Registrarse"])
+    
+    # --- PESTAÑA LOGIN ---
     with t1:
-        p = st.text_input("Teléfono", key="l_p")
+        p = st.text_input("Teléfono", key="l_p", placeholder="Ej: 2604...")
         pw = st.text_input("Contraseña", type="password", key="l_pw")
-        if st.button("Entrar", type="primary", disabled=is_locked):
+        
+        if st.button("Iniciar Sesión", type="primary", disabled=is_locked, use_container_width=True):
             u, m = db.login_user(p, pw)
             if u: st.session_state.user = u; st.rerun()
             else: st.error(m)
+    
+    # --- PESTAÑA REGISTRO ---
     with t2:
-        n = st.text_input("Nick"); ph = st.text_input("Teléfono", key="r_p"); pw2 = st.text_input("Crear Pass", type="password", key="r_pw")
+        n = st.text_input("Nick / Apodo")
+        ph = st.text_input("Teléfono", key="r_p", placeholder="Ej: 2604...")
+        pw2 = st.text_input("Contraseña", type="password", key="r_pw") # Homogeneizado
         z = st.selectbox("Zona", ZONAS_DISPONIBLES)
+        
         st.divider()
-        if st.button("Legales", type="secondary"): ver_contrato()
-        acepto = st.checkbox("Acepto términos")
-        if st.button("Crear Cuenta", disabled=(is_locked or not acepto)):
+        col_legales, col_check = st.columns([1, 2])
+        col_legales.button("📄 Leer Legales", type="secondary", on_click=ver_contrato, use_container_width=True)
+        acepto = col_check.checkbox("Acepto términos y condiciones")
+        
+        if st.button("Registrarme", type="primary", disabled=(is_locked or not acepto), use_container_width=True):
             u, m = db.register_user(n, ph, z, pw2)
-            if u: st.success("Creado!"); st.balloons()
+            if u: 
+                # NUEVO FEEDBACK PROFESIONAL (SIN GLOBOS)
+                st.toast("¡Fichaje Exitoso! Bienvenido al equipo.", icon="⚽")
+                st.success("Usuario creado correctamente. Por favor, inicia sesión.")
+                time.sleep(2)
             else: st.error(m)
     st.stop()
 
@@ -166,7 +180,7 @@ user = st.session_state.user
 # --- VERIFICACIÓN DIARIA (RESET) ---
 if db.verify_daily_reset(user):
     st.session_state.unlocked_users = set()
-    st.toast("📅 ¡Nuevo día! Tus contactos diarios se han renovado.", icon="☀️")
+    st.toast("📅 ¡Nuevo día! Tus créditos diarios se han renovado.", icon="☀️")
 
 # --- CÁLCULOS ---
 seleccion_pais = st.session_state.get("seleccion_pais_key", list(config.ALBUM_PAGES.keys())[0])
@@ -205,7 +219,11 @@ with st.sidebar:
         up = st.file_uploader("Subir CSV", type="csv")
         if up and st.button("🚀 Procesar Carga", type="primary", use_container_width=True):
             ok, msg = db.process_csv_upload(pd.read_csv(up), user['id'])
-            if ok: st.success(msg); time.sleep(2); st.rerun()
+            if ok: 
+                st.toast("¡Inventario actualizado!", icon="📦")
+                st.success(msg)
+                time.sleep(1)
+                st.rerun()
             else: st.error(msg)
             
     st.divider()
@@ -221,7 +239,7 @@ with st.sidebar:
             op = st.text_input("ID Op")
             if op and st.button("Validar"):
                 ok, msg = db.verificar_pago_mp(op, user['id'])
-                if ok: st.success(msg); time.sleep(2); st.rerun()
+                if ok: st.success(msg); st.toast("¡Bienvenido a Premium!", icon="💎"); time.sleep(2); st.rerun()
                 else: st.error(msg)
 
     if st.button("Salir"): st.session_state.user = None; st.rerun()
@@ -261,7 +279,7 @@ if seleccion_repes:
     
     if st.button("💾 GUARDAR CAMBIOS", type="primary", use_container_width=True):
         db.save_inventory_positive(user['id'], start, end, seleccion_tengo, edited_df)
-        st.toast("Guardado", icon="✅"); time.sleep(0.5); st.rerun()
+        st.toast("Álbum guardado correctamente", icon="💾"); time.sleep(0.5); st.rerun()
 
 # --- MERCADO ---
 st.divider()
@@ -316,7 +334,12 @@ def render_card(item, tipo):
                     st.caption("Solo si ya realizaste el intercambio:")
                     if st.button(f"✅ Registrar #{fig_recibo}", key=f"swap_{fig_recibo}_{target_id}"):
                         ok, msg = db.register_exchange(user['id'], fig_entrego, fig_recibo)
-                        if ok: st.balloons(); st.success(msg); time.sleep(3); st.rerun()
+                        if ok: 
+                            # NUEVO FEEDBACK DE CANJE (SIN GLOBOS)
+                            st.toast("¡Golazo! Intercambio registrado.", icon="⚽")
+                            st.success(msg)
+                            time.sleep(3)
+                            st.rerun()
                         else: st.error(msg)
         else:
             if c2.button("🔓 Contactar", key=f"ul_{tipo}_{fig_recibo}_{target_id}", use_container_width=True):
