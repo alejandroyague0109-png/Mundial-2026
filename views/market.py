@@ -12,6 +12,7 @@ ITEMS_POR_PAGINA = 10
 def reset_pagination():
     st.session_state.page_canjes = 1
     st.session_state.page_ventas = 1
+    st.session_state.page_pendientes = 1
 
 def change_page(key, delta):
     st.session_state[key] += delta
@@ -37,7 +38,6 @@ def modal_seguridad(target_id, user):
         if db.check_contact_limit(user):
             with utils.spinner_futbolero():
                 db.consume_credit(user)
-                # PERSISTENCIA DB
                 db.log_unlock(user['id'], target_id)
                 st.session_state.unlocked_users.add(target_id)
                 time.sleep(1)
@@ -62,8 +62,6 @@ def mostrar_modal_premium():
     st.link_button("👉 Pagá con Mercado Pago", config.MP_LINK, type="primary", use_container_width=True)
 
 def render_card(item, tipo, user, is_pending_view=False):
-    # is_pending_view: Si True, estamos en la pestaña "Pendientes" y mostramos botones de cierre
-    
     with st.container(border=True):
         col_info, col_actions = st.columns([0.75, 0.25])
         target_id = item['target_id']
@@ -122,22 +120,20 @@ def render_card(item, tipo, user, is_pending_view=False):
                 if phone_target: 
                     st.link_button("🟢 WhatsApp", link_wa, type="secondary", use_container_width=True)
                 
-                # SI ESTAMOS EN PENDIENTES, MOSTRAMOS OPCIONES DE CIERRE/CANCELACIÓN
                 if is_pending_view:
-                    if st.button("✅ Fichaje cerrado", key=f"cls_{fig_recibo}_{target_id}", help="Concretar y quitar de pendientes", width="stretch"):
+                    if st.button("✅ Fichaje cerrado", key=f"pd_ok_{fig_recibo}_{target_id}", help="Concretar y quitar de pendientes", width="stretch"):
                         with utils.spinner_futbolero():
-                            # Pasamos target_id_to_remove para que lo borre de unlocked_contacts
                             if tipo == 'canje':
                                 ok, msg = db.register_exchange(user['id'], fig_entrego, fig_recibo, target_id_to_remove=target_id)
                             else:
                                 ok, msg = db.register_purchase(user['id'], fig_recibo, target_id_to_remove=target_id)
                         
                         if ok: 
-                            st.session_state.unlocked_users.discard(target_id) # Actualizar RAM
+                            st.session_state.unlocked_users.discard(target_id)
                             st.toast("¡Golazo!", icon="⚽"); st.success(msg); time.sleep(3); st.rerun()
                         else: st.error(msg)
                     
-                    if st.button("❌ Ocultar", key=f"hide_{fig_recibo}_{target_id}", width="stretch"):
+                    if st.button("❌ Ocultar", key=f"pd_no_{fig_recibo}_{target_id}", width="stretch"):
                          db.remove_unlock(user['id'], target_id)
                          st.session_state.unlocked_users.discard(target_id)
                          st.rerun()
@@ -148,7 +144,6 @@ def render_card(item, tipo, user, is_pending_view=False):
                         if st.session_state.skip_security_modal:
                             with utils.spinner_futbolero():
                                 db.consume_credit(user)
-                                # PERSISTENCIA DB
                                 db.log_unlock(user['id'], target_id)
                                 st.session_state.unlocked_users.add(target_id)
                                 time.sleep(0.5)
@@ -181,13 +176,22 @@ def paginar_y_mostrar(lista_items, tipo_key, tipo_card, user, is_pending_view=Fa
     total_items = len(lista_items)
     total_pages = (total_items - 1) // ITEMS_POR_PAGINA + 1
     
+    # FIX: ASEGURAR QUE LA KEY EXISTA ANTES DE USARLA
+    if tipo_key not in st.session_state: 
+        st.session_state[tipo_key] = 1
+        
     if st.session_state[tipo_key] > total_pages: st.session_state[tipo_key] = 1
     curr_page = st.session_state[tipo_key]
     start_idx = (curr_page - 1) * ITEMS_POR_PAGINA
     end_idx = start_idx + ITEMS_POR_PAGINA
     batch = lista_items[start_idx:end_idx]
     
-    for item in batch: render_card(item, tipo_card, user, is_pending_view)
+    for item in batch: 
+        t_final = tipo_card
+        if tipo_card == 'auto':
+            t_final = 'venta' if item.get('price', 0) > 0 else 'canje'
+        render_card(item, t_final, user, is_pending_view)
+        
     st.divider()
     
     col_p1, col_p2, col_p3 = st.columns([1, 2, 1])
@@ -211,19 +215,15 @@ def render_market(user):
     with utils.spinner_futbolero():
         market_df = db.fetch_market(user['id'])
     
-    # 1. Matches Totales (para pestañas globales)
     matches, ventas = db.find_matches(user['id'], market_df)
 
-    # 2. Matches PENDIENTES (Solo desbloqueados)
-    # Reutilizamos find_matches pero filtrando el DF original solo para usuarios desbloqueados
+    # Lógica Pendientes
     unlocked_ids = st.session_state.unlocked_users
+    pendientes_total = []
     if unlocked_ids:
-        # Filtramos market_df
-        pending_df = market_df[market_df['user_id'].isin(unlocked_ids)]
-        p_matches, p_ventas = db.find_matches(user['id'], pending_df)
-        pendientes_total = p_matches + p_ventas
-    else:
-        pendientes_total = []
+        p_df = market_df[market_df['user_id'].isin(unlocked_ids)]
+        p_match, p_ventas = db.find_matches(user['id'], p_df)
+        pendientes_total = p_match + p_ventas
 
     def aplicar(lista):
         res = []
@@ -238,31 +238,18 @@ def render_market(user):
     ventas_filtradas = aplicar(ventas)
     pendientes_filtrados = aplicar(pendientes_total)
 
-    # Diagnóstico
     total_raw_c = len(matches)
     total_raw_v = len(ventas)
     
     if (total_raw_c > len(matches_filtrados)) or (total_raw_v > len(ventas_filtradas)):
         st.caption(f"📊 **Resumen:** Se encontraron **{total_raw_c} canjes** y **{total_raw_v} ventas** en total. Estás viendo menos porque tenés filtros activados.")
 
-    # --- TRES PESTAÑAS AHORA ---
-    t1, t2, t3 = st.tabs([
-        f"Canjes ({len(matches_filtrados)})", 
-        f"Ventas ({len(ventas_filtradas)})",
-        f"🤝 Pendientes ({len(pendientes_filtrados)})"
-    ])
+    t1, t2, t3 = st.tabs([f"Canjes ({len(matches_filtrados)})", f"Ventas ({len(ventas_filtradas)})", f"🤝 Pendientes ({len(pendientes_filtrados)})"])
     
     with t1: paginar_y_mostrar(matches_filtrados, 'page_canjes', 'canje', user, is_pending_view=False)
     with t2: paginar_y_mostrar(ventas_filtradas, 'page_ventas', 'venta', user, is_pending_view=False)
     with t3: 
         if not pendientes_filtrados:
-            st.info("No tenés negociaciones activas. Desbloqueá un contacto en las otras pestañas para verlo acá.")
+            st.info("No hay negociaciones pendientes.")
         else:
-            paginar_y_mostrar(pendientes_filtrados, 'page_pendientes', 'pendiente', user, is_pending_view=True)
-            # Nota: 'pendiente' como tipo_card no afecta mucho, pero is_pending_view=True activa los botones.
-            # En realidad render_card necesita saber si es canje o venta para el texto.
-            # Como pendientes_total es una mezcla, necesitamos un pequeño fix en paginar_y_mostrar para pasar el tipo correcto.
-            # FIX RÁPIDO:
-            # Reemplazamos la llamada genérica arriba por un bucle manual si queremos ser estrictos, 
-            # PERO como render_card deduce textos por 'te_pide' o 'price', el parámetro 'tipo' es más visual.
-            # Vamos a asumir que si tiene 'price' > 0 es venta.
+            paginar_y_mostrar(pendientes_filtrados, 'page_pendientes', 'auto', user, is_pending_view=True)
