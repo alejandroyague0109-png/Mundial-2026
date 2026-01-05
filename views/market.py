@@ -15,7 +15,7 @@ def reset_pagination():
 def change_page(key, delta):
     st.session_state[key] += delta
 
-# --- MODAL SEGURIDAD ---
+# --- MODALES ---
 @st.dialog("🛡️ Consejos de Seguridad")
 def modal_seguridad(target_id, user):
     st.markdown("### ⚠️ Antes de contactar:")
@@ -42,7 +42,6 @@ def modal_seguridad(target_id, user):
         else:
             st.error("Error: Te quedaste sin créditos por hoy.")
 
-# --- MODAL PREMIUM ---
 @st.dialog("💎 Pasate a Premium", width="small")
 def mostrar_modal_premium():
     st.markdown(f"""
@@ -80,23 +79,42 @@ def render_card(item, tipo, user):
                 link_wa = f"https://wa.me/549{phone_target}?text={mensaje_encoded}"
             else: st.error("Error al desencriptar.")
 
+        # --- COLUMNA IZQUIERDA: DISEÑO LIMPIO Y GRANDE ---
         with col_info:
-            st.markdown(f"**{item['nick']}** <span style='color:grey; font-size:0.8em'>📍 {item['zone']} ({item['province']})</span>", unsafe_allow_html=True)
+            # 1. Encabezado: Nick Grande + Zona Pequeña
+            # Usamos HTML para controlar el tamaño exacto sin usar cabeceras H1/H2 que ocupan mucho margen
+            st.markdown(f"""
+                <div style="line-height: 1.2;">
+                    <span style="font-size: 1.25em; font-weight: bold;">{item['nick']}</span>
+                    <span style="color: grey; font-size: 0.9em; margin-left: 8px;">📍 {item['zone']}</span>
+                </div>
+            """, unsafe_allow_html=True)
+
+            # 2. La Oferta: Texto mediano-grande con espaciado
             if tipo == 'canje':
                 fig_entrego = item.get('te_pide', '?')
-                st.markdown(f"🔄 Cambia **#{fig_recibo}** por tu **#{fig_entrego}**")
+                st.markdown(f"""
+                <div style="font-size: 1.15em; margin-top: 8px; margin-bottom: 5px;">
+                    🔄 Cambia <b>#{fig_recibo}</b> por tu <b>#{fig_entrego}</b>
+                </div>
+                """, unsafe_allow_html=True)
             else:
                 precio = item['price']
-                st.markdown(f"💰 Vende **#{fig_recibo}** a **${precio}**")
+                st.markdown(f"""
+                <div style="font-size: 1.15em; margin-top: 8px; margin-bottom: 5px;">
+                    💰 Vende <b>#{fig_recibo}</b> a <b>${precio}</b>
+                </div>
+                """, unsafe_allow_html=True)
+            
+            # 3. Reputación (Pie de tarjeta)
             st.caption(f"⭐ Reputación: {item.get('reputation', 0)}")
 
+        # --- COLUMNA DERECHA: BOTONES ---
         with col_actions:
             if is_unlocked:
-                # BOTÓN VERDE WHATSAPP
                 if phone_target: 
-                    st.link_button("🟢 WhatsApp", link_wa, type="primary", use_container_width=True)
+                    st.link_button("🟢 WhatsApp", link_wa, type="secondary", use_container_width=True)
                 
-                # BOTÓN FICHAJE CERRADO
                 if tipo == 'canje':
                     if st.button("✅ Fichaje cerrado", key=f"sw_{fig_recibo}_{target_id}", help="Marcar como intercambiada", use_container_width=True):
                         with utils.spinner_futbolero():
@@ -104,7 +122,6 @@ def render_card(item, tipo, user):
                         if ok: st.toast("¡Golazo!", icon="⚽"); st.success(msg); time.sleep(3); st.rerun()
                         else: st.error(msg)
             else:
-                # BOTÓN DESBLOQUEAR
                 if st.button("🔓 Desbloquear", key=f"ul_{tipo}_{fig_recibo}_{target_id}", type="secondary", use_container_width=True):
                     if db.check_contact_limit(user):
                         if st.session_state.skip_security_modal:
@@ -116,7 +133,8 @@ def render_card(item, tipo, user):
                         else: modal_seguridad(target_id, user)
                     else: mostrar_modal_premium()
             
-            if st.button("👍", key=f"vt_{tipo}_{fig_recibo}_{target_id}", help="Recomendar usuario", use_container_width=True):
+            # BOTÓN RECOMENDAR (TEXTO)
+            if st.button("⭐ Recomendar", key=f"vt_{tipo}_{fig_recibo}_{target_id}", help="Dar voto positivo", use_container_width=True):
                 ok, m = db.votar_usuario(user['id'], target_id)
                 st.toast(m)
 

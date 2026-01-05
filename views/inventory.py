@@ -2,14 +2,11 @@ import streamlit as st
 import pandas as pd
 import time
 import database as db
-import utils # <--- Importamos utils
+import utils 
 
 def render_inventory(user, start, end, seleccion_pais):
-    st.header("📖 Mi Álbum")
+    # (Ya NO hay header aquí, está en app_figuritas.py)
     
-    # Spinner al cargar tus figus
-    # Nota: No cacheamos esto porque queremos ver cambios instantáneos,
-    # pero es tan rápido que quizás ni se vea el spinner.
     ids_tengo_db, repetidas_info, _ = db.get_inventory_status(user['id'], start, end)
     key_pills = f"pills_tengo_{seleccion_pais}"
 
@@ -56,7 +53,6 @@ def render_inventory(user, start, end, seleccion_pais):
         )
         
         if st.button("💾 GUARDAR CAMBIOS", type="primary", use_container_width=True):
-            # AQUI ESTA EL FEEDBACK VISUAL
             with utils.spinner_futbolero():
                 db.save_inventory_positive(user['id'], start, end, seleccion_tengo, edited_df)
             
