@@ -8,16 +8,14 @@ import database as db
 # --- CONFIGURACIÓN UI ---
 st.set_page_config(page_title="Figus 26 | Colección", layout="wide", page_icon="⚽")
 
-# --- ESTILOS CSS ---
+# --- ESTILOS CSS (SOLUCIÓN DEFINITIVA DE COLORES) ---
 st.markdown("""
     <style>
-    /* 1. SIDEBAR: Ensanchado horizontalmente (350px) */
+    /* 1. SIDEBAR: Ancho (350px) y Compacto Verticalmente */
     section[data-testid="stSidebar"] {
         min-width: 350px !important;
         max-width: 350px !important;
     }
-
-    /* 2. COMPRESIÓN VERTICAL INTERNA DEL SIDEBAR */
     section[data-testid="stSidebar"] .block-container {
         padding-top: 2rem !important;
         padding-bottom: 2rem !important;
@@ -25,8 +23,8 @@ st.markdown("""
     section[data-testid="stSidebar"] hr, 
     section[data-testid="stSidebar"] .stMarkdown p,
     section[data-testid="stSidebar"] .stButton,
-    section[data-testid="stSidebar"] .stProgress 
-    {
+    section[data-testid="stSidebar"] .stProgress,
+    section[data-testid="stSidebar"] .stAlert {
         margin-bottom: 0.5rem !important;
         margin-top: 0.2rem !important;
     }
@@ -35,24 +33,31 @@ st.markdown("""
         padding-bottom: 0.5rem !important;
     }
 
-    /* 3. FIGURITAS (Pills): VERDE al seleccionarlas */
-    div[data-testid="stPills"] span[aria-selected="true"] {
-        background-color: #2e7d32 !important;
+    /* 2. FIGURITAS (PILLS): FORZAR VERDE "NUCLEAR" */
+    /* Apuntamos a cualquier elemento seleccionado dentro del componente stPills */
+    [data-testid="stPills"] [aria-selected="true"] {
+        background-color: #2e7d32 !important; /* Verde Fuerte */
         border-color: #2e7d32 !important;
         color: white !important;
     }
-    div[data-testid="stPills"] span[aria-selected="true"]:hover {
+    
+    /* Aseguramos que el texto y los iconos dentro también sean blancos */
+    [data-testid="stPills"] [aria-selected="true"] * {
+        color: white !important;
+    }
+    
+    /* Efecto Hover sobre los seleccionados (Verde más oscuro) */
+    [data-testid="stPills"] [aria-selected="true"]:hover {
         background-color: #1b5e20 !important;
         border-color: #1b5e20 !important;
-    }
-    div[data-testid="stPills"] button[aria-selected="true"] {
-        background-color: #2e7d32 !important;
-        border-color: #2e7d32 !important;
         color: white !important;
     }
 
-    /* 4. Botones secundarios redondeados */
+    /* 3. BOTONES SECUNDARIOS REDONDEADOS */
     button[kind="secondary"] { border-radius: 20px; }
+    
+    /* NOTA: Los botones primarios (Guardar, Ingresar, etc) se quedan 
+       con el color por defecto (ROJO) del tema de Streamlit. */
     </style>
 """, unsafe_allow_html=True)
 
@@ -87,10 +92,13 @@ def mostrar_barrera_entrada():
     st.warning("🔞 Esta aplicación es para mayores de 18 años.")
     st.info("🤝 Facilitamos el contacto entre coleccionistas, pero no intervenimos en los canjes. No nos hacemos responsables de las reuniones pactadas por los usuarios ni de las transacciones realizadas.")
     
-    # --- VUELVE A SER SOLO BOTÓN (Sin checkbox) ---
-    st.markdown("**Al continuar, declaras bajo juramento que eres mayor de edad.**")
+    st.markdown("---")
+    # CHECKBOX DE EDAD
+    acepta_edad = st.checkbox("Declaro bajo juramento que soy mayor de edad.")
     
-    if st.button("✅ Entendido, soy +18", type="primary", use_container_width=True):
+    # EL BOTÓN "INGRESAR" PERMANECE BLOQUEADO HASTA QUE MARCA LA CASILLA
+    # Al ser "primary", tomará el color ROJO por defecto del tema.
+    if st.button("Ingresar", type="primary", disabled=not acepta_edad, use_container_width=True):
         st.session_state.barrera_superada = True
         st.rerun()
 
@@ -109,28 +117,20 @@ def mostrar_instrucciones_csv():
     """)
 
 # --- LOGIN / REGISTRO ---
-
-# 1. Control de Barrera
 if 'barrera_superada' not in st.session_state: st.session_state.barrera_superada = False
-
-# Si no ha superado la barrera, mostramos el diálogo PERO NO DETENEMOS EL SCRIPT (st.stop)
-# para que se renderice el formulario de abajo (bloqueado).
-if not st.session_state.barrera_superada:
-    mostrar_barrera_entrada()
-
-# Variable de bloqueo para los botones
-is_locked = not st.session_state.barrera_superada
+if not st.session_state.barrera_superada: mostrar_barrera_entrada()
 
 if 'user' not in st.session_state: st.session_state.user = None
 if not st.session_state.user:
     st.title("🏆 Figus 26")
     t1, t2 = st.tabs(["Ingresar", "Registrarse"])
     
+    # Variable de bloqueo si el modal se cierra sin aceptar (seguridad extra)
+    is_locked = not st.session_state.barrera_superada
+    
     with t1:
         p = st.text_input("Teléfono", key="l_p")
         pw = st.text_input("Contraseña", type="password", key="l_pw")
-        
-        # EL BOTÓN ENTRAR SE BLOQUEA SI NO SE SUPERÓ LA BARRERA
         if st.button("Entrar", type="primary", disabled=is_locked):
             u, m = db.login_user(p, pw)
             if u: st.session_state.user = u; st.rerun()
@@ -142,14 +142,12 @@ if not st.session_state.user:
         st.divider()
         if st.button("Legales", type="secondary"): ver_contrato()
         acepto = st.checkbox("Acepto términos")
-        
-        # EL BOTÓN CREAR SE BLOQUEA SI NO HAY BARRERA O NO ACEPTA TÉRMINOS
         if st.button("Crear Cuenta", disabled=(is_locked or not acepto)):
             u, m = db.register_user(n, ph, z, pw2)
             if u: st.success("Creado!"); st.balloons()
             else: st.error(m)
-    
-    # Detenemos aquí si no hay usuario logueado
+            
+    # Si no hay usuario, detenemos aquí para no cargar el resto de la app
     st.stop()
 
 user = st.session_state.user
