@@ -15,7 +15,7 @@ def reset_pagination():
 def change_page(key, delta):
     st.session_state[key] += delta
 
-# --- MODALES (Igual que antes) ---
+# --- MODAL SEGURIDAD ---
 @st.dialog("🛡️ Consejos de Seguridad")
 def modal_seguridad(target_id, user):
     st.markdown("### ⚠️ Antes de contactar:")
@@ -27,15 +27,23 @@ def modal_seguridad(target_id, user):
     """)
     st.divider()
     st.caption("Si confirmás, usás 1 crédito diario (si no sos Premium) para ver el número.")
+    
     no_volver_a_mostrar = st.checkbox("No me mostrés esto de nuevo", key="chk_skip_sec")
+    
     if st.button("✅ Dale, Ver Contacto", type="primary", use_container_width=True):
         if no_volver_a_mostrar: st.session_state.skip_security_modal = True
+        
         if db.check_contact_limit(user):
-            db.consume_credit(user)
-            st.session_state.unlocked_users.add(target_id)
+            # AGREGADO SPINNER AQUÍ
+            with utils.spinner_futbolero():
+                db.consume_credit(user)
+                st.session_state.unlocked_users.add(target_id)
+                time.sleep(1) # Pequeña pausa dramática para que se lea la frase
             st.rerun()
-        else: st.error("Error: Te quedaste sin créditos por hoy.")
+        else:
+            st.error("Error: Te quedaste sin créditos por hoy.")
 
+# --- MODAL PREMIUM ---
 @st.dialog("💎 Pasate a Premium", width="small")
 def mostrar_modal_premium():
     st.markdown(f"""
@@ -89,7 +97,7 @@ def render_card(item, tipo, user):
             if phone_target: c2.link_button("🟢 Abrir Chat", link_wa, use_container_width=True)
             if tipo == 'canje':
                 with c1.expander("⚙️ Confirmar"):
-                    # Spinner al confirmar intercambio
+                    st.caption("Solo si ya hicieron el cambio:")
                     if st.button(f"✅ Registrar #{fig_recibo}", key=f"swap_{fig_recibo}_{target_id}"):
                         with utils.spinner_futbolero():
                             ok, msg = db.register_exchange(user['id'], fig_entrego, fig_recibo)
@@ -99,8 +107,10 @@ def render_card(item, tipo, user):
             if c2.button("🔓 Contactar", key=f"ul_{tipo}_{fig_recibo}_{target_id}", use_container_width=True):
                 if db.check_contact_limit(user):
                     if st.session_state.skip_security_modal:
-                        db.consume_credit(user)
-                        st.session_state.unlocked_users.add(target_id)
+                        with utils.spinner_futbolero():
+                            db.consume_credit(user)
+                            st.session_state.unlocked_users.add(target_id)
+                            time.sleep(0.5)
                         st.rerun()
                     else: modal_seguridad(target_id, user)
                 else: mostrar_modal_premium()
@@ -141,13 +151,11 @@ def render_market(user):
         filtro_zonas = col_f2.multiselect("Depto / Barrio:", avail_zones, on_change=reset_pagination)
         filtro_num = col_f3.text_input("Buscá por número:", placeholder="Ej: 10", on_change=reset_pagination)
 
-    # AQUI AGREGAMOS EL SPINNER DE CARGA DEL MERCADO
     with utils.spinner_futbolero():
         market_df = db.fetch_market(user['id'])
     
     matches, ventas = db.find_matches(user['id'], market_df)
 
-    # Aplicar filtros
     def aplicar(lista):
         res = []
         for i in lista:

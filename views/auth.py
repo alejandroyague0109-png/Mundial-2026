@@ -3,6 +3,7 @@ import time
 import database as db
 import locations
 import config
+import utils # Importamos utils para el spinner al entrar
 
 def mostrar_login():
     st.title("🏆 Figus 26")
@@ -13,9 +14,15 @@ def mostrar_login():
         pw = st.text_input("Contraseña", type="password", key="l_pw")
         
         if st.button("Entrar", type="primary", use_container_width=True):
-            u, m = db.login_user(p, pw)
-            if u: st.session_state.user = u; st.rerun()
-            else: st.error(m)
+            # Agregamos feedback de carga al login
+            with utils.spinner_futbolero():
+                u, m = db.login_user(p, pw)
+            
+            if u: 
+                st.session_state.user = u
+                st.rerun()
+            else: 
+                st.error(m)
             
     with t2:
         n = st.text_input("Nick / Apodo")
@@ -30,7 +37,6 @@ def mostrar_login():
         st.divider()
         col_legales, col_check = st.columns([1, 2])
         
-        # Callback para ver contrato
         def ver_contrato():
              @st.dialog("📄 Términos", width="large")
              def _dialog(): st.markdown(config.TEXTO_LEGAL_COMPLETO)
@@ -42,9 +48,12 @@ def mostrar_login():
         campos_completos = n and ph and pw2 and reg_prov and reg_zone and acepto
         
         if st.button("Registrarme", type="primary", disabled=(not campos_completos), use_container_width=True):
-            u, m = db.register_user(n, ph, reg_prov, reg_zone, pw2)
+            with utils.spinner_futbolero():
+                u, m = db.register_user(n, ph, reg_prov, reg_zone, pw2)
+            
             if u: 
                 st.toast("¡Alta incorporación! Bienvenido al equipo.", icon="⚽")
-                st.success("Te creaste la cuenta. Ahora entrá.")
-                time.sleep(2)
-            else: st.error(m)
+                st.success("Cuenta creada, crack. Ahora iniciá sesión en la otra pestaña.")
+                time.sleep(3)
+            else: 
+                st.error(m)
