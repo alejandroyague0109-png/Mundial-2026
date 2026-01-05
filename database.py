@@ -56,7 +56,7 @@ def register_user(nick, phone, province, zone, password):
         return response.data[0], "OK"
     except Exception as e: return None, f"Error DB: {str(e)}"
 
-# --- INVENTARIO (MODIFICADO PARA WISHLIST) ---
+# --- INVENTARIO ---
 def get_inventory_status(user_id, start, end):
     try:
         response = supabase.table("inventory").select("*").eq("user_id", user_id).execute()
@@ -66,7 +66,7 @@ def get_inventory_status(user_id, start, end):
             df['sticker_num'] = pd.to_numeric(df['sticker_num'], errors='coerce').fillna(0).astype(int)
         
         db_tengo = []
-        db_wishlist = []  # NUEVO
+        db_wishlist = []
         db_repetidas_info = {}
         
         if not df.empty:
@@ -74,7 +74,6 @@ def get_inventory_status(user_id, start, end):
             df_page = df[mask]
             
             db_tengo = df_page[df_page['status'] == 'tengo']['sticker_num'].tolist()
-            # Capturamos la wishlist
             db_wishlist = df_page[df_page['status'] == 'wishlist']['sticker_num'].tolist()
             
             for _, row in df_page[df_page['status'] == 'repetida'].iterrows():
@@ -88,13 +87,10 @@ def get_inventory_status(user_id, start, end):
         return [], [], {}, pd.DataFrame()
 
 def save_inventory_positive(user_id, start, end, ui_owned_list, ui_wishlist_list, ui_repe_df):
-    # ui_wishlist_list es NUEVO argumento
     page_numbers = list(range(start, end + 1))
-    
     max_retries = 3
     for attempt in range(max_retries):
         try:
-            # Borramos todo lo de esta página para reescribirlo limpio
             supabase.table("inventory").delete().eq("user_id", user_id).in_("sticker_num", page_numbers).execute()
             break 
         except Exception as e:
@@ -102,17 +98,13 @@ def save_inventory_positive(user_id, start, end, ui_owned_list, ui_wishlist_list
             else: st.error("Error de conexión. No pudimos guardar, intentá de nuevo."); raise e
 
     new_rows = []
-    # 1. Guardar TENGO
     for num in ui_owned_list:
         new_rows.append({"user_id": user_id, "sticker_num": num, "status": "tengo", "price": 0, "quantity": 1})
     
-    # 2. Guardar WISHLIST (NUEVO)
     for num in ui_wishlist_list:
-        # Solo guardamos en wishlist si NO lo tengo (validación de seguridad)
         if num not in ui_owned_list:
             new_rows.append({"user_id": user_id, "sticker_num": num, "status": "wishlist", "price": 0, "quantity": 1})
 
-    # 3. Guardar REPETIDAS
     if not ui_repe_df.empty:
         for _, row in ui_repe_df.iterrows():
             es_venta = "Venta" in str(row['Modo'])
@@ -134,12 +126,14 @@ def save_inventory_positive(user_id, start, end, ui_owned_list, ui_wishlist_list
     
     fetch_market.clear()
 
-# --- INTERCAMBIO ---
+# --- INTERCAMBIO Y COMPRA ---
+
 def register_exchange(user_id, given_fig, received_fig):
     try:
         given_fig = int(given_fig)
         received_fig = int(received_fig)
         
+        # 1. Verificar y restar la que doy
         resp = supabase.table("inventory").select("*").eq("user_id", user_id).eq("sticker_num", given_fig).eq("status", "repetida").execute()
         if not resp.data: return False, f"Error: No tenés la #{given_fig} repetida para entregar."
         
@@ -151,7 +145,7 @@ def register_exchange(user_id, given_fig, received_fig):
         else:
             supabase.table("inventory").delete().eq("id", row['id']).execute()
             
-        # Al recibir, borramos si estaba en wishlist
+        # 2. Agregar la que recibo y limpiar wishlist
         supabase.table("inventory").delete().eq("user_id", user_id).eq("sticker_num", received_fig).eq("status", "wishlist").execute()
         
         check = supabase.table("inventory").select("*").eq("user_id", user_id).eq("sticker_num", received_fig).eq("status", "tengo").execute()
@@ -163,7 +157,29 @@ def register_exchange(user_id, given_fig, received_fig):
     except Exception as e:
         return False, f"Error de red: {str(e)}"
 
-# --- MERCADO (CON LÓGICA WISHLIST) ---
+# --- NUEVA FUNCIÓN PARA VENTAS ---
+def register_purchase(user_id, received_fig):
+    try:
+        received_fig = int(received_fig)
+        
+        # 1. Limpiar wishlist si existe
+        supabase.table("inventory").delete().eq("user_id", user_id).eq("sticker_num", received_fig).eq("status", "wishlist").execute()
+        
+        # 2. Agregar a "Tengo" (Solo si no la tengo ya)
+        check = supabase.table("inventory").select("*").eq("user_id", user_id).eq("sticker_num", received_fig).eq("status", "tengo").execute()
+        if not check.data:
+            supabase.table("inventory").insert({"user_id": user_id, "sticker_num": received_fig, "status": "tengo", "price": 0, "quantity": 1}).execute()
+            msg = f"¡Compra registrada! La #{received_fig} ya está en tu álbum."
+        else:
+            msg = f"Ya tenías la #{received_fig} anotada, pero igual cerramos el fichaje."
+            
+        fetch_market.clear()
+        return True, msg
+    except Exception as e:
+        return False, f"Error de red: {str(e)}"
+
+
+# --- MERCADO ---
 @st.cache_data(ttl=60, show_spinner=False)
 def fetch_market(user_id):
     try:
@@ -180,15 +196,12 @@ def find_matches(user_id, market_df):
     if market_df.empty: return [], []
 
     try:
-        # Mis TENGO
         resp = supabase.table("inventory").select("sticker_num").eq("user_id", user_id).eq("status", "tengo").execute()
         mis_tengo_set = set(int(item['sticker_num']) for item in resp.data)
         
-        # Mis REPES
         resp_r = supabase.table("inventory").select("sticker_num").eq("user_id", user_id).eq("status", "repetida").execute()
         mis_repes_set = set(int(item['sticker_num']) for item in resp_r.data)
 
-        # Mi WISHLIST (NUEVO)
         resp_w = supabase.table("inventory").select("sticker_num").eq("user_id", user_id).eq("status", "wishlist").execute()
         mis_wishlist_set = set(int(item['sticker_num']) for item in resp_w.data)
     except:
@@ -209,7 +222,6 @@ def find_matches(user_id, market_df):
         figu = int(row['sticker_num'])
         
         if figu not in mis_tengo_set:
-            # Determinamos si es un item de ALTA PRIORIDAD (Wishlist)
             es_wishlist = figu in mis_wishlist_set
             
             match = {
@@ -217,7 +229,7 @@ def find_matches(user_id, market_df):
                 'phone_encrypted': row['phone_encrypted'], 
                 'figu': figu, 'price': row['price'], 
                 'reputation': row['reputation'], 'target_id': row['user_id'],
-                'is_wishlist': es_wishlist # Flag para el frontend
+                'is_wishlist': es_wishlist
             }
             
             if row['price'] > 0: 
@@ -231,13 +243,12 @@ def find_matches(user_id, market_df):
                     match['te_pide'] = sirven[0]
                     directos.append(match)
     
-    # ORDENAMIENTO: Primero Wishlist, luego Reputación, luego Normal
     directos.sort(key=lambda x: (not x['is_wishlist'], -x['reputation']))
     ventas.sort(key=lambda x: (not x['is_wishlist'], x['price'], -x['reputation']))
                     
     return directos, ventas
 
-# --- UTILS VARIOS (Sin cambios) ---
+# --- UTILS VARIOS ---
 def verificar_pago_mp(payment_id, user_id):
     try:
         if supabase.table("payments_log").select("*").eq("payment_id", payment_id).execute().data: return False, "Usado."
@@ -296,7 +307,6 @@ def process_csv_upload(df, user_id):
         rows_to_insert = []
         for _, row in df.iterrows():
             st_val = str(row['status']).lower().strip()
-            # También aceptamos wishlist en el CSV si se quisiera
             if st_val not in ['tengo', 'repetida', 'wishlist']: st_val = 'tengo'
             qty = 1
             if 'quantity' in df.columns and pd.notnull(row['quantity']): qty = int(row['quantity'])
