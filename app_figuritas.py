@@ -21,6 +21,9 @@ st.markdown("""
     div[data-testid="stPills"] span[aria-selected="true"] { background-color: #2e7d32 !important; border-color: #2e7d32 !important; color: white !important; }
     div[data-testid="stPills"] button[aria-selected="true"] { background-color: #2e7d32 !important; border-color: #2e7d32 !important; color: white !important; }
     button[kind="secondary"] { border-radius: 20px; }
+    
+    /* Centrar paginación */
+    div[data-testid="column"] { text-align: center; }
     </style>
 """, unsafe_allow_html=True)
 
@@ -28,11 +31,26 @@ st.markdown("""
 if 'unlocked_users' not in st.session_state: st.session_state.unlocked_users = set()
 if 'skip_security_modal' not in st.session_state: st.session_state.skip_security_modal = False
 
+# Variables de Paginación
+if 'page_canjes' not in st.session_state: st.session_state.page_canjes = 1
+if 'page_ventas' not in st.session_state: st.session_state.page_ventas = 1
+
+ITEMS_POR_PAGINA = 15
+
+# --- FUNCIONES AUXILIARES ---
+def reset_pagination():
+    """Resetea la paginación a 1 cuando cambian los filtros."""
+    st.session_state.page_canjes = 1
+    st.session_state.page_ventas = 1
+
+def change_page(key, delta):
+    st.session_state[key] += delta
+
 # --- MODALES ---
 @st.dialog("🛡️ Consejos de Seguridad")
 def modal_seguridad(target_id):
     st.markdown("### ⚠️ Antes de contactar:")
-    st.info("Para jugar tranquilo en este mercado:")
+    st.info("Para jugar seguro en este mercado:")
     st.markdown("""
     * 🏢 **Campo Neutral:** Juntate siempre en zonas públicas y concurridas.
     * 👀 **VAR:** Revisá el estado de las figus antes de entregar las tuyas.
@@ -225,13 +243,14 @@ st.subheader("🔍 Mercado")
 
 with st.expander("🔎 Filtros", expanded=True):
     col_f1, col_f2, col_f3 = st.columns(3)
-    filtro_prov = col_f1.multiselect("Provincia:", list(locations.ARGENTINA.keys()), default=[user.get('province', 'Mendoza')])
+    # Agregamos on_change=reset_pagination a los filtros
+    filtro_prov = col_f1.multiselect("Provincia:", list(locations.ARGENTINA.keys()), default=[user.get('province', 'Mendoza')], on_change=reset_pagination)
     avail_zones = []
     if filtro_prov:
         for p in filtro_prov:
             avail_zones.extend(locations.ARGENTINA.get(p, []))
-    filtro_zonas = col_f2.multiselect("Depto / Barrio:", avail_zones)
-    filtro_num = col_f3.text_input("Buscá por número:", placeholder="Ej: 10")
+    filtro_zonas = col_f2.multiselect("Depto / Barrio:", avail_zones, on_change=reset_pagination)
+    filtro_num = col_f3.text_input("Buscá por número:", placeholder="Ej: 10", on_change=reset_pagination)
 
 market_df = db.fetch_market(user['id'])
 matches, ventas = db.find_matches(user['id'], market_df)
@@ -299,9 +318,49 @@ def render_card(item, tipo):
             ok, m = db.votar_usuario(user['id'], target_id)
             st.toast(m)
 
+# --- RENDERIZADO CON PAGINACIÓN ---
+def paginar_y_mostrar(lista_items, tipo_key, tipo_card):
+    if not lista_items:
+        st.info("No encontramos nada con estos filtros.")
+        return
+
+    # Cálculos
+    total_items = len(lista_items)
+    total_pages = (total_items - 1) // ITEMS_POR_PAGINA + 1
+    
+    # Validar que la página actual no se pase del total (por si filtran y quedan menos)
+    if st.session_state[tipo_key] > total_pages:
+        st.session_state[tipo_key] = 1
+        
+    curr_page = st.session_state[tipo_key]
+    start_idx = (curr_page - 1) * ITEMS_POR_PAGINA
+    end_idx = start_idx + ITEMS_POR_PAGINA
+    
+    # Slice
+    batch = lista_items[start_idx:end_idx]
+    
+    # Renderizar tarjetas
+    for item in batch:
+        render_card(item, tipo_card)
+        
+    st.divider()
+    
+    # Controles de Paginación
+    col_p1, col_p2, col_p3 = st.columns([1, 2, 1])
+    
+    with col_p1:
+        if curr_page > 1:
+            st.button("⬅️ Anterior", key=f"prev_{tipo_key}", on_click=change_page, args=(tipo_key, -1), use_container_width=True)
+            
+    with col_p2:
+        st.markdown(f"<div style='text-align: center; padding-top: 5px;'><b>Página {curr_page} de {total_pages}</b></div>", unsafe_allow_html=True)
+        
+    with col_p3:
+        if curr_page < total_pages:
+            st.button("Siguiente ➡️", key=f"next_{tipo_key}", on_click=change_page, args=(tipo_key, 1), use_container_width=True)
+
 with t1:
-    if not matches_filtrados: st.info("No hay canjes con estos filtros.")
-    for m in matches_filtrados: render_card(m, 'canje')
+    paginar_y_mostrar(matches_filtrados, 'page_canjes', 'canje')
+
 with t2:
-    if not ventas_filtradas: st.info("No hay ventas con estos filtros.")
-    for v in ventas_filtradas: render_card(v, 'venta')
+    paginar_y_mostrar(ventas_filtradas, 'page_ventas', 'venta')

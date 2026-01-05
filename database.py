@@ -58,6 +58,7 @@ def register_user(nick, phone, province, zone, password):
 
 # --- INVENTARIO ---
 def get_inventory_status(user_id, start, end):
+    # NO CACHEAMOS ESTO: El usuario necesita ver sus cambios al instante al hacer clic.
     try:
         response = supabase.table("inventory").select("*").eq("user_id", user_id).execute()
         df = pd.DataFrame(response.data)
@@ -120,6 +121,9 @@ def save_inventory_positive(user_id, start, end, ui_owned_list, ui_repe_df):
             except Exception as e:
                 if attempt < max_retries - 1: time.sleep(1)
                 else: raise e
+    
+    # IMPORTANTE: Al guardar, limpiamos la caché del mercado para que otros vean mis cambios pronto.
+    fetch_market.clear()
 
 # --- INTERCAMBIO ---
 def register_exchange(user_id, given_fig, received_fig):
@@ -137,20 +141,31 @@ def register_exchange(user_id, given_fig, received_fig):
         check = supabase.table("inventory").select("*").eq("user_id", user_id).eq("sticker_num", received_fig).eq("status", "tengo").execute()
         if not check.data:
             supabase.table("inventory").insert({"user_id": user_id, "sticker_num": received_fig, "status": "tengo", "price": 0, "quantity": 1}).execute()
+            
+        # Limpiamos caché porque el stock del mercado cambió
+        fetch_market.clear()
+        
         return True, f"¡Golazo! Entregaste la #{given_fig} y te guardaste la #{received_fig}."
     except Exception as e:
         return False, f"Error de red: {str(e)}"
 
-# --- MERCADO ---
+# --- MERCADO (CON CACHÉ) ---
+# TTL = 60 segundos. Los datos del mercado se refrescan cada minuto.
+# show_spinner=False evita que aparezca el "Cargando..." molesto a cada rato.
+@st.cache_data(ttl=60, show_spinner=False)
 def fetch_market(user_id):
     try:
+        # Traemos TODO el inventario que no sea mío
         resp = supabase.table("inventory").select("*, users(nick, province, zone, phone, reputation)").neq("user_id", user_id).execute()
         return pd.DataFrame(resp.data)
     except:
         return pd.DataFrame()
 
 def find_matches(user_id, market_df):
+    # Esta función procesa datos en memoria (Pandas), es muy rápida, no requiere caché extra
+    # si market_df ya viene cacheado.
     try:
+        # Traemos mis datos frescos (sin caché)
         resp = supabase.table("inventory").select("sticker_num").eq("user_id", user_id).eq("status", "tengo").execute()
         mis_tengo_set = set(item['sticker_num'] for item in resp.data)
         resp_r = supabase.table("inventory").select("sticker_num").eq("user_id", user_id).eq("status", "repetida").execute()
@@ -161,6 +176,7 @@ def find_matches(user_id, market_df):
     directos, ventas = [], []
     if market_df.empty: return [], []
     
+    # Procesamiento Vectorizado (Más eficiente que iterrows, pero mantenemos iterrows por legibilidad si no hay millones)
     market_df['nick'] = market_df['users'].apply(lambda x: x['nick'])
     market_df['province'] = market_df['users'].apply(lambda x: x.get('province', 'Mendoza'))
     market_df['zone'] = market_df['users'].apply(lambda x: x['zone'])
@@ -254,6 +270,10 @@ def process_csv_upload(df, user_id):
             nums = [r['sticker_num'] for r in rows_to_insert]
             supabase.table("inventory").delete().eq("user_id", user_id).in_("sticker_num", nums).execute()
             supabase.table("inventory").insert(rows_to_insert).execute()
+            
+            # Limpiamos caché al cargar masivamente
+            fetch_market.clear()
+            
             return True, f"Cargamos {len(rows_to_insert)} figus."
         return False, "El CSV estaba vacío."
     except Exception as e: return False, str(e)
