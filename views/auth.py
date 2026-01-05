@@ -3,21 +3,24 @@ import time
 import database as db
 import locations
 import config
-import utils # Importamos utils para el spinner al entrar
+import utils
 
 def mostrar_login():
     st.title("🏆 Figus 26")
+    
+    # Lógica de Bloqueo: Si no aceptó el +18, bloqueamos botones
+    is_locked = not st.session_state.get('barrera_superada', False)
+    
     t1, t2 = st.tabs(["Ingresar", "Registrarse"])
     
     with t1:
         p = st.text_input("Teléfono", key="l_p", placeholder="Ej: 2604...")
         pw = st.text_input("Contraseña", type="password", key="l_pw")
         
-        if st.button("Entrar", type="primary", use_container_width=True):
-            # Agregamos feedback de carga al login
+        # Botón deshabilitado si está bloqueado
+        if st.button("Entrar", type="primary", disabled=is_locked, use_container_width=True):
             with utils.spinner_futbolero():
                 u, m = db.login_user(p, pw)
-            
             if u: 
                 st.session_state.user = u
                 st.rerun()
@@ -28,7 +31,6 @@ def mostrar_login():
         n = st.text_input("Nick / Apodo")
         ph = st.text_input("Teléfono", key="r_p", placeholder="Ej: 2604...")
         pw2 = st.text_input("Contraseña", type="password", key="r_pw")
-        
         col_prov, col_dep = st.columns(2)
         reg_prov = col_prov.selectbox("Provincia", list(locations.ARGENTINA.keys()), index=None, placeholder="Seleccioná Provincia...")
         opciones_deptos = locations.ARGENTINA.get(reg_prov, []) if reg_prov else []
@@ -47,10 +49,10 @@ def mostrar_login():
         
         campos_completos = n and ph and pw2 and reg_prov and reg_zone and acepto
         
-        if st.button("Registrarme", type="primary", disabled=(not campos_completos), use_container_width=True):
+        # Botón bloqueado si no hay +18 OR faltan datos
+        if st.button("Registrarme", type="primary", disabled=(is_locked or not campos_completos), use_container_width=True):
             with utils.spinner_futbolero():
                 u, m = db.register_user(n, ph, reg_prov, reg_zone, pw2)
-            
             if u: 
                 st.toast("¡Alta incorporación! Bienvenido al equipo.", icon="⚽")
                 st.success("Cuenta creada, crack. Ahora iniciá sesión en la otra pestaña.")
