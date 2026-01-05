@@ -14,12 +14,10 @@ def render_inventory(user, start, end, seleccion_pais):
     col_head_1, col_btn_all, col_btn_none = st.columns([4, 1, 1])
     col_head_1.markdown("### 1️⃣ Tus Figus")
 
-    # FIX 2026: width="stretch"
     if col_btn_all.button("Todas", width="stretch", key=f"all_{seleccion_pais}"):
         st.session_state[key_pills] = list(range(start, end + 1))
         st.rerun()
 
-    # FIX 2026: width="stretch"
     if col_btn_none.button("Ninguna", width="stretch", key=f"none_{seleccion_pais}"):
         st.session_state[key_pills] = []
         st.rerun()
@@ -30,6 +28,9 @@ def render_inventory(user, start, end, seleccion_pais):
     posibles_repes = sorted(seleccion_tengo) if seleccion_tengo else []
     ids_repes_val = [k for k in repetidas_info.keys() if k in posibles_repes]
     seleccion_repes = st.pills("Repes", posibles_repes, default=ids_repes_val, selection_mode="multi", key=f"repes_{seleccion_pais}")
+
+    # Inicializamos el dataframe vacío por si no hay repetidas
+    edited_df = pd.DataFrame()
 
     if seleccion_repes:
         st.info("👇 **Data:** Hacé doble clic en 'Modo' para cambiar entre **Canje** y **Venta**. Ajustá la 'Cantidad'.")
@@ -51,12 +52,15 @@ def render_inventory(user, start, end, seleccion_pais):
             }, 
             hide_index=True, use_container_width=True
         )
+    
+    st.divider()
+
+    # --- BOTÓN GUARDAR (AHORA FUERA DEL IF) ---
+    # Esto asegura que siempre puedas guardar, incluso si marcaste "Ninguna" o "Todas" sin repetidas.
+    if st.button("💾 GUARDAR CAMBIOS", type="primary", width="stretch"):
+        with utils.spinner_futbolero():
+            db.save_inventory_positive(user['id'], start, end, seleccion_tengo, edited_df)
         
-        # FIX 2026: width="stretch"
-        if st.button("💾 GUARDAR CAMBIOS", type="primary", width="stretch"):
-            with utils.spinner_futbolero():
-                db.save_inventory_positive(user['id'], start, end, seleccion_tengo, edited_df)
-            
-            st.toast("Joyas guardadas", icon="💾")
-            time.sleep(0.5)
-            st.rerun()
+        st.toast("Joyas guardadas", icon="💾")
+        time.sleep(0.5)
+        st.rerun()
