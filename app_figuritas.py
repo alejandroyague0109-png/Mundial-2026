@@ -8,7 +8,7 @@ import database as db
 # --- CONFIGURACIÓN UI ---
 st.set_page_config(page_title="Figus 26 | Colección", layout="wide", page_icon="⚽")
 
-# --- ESTILOS CSS (DISEÑO AJUSTADO: ANCHO Y COMPACTO) ---
+# --- ESTILOS CSS ---
 st.markdown("""
     <style>
     /* 1. SIDEBAR: Ensanchado horizontalmente (350px) */
@@ -18,12 +18,10 @@ st.markdown("""
     }
 
     /* 2. COMPRESIÓN VERTICAL INTERNA DEL SIDEBAR */
-    /* Reducir padding general del contenedor del sidebar */
     section[data-testid="stSidebar"] .block-container {
         padding-top: 2rem !important;
         padding-bottom: 2rem !important;
     }
-    /* Reducir márgenes entre elementos (dividers, texto, botones, barras) */
     section[data-testid="stSidebar"] hr, 
     section[data-testid="stSidebar"] .stMarkdown p,
     section[data-testid="stSidebar"] .stButton,
@@ -32,7 +30,6 @@ st.markdown("""
         margin-bottom: 0.5rem !important;
         margin-top: 0.2rem !important;
     }
-    /* Reducir el título principal del sidebar */
     section[data-testid="stSidebar"] h1 {
         font-size: 2rem !important;
         padding-bottom: 0.5rem !important;
@@ -40,7 +37,7 @@ st.markdown("""
 
     /* 3. FIGURITAS (Pills): VERDE al seleccionarlas */
     div[data-testid="stPills"] span[aria-selected="true"] {
-        background-color: #2e7d32 !important; /* Verde Fuerte */
+        background-color: #2e7d32 !important;
         border-color: #2e7d32 !important;
         color: white !important;
     }
@@ -88,15 +85,12 @@ def mostrar_modal_premium():
 @st.dialog("⚠️ Bienvenido a Figus 26")
 def mostrar_barrera_entrada():
     st.warning("🔞 Esta aplicación es para mayores de 18 años.")
-    
     st.info("🤝 Facilitamos el contacto entre coleccionistas, pero no intervenimos en los canjes. No nos hacemos responsables de las reuniones pactadas por los usuarios ni de las transacciones realizadas.")
     
-    st.markdown("---")
-    # --- CHECKBOX OBLIGATORIO ---
-    acepta_edad = st.checkbox("Declaro bajo juramento que soy mayor de edad.")
+    # --- VUELVE A SER SOLO BOTÓN (Sin checkbox) ---
+    st.markdown("**Al continuar, declaras bajo juramento que eres mayor de edad.**")
     
-    # CORRECCIÓN AQUÍ: Usamos la misma variable 'acepta_edad'
-    if st.button("Ingresar", type="primary", disabled=not acepta_edad, use_container_width=True):
+    if st.button("✅ Entendido, soy +18", type="primary", use_container_width=True):
         st.session_state.barrera_superada = True
         st.rerun()
 
@@ -115,30 +109,47 @@ def mostrar_instrucciones_csv():
     """)
 
 # --- LOGIN / REGISTRO ---
+
+# 1. Control de Barrera
 if 'barrera_superada' not in st.session_state: st.session_state.barrera_superada = False
-if not st.session_state.barrera_superada: mostrar_barrera_entrada()
+
+# Si no ha superado la barrera, mostramos el diálogo PERO NO DETENEMOS EL SCRIPT (st.stop)
+# para que se renderice el formulario de abajo (bloqueado).
+if not st.session_state.barrera_superada:
+    mostrar_barrera_entrada()
+
+# Variable de bloqueo para los botones
+is_locked = not st.session_state.barrera_superada
 
 if 'user' not in st.session_state: st.session_state.user = None
 if not st.session_state.user:
     st.title("🏆 Figus 26")
     t1, t2 = st.tabs(["Ingresar", "Registrarse"])
+    
     with t1:
         p = st.text_input("Teléfono", key="l_p")
         pw = st.text_input("Contraseña", type="password", key="l_pw")
-        if st.button("Entrar", type="primary"):
+        
+        # EL BOTÓN ENTRAR SE BLOQUEA SI NO SE SUPERÓ LA BARRERA
+        if st.button("Entrar", type="primary", disabled=is_locked):
             u, m = db.login_user(p, pw)
             if u: st.session_state.user = u; st.rerun()
             else: st.error(m)
+            
     with t2:
         n = st.text_input("Nick"); ph = st.text_input("Teléfono", key="r_p"); pw2 = st.text_input("Crear Pass", type="password", key="r_pw")
         z = st.selectbox("Zona", ZONAS_DISPONIBLES)
         st.divider()
         if st.button("Legales", type="secondary"): ver_contrato()
         acepto = st.checkbox("Acepto términos")
-        if st.button("Crear Cuenta", disabled=not acepto):
+        
+        # EL BOTÓN CREAR SE BLOQUEA SI NO HAY BARRERA O NO ACEPTA TÉRMINOS
+        if st.button("Crear Cuenta", disabled=(is_locked or not acepto)):
             u, m = db.register_user(n, ph, z, pw2)
             if u: st.success("Creado!"); st.balloons()
             else: st.error(m)
+    
+    # Detenemos aquí si no hay usuario logueado
     st.stop()
 
 user = st.session_state.user
