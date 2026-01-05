@@ -1,11 +1,11 @@
 import streamlit as st
 import pandas as pd
 import time
-from urllib.parse import quote
 import config
 import database as db
-import locations
-import utils
+
+# Importamos las vistas
+from views import auth, inventory, market
 
 # --- CONFIGURACIÓN UI ---
 st.set_page_config(page_title="Figus 26 | Colección", layout="wide", page_icon="⚽")
@@ -13,446 +13,121 @@ st.set_page_config(page_title="Figus 26 | Colección", layout="wide", page_icon=
 # --- ESTILOS CSS ---
 st.markdown("""
     <style>
-    /* Ocultar enlaces de títulos */
     .stHeading a { display: none !important; }
     [data-testid="stHeaderActionElements"] { display: none !important; }
-    
-    /* Sidebar Ajustado */
     section[data-testid="stSidebar"] { min-width: 350px !important; max-width: 350px !important; }
     section[data-testid="stSidebar"] .block-container { padding-top: 2rem !important; padding-bottom: 2rem !important; }
-    
-    /* Espaciados */
-    section[data-testid="stSidebar"] hr, 
-    section[data-testid="stSidebar"] .stMarkdown p, 
-    section[data-testid="stSidebar"] .stButton, 
-    section[data-testid="stSidebar"] .stProgress { 
-        margin-bottom: 0.5rem !important; margin-top: 0.2rem !important; 
-    }
-    section[data-testid="stSidebar"] h1 { font-size: 2rem !important; padding-bottom: 0.5rem !important; }
-    
-    /* Pills Verdes (Solo aplica si el usuario está en modo compatible, pero no fuerza el resto) */
     div[data-testid="stPills"] span[aria-selected="true"] { background-color: #2e7d32 !important; border-color: #2e7d32 !important; color: white !important; }
     div[data-testid="stPills"] button[aria-selected="true"] { background-color: #2e7d32 !important; border-color: #2e7d32 !important; color: white !important; }
-    
-    /* Botones Redondeados */
     button[kind="secondary"] { border-radius: 20px; }
-    
-    /* Centrar Paginación */
     div[data-testid="column"] { text-align: center; }
-    
-    /* Ajuste botones selección masiva */
     div.stButton > button:first-child { min-height: 0px; padding-top: 0px; padding-bottom: 0px; }
     </style>
 """, unsafe_allow_html=True)
 
-# --- INICIALIZAR MEMORIA ---
+# --- INICIALIZAR MEMORIA GLOBAL ---
 if 'unlocked_users' not in st.session_state: st.session_state.unlocked_users = set()
 if 'skip_security_modal' not in st.session_state: st.session_state.skip_security_modal = False
 if 'page_canjes' not in st.session_state: st.session_state.page_canjes = 1
 if 'page_ventas' not in st.session_state: st.session_state.page_ventas = 1
+if 'barrera_superada' not in st.session_state: st.session_state.barrera_superada = False
 
-ITEMS_POR_PAGINA = 15
-
-# --- FUNCIONES AUXILIARES ---
-def reset_pagination():
-    """Resetea la paginación a 1 cuando cambian los filtros."""
-    st.session_state.page_canjes = 1
-    st.session_state.page_ventas = 1
-
-def change_page(key, delta):
-    st.session_state[key] += delta
-
-# --- MODALES ---
-
-@st.dialog("🛡️ Consejos de Seguridad")
-def modal_seguridad(target_id):
-    st.markdown("### ⚠️ Antes de contactar:")
-    st.info("Para jugar tranquilo en este mercado:")
-    st.markdown("""
-    * 🏢 **Campo Neutral:** Juntate siempre en zonas públicas y concurridas.
-    * 👀 **VAR:** Revisá el estado de las figus antes de entregar las tuyas.
-    * 💰 **Sin Adelantos:** No mandes plata antes del encuentro.
-    """)
-    st.divider()
-    st.caption("Si confirmás, usás 1 crédito diario (si no sos Premium) para ver el número.")
-    
-    no_volver_a_mostrar = st.checkbox("No me mostrés esto de nuevo", key="chk_skip_sec")
-    
-    if st.button("✅ Dale, Ver Contacto", type="primary", use_container_width=True):
-        if no_volver_a_mostrar: st.session_state.skip_security_modal = True
-        
-        if db.check_contact_limit(st.session_state.user):
-            db.consume_credit(st.session_state.user)
-            st.session_state.unlocked_users.add(target_id)
-            st.rerun()
-        else:
-            st.error("Error: Te quedaste sin créditos por hoy.")
-
-@st.dialog("💎 Pasate a Premium", width="small")
-def mostrar_modal_premium():
-    st.markdown(f"""
-    ### 🚀 Límite Alcanzado
-    **Tenés** 1 contacto gratis por día.
-    
-    **Jugá en Primera con Premium:**
-    * 🔓 **Ilimitado:** Contactá sin restricciones.
-    * 📐 **Triangulaciones:** Acceso a cadenas de cambio.
-    * 🌍 **Un pago único:** Todo el mundial.
-    * ⭐ **Destacado:** Aparecés primero en las listas.
-    
-    ---
-    ### Precio Final: **${config.PRECIO_PREMIUM}**
-    """)
-    st.link_button("👉 Pagá con Mercado Pago", config.MP_LINK, type="primary", use_container_width=True)
-    st.caption("Después pegá tu ID de operación en el menú.")
-
+# --- MODAL BIENVENIDA ---
 @st.dialog("⚠️ Bienvenido a Figus 26")
 def mostrar_barrera_entrada():
     st.warning("🔞 Esta aplicación es para mayores de 18 años.")
-    st.info("🤝 Facilitamos el contacto entre coleccionistas, pero no intervenimos en los canjes. No nos hacemos responsables de las reuniones pactadas por los usuarios ni de las transacciones realizadas.")
+    st.info("🤝 Facilitamos el contacto entre coleccionistas, pero no intervenimos en los canjes.")
     st.markdown("**Al continuar, declarás bajo juramento que sos mayor de edad.**")
-    
     if st.button("✅ Entendido, soy +18", type="primary", use_container_width=True):
         st.session_state.barrera_superada = True
         st.rerun()
 
-@st.dialog("📄 Términos", width="large")
-def ver_contrato(): st.markdown(config.TEXTO_LEGAL_COMPLETO)
-
+# --- MODAL AYUDA CSV ---
 @st.dialog("📤 Ayuda CSV")
 def mostrar_instrucciones_csv():
     st.markdown("""
     ### Formato del Archivo
     Debe tener 3 columnas obligatorias:
-    1. **num**: Número de la figurita (ej: 10, 150).
-    2. **status**: Escribí `tengo` o `repetida`.
+    1. **num**: Número de la figurita.
+    2. **status**: `tengo` o `repetida`.
     3. **price**: Precio de venta (0 si es para canje).
-    *(Opcional: 'quantity')*
     """)
 
-# --- LOGIN / REGISTRO ---
+# --- LOGIC FLOW ---
 
-if 'barrera_superada' not in st.session_state: st.session_state.barrera_superada = False
-if not st.session_state.barrera_superada: mostrar_barrera_entrada()
-is_locked = not st.session_state.barrera_superada
+# 1. Barrera de Edad
+if not st.session_state.barrera_superada:
+    mostrar_barrera_entrada()
 
+# 2. Control de Sesión
 if 'user' not in st.session_state: st.session_state.user = None
 
+# 3. Router de Vistas
 if not st.session_state.user:
-    st.title("🏆 Figus 26")
-    t1, t2 = st.tabs(["Ingresar", "Registrarse"])
+    # VISTA DE LOGIN
+    auth.mostrar_login()
+else:
+    # VISTA PRINCIPAL (LOGUEADO)
+    user = st.session_state.user
     
-    with t1:
-        p = st.text_input("Teléfono", key="l_p", placeholder="Ej: 2604...")
-        pw = st.text_input("Contraseña", type="password", key="l_pw")
-        
-        if st.button("Entrar", type="primary", disabled=is_locked, use_container_width=True):
-            u, m = db.login_user(p, pw)
-            if u: st.session_state.user = u; st.rerun()
-            else: st.error(m)
-            
-    with t2:
-        n = st.text_input("Nick / Apodo")
-        ph = st.text_input("Teléfono", key="r_p", placeholder="Ej: 2604...")
-        pw2 = st.text_input("Contraseña", type="password", key="r_pw")
-        
-        # Selección de ubicación en cascada (Obligatoria)
-        col_prov, col_dep = st.columns(2)
-        reg_prov = col_prov.selectbox("Provincia", list(locations.ARGENTINA.keys()), index=None, placeholder="Seleccioná Provincia...")
-        opciones_deptos = locations.ARGENTINA.get(reg_prov, []) if reg_prov else []
-        reg_zone = col_dep.selectbox("Departamento / Barrio", opciones_deptos, index=None, placeholder="Seleccioná Zona...")
-        
+    # Check diario
+    if db.verify_daily_reset(user):
+        st.session_state.unlocked_users = set()
+        st.toast("📅 ¡Nuevo día! Se renovaron tus créditos.", icon="☀️")
+
+    # Cálculos globales para Sidebar
+    seleccion_pais = st.session_state.get("seleccion_pais_key", list(config.ALBUM_PAGES.keys())[0])
+    start, end = config.ALBUM_PAGES[seleccion_pais]
+    total_album = sum([(v[1] - v[0] + 1) for v in config.ALBUM_PAGES.values()])
+    
+    # Obtener totales para barra de progreso
+    _, _, df_full = db.get_inventory_status(user['id'], start, end)
+    try: tengo_total = df_full[df_full['status'] == 'tengo'].shape[0]
+    except: tengo_total = 0
+    
+    # SIDEBAR
+    with st.sidebar:
+        st.title(f"Hola {user['nick']}")
+        st.caption(f"📍 {user.get('province', '')} - {user.get('zone', '')}")
+        st.caption(f"⭐ Reputación: {user.get('reputation', 0)}")
         st.divider()
-        col_legales, col_check = st.columns([1, 2])
-        col_legales.button("📄 Leer Legales", type="secondary", on_click=ver_contrato, use_container_width=True)
-        acepto = col_check.checkbox("Acepto términos y condiciones")
+        st.progress(min(tengo_total / total_album, 1.0), text="🏆 Mi Álbum")
+        st.caption(f"Tenés **{tengo_total}** de {total_album}.")
+        st.divider()
         
-        campos_completos = n and ph and pw2 and reg_prov and reg_zone and acepto
-        
-        if st.button("Registrarme", type="primary", disabled=(is_locked or not campos_completos), use_container_width=True):
-            u, m = db.register_user(n, ph, reg_prov, reg_zone, pw2)
-            if u: 
-                st.toast("¡Alta incorporación! Bienvenido al equipo.", icon="⚽")
-                st.success("Te creaste la cuenta. Ahora entrá.")
-                time.sleep(2)
-            else: st.error(m)
-            
-    st.stop()
-
-user = st.session_state.user
-
-# --- VERIFICACIÓN DIARIA ---
-if db.verify_daily_reset(user):
-    st.session_state.unlocked_users = set()
-    st.toast("📅 ¡Nuevo día! Se renovaron tus créditos.", icon="☀️")
-
-# --- CÁLCULOS GLOBALES ---
-seleccion_pais = st.session_state.get("seleccion_pais_key", list(config.ALBUM_PAGES.keys())[0])
-start, end = config.ALBUM_PAGES[seleccion_pais]
-total_active = end - start + 1
-total_album = sum([(v[1] - v[0] + 1) for v in config.ALBUM_PAGES.values()])
-
-ids_tengo_db, repetidas_info, df_full = db.get_inventory_status(user['id'], start, end)
-key_pills = f"pills_tengo_{seleccion_pais}"
-
-# --- SIDEBAR ---
-with st.sidebar:
-    st.title(f"Hola {user['nick']}")
-    user_prov = user.get('province', 'Mendoza')
-    user_zone = user.get('zone', '')
-    st.caption(f"📍 {user_prov} - {user_zone}")
-    st.caption(f"⭐ Reputación: {user.get('reputation', 0)}")
-    
-    st.divider()
-    # Calculamos el total global para la barra de progreso
-    try: tengo_db_total = df_full[df_full['status'] == 'tengo'].shape[0]
-    except: tengo_db_total = 0
-    # Obtenemos lo que está en vivo en la UI, o usamos la DB si no hay cambios aún
-    ids_tengo_live = st.session_state.get(key_pills, ids_tengo_db)
-    
-    tengo_db_esta_seccion = len(ids_tengo_db)
-    tengo_live_count = len(ids_tengo_live)
-    tengo_global_live = (tengo_db_total - tengo_db_esta_seccion) + tengo_live_count
-    
-    progreso = min(tengo_global_live / total_album, 1.0)
-    st.progress(progreso, text="🏆 Mi Álbum")
-    st.caption(f"Tenés **{tengo_global_live}** de {total_album}.")
-    
-    st.divider()
-    with st.expander("📤 Carga Masiva (CSV)"):
-        st.caption("Carga rápida de inventario.")
-        col_a, col_b = st.columns(2)
-        if col_a.button("❓ Ayuda", use_container_width=True): mostrar_instrucciones_csv()
-        
-        df_plantilla = pd.DataFrame([{"num": 10, "status": "tengo", "price": 0, "quantity": 1}, {"num": 25, "status": "repetida", "price": 500, "quantity": 2}])
-        csv_plantilla = df_plantilla.to_csv(index=False).encode('utf-8')
-        col_b.download_button("⬇️ Plantilla", data=csv_plantilla, file_name="plantilla.csv", mime="text/csv", use_container_width=True)
-        
-        up = st.file_uploader("Subí tu CSV", type="csv")
-        if up and st.button("🚀 Procesar", type="primary", use_container_width=True):
-            ok, msg = db.process_csv_upload(pd.read_csv(up), user['id'])
-            if ok: 
-                st.toast("¡Inventario actualizado!", icon="📦")
-                st.success(msg); time.sleep(1); st.rerun()
-            else: st.error(msg)
-            
-    st.divider()
-    if user.get('is_premium', False):
-        st.success("💎 PREMIUM")
-    else:
-        st.info("👤 GRATIS")
-        contacts = user.get('daily_contacts_count', 0)
-        
-        if contacts >= 1: st.progress(1.0, text="Límite: 1/1 (Agotado)")
-        else: st.progress(0.0, text="Límite: 0/1 (Disponible)")
-            
-        if st.button("💎 Hacete Premium", use_container_width=True): mostrar_modal_premium()
-        
-        with st.expander("Validar Pago"):
-            op = st.text_input("ID Op")
-            if op and st.button("Validar"):
-                ok, msg = db.verificar_pago_mp(op, user['id'])
-                if ok: st.success(msg); st.toast("¡Ya sos Premium!", icon="💎"); time.sleep(2); st.rerun()
+        with st.expander("📤 Carga Masiva (CSV)"):
+            col_a, col_b = st.columns(2)
+            if col_a.button("❓ Ayuda"): mostrar_instrucciones_csv()
+            df_plantilla = pd.DataFrame([{"num": 10, "status": "tengo", "price": 0}, {"num": 25, "status": "repetida", "price": 500}])
+            col_b.download_button("⬇️ Plantilla", df_plantilla.to_csv(index=False).encode('utf-8'), "plantilla.csv", "text/csv")
+            up = st.file_uploader("Subí tu CSV", type="csv")
+            if up and st.button("🚀 Procesar", type="primary"):
+                ok, msg = db.process_csv_upload(pd.read_csv(up), user['id'])
+                if ok: st.toast("¡Cargado!", icon="📦"); st.success(msg); time.sleep(1); st.rerun()
                 else: st.error(msg)
-
-    if st.button("Chau / Salir"): st.session_state.user = None; st.rerun()
-
-# --- APP PRINCIPAL: INVENTARIO ---
-st.header("📖 Mi Álbum")
-seleccion_pais = st.selectbox("Sección:", list(config.ALBUM_PAGES.keys()), key="seleccion_pais_key")
-
-# --- SECCIÓN 1: TUS FIGUS ---
-col_head_1, col_btn_all, col_btn_none = st.columns([4, 1, 1])
-col_head_1.markdown("### 1️⃣ Tus Figus")
-
-# LÓGICA DE CORRECCIÓN PARA st.pills
-# 1. Si la key no está en session state, la inicializamos con los datos de DB.
-if key_pills not in st.session_state:
-    st.session_state[key_pills] = ids_tengo_db
-
-# 2. Botones de Acción Masiva (Modifican Session State Directamente)
-if col_btn_all.button("Todas", use_container_width=True, help="Marcar todas"):
-    st.session_state[key_pills] = list(range(start, end + 1))
-    st.rerun()
-
-if col_btn_none.button("Ninguna", use_container_width=True, help="Desmarcar todas"):
-    st.session_state[key_pills] = []
-    st.rerun()
-
-# 3. Widget st.pills SIN parámetro default (porque ya usamos la key)
-seleccion_tengo = st.pills("Tengo", list(range(start, end + 1)), selection_mode="multi", key=key_pills, label_visibility="collapsed")
-
-st.markdown("### 2️⃣ Repes")
-# Para repetidas, usamos lógica similar o derivamos de 'tengo'
-posibles_repes = sorted(seleccion_tengo) if seleccion_tengo else []
-ids_repes_val = [k for k in repetidas_info.keys() if k in posibles_repes]
-seleccion_repes = st.pills("Repes", posibles_repes, default=ids_repes_val, selection_mode="multi", key=f"repes_{seleccion_pais}")
-
-if seleccion_repes:
-    st.info("👇 **Data:** Hacé doble clic en 'Modo' para cambiar entre **Canje** y **Venta**. Ajustá la 'Cantidad'.")
-    data = []
-    for n in seleccion_repes:
-        info = repetidas_info.get(n, {})
-        precio = info.get('price', 0)
-        qty = info.get('quantity', 1)
-        modo = "💰 Venta" if precio > 0 else "🔄 Canje"
-        data.append({"Figurita": n, "Cantidad": qty, "Modo": modo, "Precio": precio})
-        
-    edited_df = st.data_editor(
-        pd.DataFrame(data), 
-        column_config={
-            "Figurita": st.column_config.NumberColumn(disabled=True),
-            "Cantidad": st.column_config.NumberColumn(min_value=1, step=1, help="Copias disponibles"),
-            "Modo": st.column_config.SelectboxColumn(options=["🔄 Canje", "💰 Venta"], required=True),
-            "Precio": st.column_config.NumberColumn(min_value=0, step=100)
-        }, 
-        hide_index=True, use_container_width=True
-    )
-    
-    if st.button("💾 GUARDAR CAMBIOS", type="primary", use_container_width=True):
-        db.save_inventory_positive(user['id'], start, end, seleccion_tengo, edited_df)
-        st.toast("Joyas guardadas", icon="💾"); time.sleep(0.5); st.rerun()
-
-# --- MERCADO ---
-st.divider()
-st.subheader("🔍 Mercado")
-
-with st.expander("🔎 Filtros", expanded=True):
-    col_f1, col_f2, col_f3 = st.columns(3)
-    
-    # Filtro Provincia
-    filtro_prov = col_f1.multiselect("Provincia:", list(locations.ARGENTINA.keys()), default=[user.get('province', 'Mendoza')], on_change=reset_pagination)
-    
-    # Filtro Zona (Dinámico)
-    avail_zones = []
-    if filtro_prov:
-        for p in filtro_prov:
-            avail_zones.extend(locations.ARGENTINA.get(p, []))
-            
-    filtro_zonas = col_f2.multiselect("Depto / Barrio:", avail_zones, on_change=reset_pagination)
-    filtro_num = col_f3.text_input("Buscá por número:", placeholder="Ej: 10", on_change=reset_pagination)
-
-# Obtener y procesar mercado (Cacheado)
-market_df = db.fetch_market(user['id'])
-matches, ventas = db.find_matches(user['id'], market_df)
-
-def aplicar_filtros(lista_items):
-    filtrados = []
-    for item in lista_items:
-        if filtro_prov and item['province'] not in filtro_prov: continue
-        if filtro_zonas and item['zone'] not in filtro_zonas: continue
-        if filtro_num and str(item['figu']) != filtro_num: continue
-        filtrados.append(item)
-    return filtrados
-
-matches_filtrados = aplicar_filtros(matches)
-ventas_filtradas = aplicar_filtros(ventas)
-
-# --- RENDERIZADO ---
-
-def render_card(item, tipo):
-    with st.container(border=True):
-        c1, c2, c3 = st.columns([3, 1, 1])
-        target_id = item['target_id']
-        fig_recibo = item['figu']
-        
-        is_unlocked = target_id in st.session_state.unlocked_users
-        phone_target = None
-        link_wa = "#"
-        
-        if is_unlocked:
-            phone_target = utils.decrypt_phone(item.get('phone_encrypted'))
-            if phone_target:
-                if tipo == 'canje':
-                    fig_entrego = item.get('te_pide', '?')
-                    texto_base = f"Hola! Vi en Figus 26 que cambiás la #{fig_recibo} por la #{fig_entrego}. ¿Hacemo cambio?"
-                else:
-                    precio = item['price']
-                    texto_base = f"Hola! Vi en Figus 26 que vendés la #{fig_recibo} a ${precio}. ¿La tenés?"
                 
-                mensaje_encoded = quote(texto_base)
-                link_wa = f"https://wa.me/549{phone_target}?text={mensaje_encoded}"
-            else:
-                st.error("Error al desencriptar.")
-
-        loc_str = f"{item['province']} - {item['zone']}"
-        
-        if tipo == 'canje':
-            fig_entrego = item.get('te_pide', '?')
-            c1.markdown(f"🔄 **{item['nick']}**")
-            c1.caption(f"📍 {loc_str}")
-            c1.markdown(f"Cambia **#{fig_recibo}** por tu **#{fig_entrego}**")
+        st.divider()
+        if user.get('is_premium', False): st.success("💎 PREMIUM")
         else:
-            precio = item['price']
-            c1.markdown(f"💰 **{item['nick']}**")
-            c1.caption(f"📍 {loc_str}")
-            c1.markdown(f"Vende **#{fig_recibo}** a **${precio}**")
+            st.info("👤 GRATIS")
+            if st.button("💎 Hacete Premium", use_container_width=True): 
+                market.mostrar_modal_premium()
+            with st.expander("Validar Pago"):
+                op = st.text_input("ID Op")
+                if op and st.button("Validar"):
+                    ok, msg = db.verificar_pago_mp(op, user['id'])
+                    if ok: st.toast("¡Premium!", icon="💎"); st.rerun()
+                    else: st.error(msg)
+                    
+        if st.button("Chau / Salir"): st.session_state.user = None; st.rerun()
 
-        if is_unlocked:
-            if phone_target:
-                c2.link_button("🟢 Abrir Chat", link_wa, use_container_width=True)
-            if tipo == 'canje':
-                with c1.expander("⚙️ Confirmar"):
-                    st.caption("Solo si ya hicieron el cambio:")
-                    if st.button(f"✅ Registrar #{fig_recibo}", key=f"swap_{fig_recibo}_{target_id}"):
-                        ok, msg = db.register_exchange(user['id'], fig_entrego, fig_recibo)
-                        if ok: 
-                            st.toast("¡Golazo! Intercambio registrado.", icon="⚽")
-                            st.success(msg); time.sleep(3); st.rerun()
-                        else: st.error(msg)
-        else:
-            if c2.button("🔓 Contactar", key=f"ul_{tipo}_{fig_recibo}_{target_id}", use_container_width=True):
-                if db.check_contact_limit(user):
-                    if st.session_state.skip_security_modal:
-                        db.consume_credit(user)
-                        st.session_state.unlocked_users.add(target_id)
-                        st.rerun()
-                    else:
-                        modal_seguridad(target_id)
-                else: 
-                     mostrar_modal_premium()
-        
-        if c3.button("👍", key=f"vt_{tipo}_{fig_recibo}_{target_id}"):
-            ok, m = db.votar_usuario(user['id'], target_id)
-            st.toast(m)
-
-def paginar_y_mostrar(lista_items, tipo_key, tipo_card):
-    if not lista_items:
-        st.info("No encontramos nada con estos filtros.")
-        return
-
-    total_items = len(lista_items)
-    total_pages = (total_items - 1) // ITEMS_POR_PAGINA + 1
+    # APP PRINCIPAL
+    st.selectbox("Sección:", list(config.ALBUM_PAGES.keys()), key="seleccion_pais_key")
     
-    if st.session_state[tipo_key] > total_pages:
-        st.session_state[tipo_key] = 1
-        
-    curr_page = st.session_state[tipo_key]
-    start_idx = (curr_page - 1) * ITEMS_POR_PAGINA
-    end_idx = start_idx + ITEMS_POR_PAGINA
+    # 1. Renderizar Inventario
+    inventory.render_inventory(user, start, end, seleccion_pais)
     
-    batch = lista_items[start_idx:end_idx]
-    
-    for item in batch:
-        render_card(item, tipo_card)
-        
     st.divider()
     
-    col_p1, col_p2, col_p3 = st.columns([1, 2, 1])
-    
-    with col_p1:
-        if curr_page > 1:
-            st.button("⬅️ Anterior", key=f"prev_{tipo_key}", on_click=change_page, args=(tipo_key, -1), use_container_width=True)
-            
-    with col_p2:
-        st.markdown(f"<div style='text-align: center; padding-top: 5px;'><b>Página {curr_page} de {total_pages}</b></div>", unsafe_allow_html=True)
-        
-    with col_p3:
-        if curr_page < total_pages:
-            st.button("Siguiente ➡️", key=f"next_{tipo_key}", on_click=change_page, args=(tipo_key, 1), use_container_width=True)
-
-with t1:
-    paginar_y_mostrar(matches_filtrados, 'page_canjes', 'canje')
-
-with t2:
-    paginar_y_mostrar(ventas_filtradas, 'page_ventas', 'venta')
+    # 2. Renderizar Mercado
+    market.render_market(user)
