@@ -8,40 +8,47 @@ import database as db
 # --- CONFIGURACIÓN UI ---
 st.set_page_config(page_title="Figus 26 | Colección", layout="wide", page_icon="⚽")
 
-# --- ESTILOS CSS AGRESIVOS (SOLUCIÓN VISUAL) ---
+# --- ESTILOS CSS (DISEÑO AJUSTADO: ANCHO Y COMPACTO) ---
 st.markdown("""
     <style>
-    /* 1. FORZAR BOTONES VERDES (Sobreescribe el rojo por defecto) */
-    button[kind="primary"] {
-        background-color: #2e7d32 !important;
-        border-color: #2e7d32 !important;
-        color: white !important;
-    }
-    button[kind="primary"]:hover {
-        background-color: #1b5e20 !important;
-        border-color: #1b5e20 !important;
-        color: white !important;
-    }
-    button[kind="primary"]:focus {
-        background-color: #2e7d32 !important;
-        border-color: #2e7d32 !important;
-        box-shadow: none !important;
+    /* 1. SIDEBAR: Ensanchado horizontalmente (350px) */
+    section[data-testid="stSidebar"] {
+        min-width: 350px !important;
+        max-width: 350px !important;
     }
 
-    /* 2. ADELGAZAR SIDEBAR (Más comprimido) */
-    [data-testid="stSidebar"] {
-        min-width: 200px !important;
-        max-width: 200px !important;
+    /* 2. COMPRESIÓN VERTICAL INTERNA DEL SIDEBAR */
+    /* Reducir padding general del contenedor del sidebar */
+    section[data-testid="stSidebar"] .block-container {
+        padding-top: 2rem !important;
+        padding-bottom: 2rem !important;
     }
-    
-    /* 3. Estilos de Pills (Botones de selección) */
+    /* Reducir márgenes entre elementos (dividers, texto, botones, barras) */
+    section[data-testid="stSidebar"] hr, /* Dividers */
+    section[data-testid="stSidebar"] .stMarkdown p, /* Texto normal */
+    section[data-testid="stSidebar"] .stButton, /* Botones */
+    section[data-testid="stSidebar"] .stProgress /* Barras de progreso */
+    {
+        margin-bottom: 0.5rem !important;
+        margin-top: 0.2rem !important;
+    }
+    /* Reducir un poco el título principal del sidebar */
+    section[data-testid="stSidebar"] h1 {
+        font-size: 2rem !important;
+        padding-bottom: 0.5rem !important;
+    }
+
+    /* 3. FIGURITAS (Pills): VERDE al seleccionarlas */
     div[data-testid="stPills"] span[aria-selected="true"] {
-        background-color: #2e7d32 !important; color: white !important; border-color: #2e7d32 !important;
+        background-color: #2e7d32 !important; /* Verde Fuerte */
+        border-color: #2e7d32 !important;
+        color: white !important;
     }
-    div[data-testid="stPills"] button[aria-selected="true"] {
-        background-color: #2e7d32 !important; color: white !important; border-color: #2e7d32 !important;
+    div[data-testid="stPills"] span[aria-selected="true"]:hover {
+        background-color: #1b5e20 !important; /* Verde Oscuro al pasar mouse */
+        border-color: #1b5e20 !important;
     }
-    
+
     /* 4. Botones secundarios redondeados */
     button[kind="secondary"] { border-radius: 20px; }
     </style>
@@ -54,16 +61,20 @@ if 'unlocked_users' not in st.session_state: st.session_state.unlocked_users = s
 ZONAS_DISPONIBLES = ["Centro", "Godoy Cruz", "Guaymallén", "Las Heras"]
 
 # --- MODALES ---
+
 @st.dialog("💎 Pásate a Premium", width="small")
 def mostrar_modal_premium():
     st.markdown(f"""
     ### 🚀 Límite Alcanzado
     Tienes **1 contacto gratis por día**.
+    
     **Con Premium obtienes:**
     * 🔓 **Ilimitado:** Contacta sin restricciones.
     * 📐 **Triangulaciones:** Acceso a cadenas de cambio.
     * 🌍 **Un pago único:** Todo el mundial.
     * ⭐ **Destacado:** Perfil verificado.
+    
+    ---
     ### Precio Final: **${config.PRECIO_PREMIUM}**
     """)
     st.link_button("👉 Pagar con Mercado Pago", config.MP_LINK, type="primary", use_container_width=True)
@@ -72,9 +83,15 @@ def mostrar_modal_premium():
 @st.dialog("⚠️ Bienvenido a Figus 26")
 def mostrar_barrera_entrada():
     st.warning("🔞 Esta aplicación es para mayores de 18 años.")
+    
     st.info("🤝 Facilitamos el contacto entre coleccionistas, pero no intervenimos en los canjes. No nos hacemos responsables de las reuniones pactadas por los usuarios ni de las transacciones realizadas.")
-    st.markdown("**Al continuar, declaras bajo juramento que eres mayor de edad.**")
-    if st.button("✅ Entendido, soy +18", type="primary", use_container_width=True):
+    
+    st.markdown("---")
+    # --- CHECKBOX OBLIGATORIO ---
+    acepta_edad = st.checkbox("Declaro bajo juramento que soy mayor de edad.")
+    
+    # El botón solo se habilita si marca el checkbox. Al ser "primary", será ROJO por defecto.
+    if st.button("Ingresar", type="primary", disabled=not acepto_edad, use_container_width=True):
         st.session_state.barrera_superada = True
         st.rerun()
 
@@ -252,7 +269,7 @@ def render_card(item, tipo):
         target_id = item['target_id']
         fig_recibo = item['figu']
         
-        # GENERAR MENSAJE WHATSAPP
+        # --- GENERADOR DE MENSAJE WHATSAPP ---
         phone_target = item['phone']
         if tipo == 'canje':
             fig_entrego = item['te_pide']
@@ -263,15 +280,16 @@ def render_card(item, tipo):
             texto_base = f"Hola! Vi en Figus 26 que vendes la figurita #{fig_recibo} a ${precio}. ¿La tienes disponible?"
             c1.markdown(f"💰 **{item['nick']}** ({item['zone']}) vende **#{fig_recibo}** a **${precio}**")
 
-        # Mensaje codificado
         mensaje_encoded = quote(texto_base)
         link_wa = f"https://wa.me/549{phone_target}?text={mensaje_encoded}"
 
-        # ACCIONES
+        # COLUMNA 2: ACCIÓN
         is_unlocked = target_id in st.session_state.unlocked_users
         
         if is_unlocked:
+            # BOTÓN VERDE (Chat)
             c2.link_button("🟢 Abrir Chat", link_wa, use_container_width=True)
+            
             if tipo == 'canje':
                 with c1.expander("⚙️ Confirmar Canje"):
                     st.caption("Solo si ya realizaste el intercambio:")
@@ -280,6 +298,7 @@ def render_card(item, tipo):
                         if ok: st.balloons(); st.success(msg); time.sleep(3); st.rerun()
                         else: st.error(msg)
         else:
+            # BOTÓN ROJO (Por defecto) - Contactar
             if c2.button("🔓 Contactar", key=f"ul_{tipo}_{fig_recibo}_{target_id}", use_container_width=True):
                 if db.check_contact_limit(user):
                     db.consume_credit(user)
@@ -287,6 +306,7 @@ def render_card(item, tipo):
                     st.rerun()
                 else: mostrar_modal_premium()
         
+        # COLUMNA 3: VOTO
         if c3.button("👍", key=f"vt_{tipo}_{fig_recibo}_{target_id}"):
             ok, m = db.votar_usuario(user['id'], target_id)
             st.toast(m)
