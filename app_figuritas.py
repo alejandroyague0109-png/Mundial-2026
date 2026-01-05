@@ -13,26 +13,62 @@ st.set_page_config(page_title="Figus 26 | Colección", layout="wide", page_icon=
 # --- ESTILOS CSS ---
 st.markdown("""
     <style>
+    /* Ocultar enlaces de títulos */
     .stHeading a { display: none !important; }
     [data-testid="stHeaderActionElements"] { display: none !important; }
+    
+    /* Sidebar Ajustado */
     section[data-testid="stSidebar"] { min-width: 350px !important; max-width: 350px !important; }
     section[data-testid="stSidebar"] .block-container { padding-top: 2rem !important; padding-bottom: 2rem !important; }
-    section[data-testid="stSidebar"] hr, section[data-testid="stSidebar"] .stMarkdown p, section[data-testid="stSidebar"] .stButton, section[data-testid="stSidebar"] .stProgress { margin-bottom: 0.5rem !important; margin-top: 0.2rem !important; }
+    
+    /* Espaciados */
+    section[data-testid="stSidebar"] hr, 
+    section[data-testid="stSidebar"] .stMarkdown p, 
+    section[data-testid="stSidebar"] .stButton, 
+    section[data-testid="stSidebar"] .stProgress { 
+        margin-bottom: 0.5rem !important; margin-top: 0.2rem !important; 
+    }
     section[data-testid="stSidebar"] h1 { font-size: 2rem !important; padding-bottom: 0.5rem !important; }
+    
+    /* Pills Verdes */
     div[data-testid="stPills"] span[aria-selected="true"] { background-color: #2e7d32 !important; border-color: #2e7d32 !important; color: white !important; }
     div[data-testid="stPills"] button[aria-selected="true"] { background-color: #2e7d32 !important; border-color: #2e7d32 !important; color: white !important; }
+    
+    /* Botones Redondeados */
     button[kind="secondary"] { border-radius: 20px; }
+    
+    /* Centrar Paginación */
     div[data-testid="column"] { text-align: center; }
-    div.stButton > button, div.stDownloadButton > button { min-height: 45px !important; height: 45px !important; margin-top: 0px !important; } 
-    a[kind="secondary"] { background-color: #ffffff !important; color: #000000 !important; border: 1px solid #cccccc !important; text-decoration: none !important; }
-    a[kind="secondary"]:hover { background-color: #f0f0f0 !important; border-color: #999999 !important; color: #000000 !important; }
+
+    /* --- CORRECCIÓN BOTONES (MISMA ALTURA Y ALINEACIÓN) --- */
+    div.stButton > button, div.stDownloadButton > button { 
+        min-height: 45px !important; 
+        height: 45px !important;
+        margin-top: 0px !important;
+    } 
+
+    /* ESTILO PARA BOTÓN WHATSAPP (Secundario = Fondo Blanco) */
+    a[kind="secondary"] {
+        background-color: #ffffff !important;
+        color: #000000 !important;
+        border: 1px solid #cccccc !important;
+        text-decoration: none !important;
+    }
+    a[kind="secondary"]:hover {
+        background-color: #f0f0f0 !important;
+        border-color: #999999 !important;
+        color: #000000 !important;
+    }
     </style>
 """, unsafe_allow_html=True)
 
-# --- MEMORIA ---
+# --- MEMORIA (AQUÍ ESTABA EL ERROR) ---
+if 'unlocked_users' not in st.session_state: st.session_state.unlocked_users = set()
 if 'skip_security_modal' not in st.session_state: st.session_state.skip_security_modal = False
 if 'page_canjes' not in st.session_state: st.session_state.page_canjes = 1
 if 'page_ventas' not in st.session_state: st.session_state.page_ventas = 1
+# FIX: Inicializar paginación de pendientes
+if 'page_pendientes' not in st.session_state: st.session_state.page_pendientes = 1
 if 'barrera_superada' not in st.session_state: st.session_state.barrera_superada = False
 
 # --- MODALES ---
@@ -41,6 +77,7 @@ def mostrar_barrera_entrada():
     st.warning("🔞 Esta aplicación es para mayores de 18 años.")
     st.info("🤝 Facilitamos el contacto entre coleccionistas, pero no intervenimos en los canjes. No nos hacemos responsables de las reuniones pactadas por los usuarios ni de las transacciones realizadas.")
     st.markdown("**Al continuar, declarás bajo juramento que sos mayor de edad.**")
+    
     if st.button("✅ Entendido, soy +18", type="primary", width="stretch"):
         st.session_state.barrera_superada = True
         st.rerun()
@@ -67,15 +104,15 @@ if not st.session_state.user:
 else:
     user = st.session_state.user
     
-    # INICIALIZACIÓN DE CONTACTOS DESBLOQUEADOS (PERSISTENCIA)
-    if 'unlocked_users' not in st.session_state or not st.session_state.unlocked_users:
+    # --- CARGA INICIAL DE CONTACTOS (PERSISTENCIA) ---
+    if not st.session_state.unlocked_users:
         st.session_state.unlocked_users = db.get_unlocked_ids(user['id'])
 
-    # Check diario (Solo renueva créditos, NO borra contactos)
+    # Check diario
     if db.verify_daily_reset(user):
         st.toast("📅 ¡Nuevo día! Se renovaron tus créditos.", icon="☀️")
 
-    # Notificaciones Premium
+    # Notificaciones Premium (Wishlist)
     if user.get('is_premium', False) and 'wishlist_notified' not in st.session_state:
         m_df = db.fetch_market(user['id'])
         matches, ventas = db.find_matches(user['id'], m_df)
@@ -89,8 +126,8 @@ else:
     start, end = config.ALBUM_PAGES[seleccion_pais]
     total_album = sum([(v[1] - v[0] + 1) for v in config.ALBUM_PAGES.values()])
     
+    # Desempaquetado correcto de 4 valores
     _, _, _, df_full = db.get_inventory_status(user['id'], start, end)
-    
     try: tengo_total = df_full[df_full['status'] == 'tengo'].shape[0]
     except: tengo_total = 0
     
