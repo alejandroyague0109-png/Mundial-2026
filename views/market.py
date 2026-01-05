@@ -136,18 +136,22 @@ def render_card(item, tipo, user):
                 st.toast(m)
 
 def paginar_y_mostrar(lista_items, tipo_key, tipo_card, user):
-    # --- SCROLL ROBUSTO ---
-    # Buscamos el contenedor específico de la App de Streamlit y lo subimos a 0
-    js = """
+    # --- SCROLL FORZADO (TRUCO DEL TIMESTAMP) ---
+    # Usamos time.time() para que el string del script cambie siempre y el navegador lo ejecute sí o sí.
+    unique_id = time.time()
+    js = f"""
     <script>
-        var body = window.parent.document.querySelector(".main");
+        // Buscamos el contenedor principal de Streamlit
         var viewContainer = window.parent.document.querySelector('[data-testid="stAppViewContainer"]');
-        if (viewContainer) {
-            viewContainer.scrollTo({top: 0, behavior: 'smooth'});
-        } else if (body) {
-            body.scrollTop = 0;
-        }
+        if (viewContainer) {{
+            viewContainer.scrollTo({{top: 0, behavior: 'smooth'}});
+        }} else {{
+            // Fallback para otros navegadores
+            window.parent.scrollTo(0, 0);
+        }}
+        console.log("Scroll forzado ejecutado: {unique_id}");
     </script>
+    <div style="display:none;">{unique_id}</div>
     """
     components.html(js, height=0)
     
