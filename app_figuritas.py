@@ -22,21 +22,20 @@ st.markdown("""
 # --- INICIALIZAR MEMORIA ---
 if 'unlocked_users' not in st.session_state: st.session_state.unlocked_users = set()
 
-# --- MODALES ---
+# --- CONSTANTES ---
+ZONAS_DISPONIBLES = ["Centro", "Godoy Cruz", "Guaymallén", "Las Heras"]
 
+# --- MODALES ---
 @st.dialog("💎 Pásate a Premium", width="small")
 def mostrar_modal_premium():
     st.markdown(f"""
     ### 🚀 Límite Alcanzado
     Tienes **1 contacto gratis por día**.
-    
     **Con Premium obtienes:**
     * 🔓 **Ilimitado:** Contacta sin restricciones.
-    * 📐 **Triangulaciones:** Acceso a cadenas de cambio inteligentes.
+    * 📐 **Triangulaciones:** Acceso a cadenas de cambio.
     * 🌍 **Un pago único:** Todo el mundial.
     * ⭐ **Destacado:** Perfil verificado.
-    
-    ---
     ### Precio Final: **${config.PRECIO_PREMIUM}**
     """)
     st.link_button("👉 Pagar con Mercado Pago", config.MP_LINK, type="primary", use_container_width=True)
@@ -62,8 +61,7 @@ def mostrar_instrucciones_csv():
     1. **num**: Número de la figurita (ej: 10, 150).
     2. **status**: Escribe `tengo` o `repetida`.
     3. **price**: Precio de venta (0 si es para canje).
-    
-    *(Opcional: puedes agregar una columna 'quantity')*
+    *(Opcional: 'quantity')*
     """)
 
 # --- LOGIN / REGISTRO ---
@@ -83,7 +81,7 @@ if not st.session_state.user:
             else: st.error(m)
     with t2:
         n = st.text_input("Nick"); ph = st.text_input("Teléfono", key="r_p"); pw2 = st.text_input("Crear Pass", type="password", key="r_pw")
-        z = st.selectbox("Zona", ["Centro", "Godoy Cruz", "Guaymallén", "Las Heras"])
+        z = st.selectbox("Zona", ZONAS_DISPONIBLES)
         st.divider()
         if st.button("Legales", type="secondary"): ver_contrato()
         acepto = st.checkbox("Acepto términos")
@@ -121,14 +119,12 @@ with st.sidebar:
     st.progress(progreso, text="🏆 Mi Álbum")
     st.caption(f"Tienes **{tengo_global_live}** de {total_album}.")
     
-    # Carga Masiva
     st.divider()
     with st.expander("📤 Carga Masiva (CSV)"):
         st.caption("Carga rápida de inventario.")
         col_a, col_b = st.columns(2)
         if col_a.button("❓ Ayuda", use_container_width=True): mostrar_instrucciones_csv()
         
-        # Plantilla
         df_plantilla = pd.DataFrame([{"num": 10, "status": "tengo", "price": 0, "quantity": 1}, {"num": 25, "status": "repetida", "price": 500, "quantity": 2}])
         csv_plantilla = df_plantilla.to_csv(index=False).encode('utf-8')
         col_b.download_button("⬇️ Plantilla", data=csv_plantilla, file_name="plantilla.csv", mime="text/csv", use_container_width=True)
@@ -200,10 +196,34 @@ if seleccion_repes:
 # --- MERCADO ---
 st.divider()
 st.subheader("🔍 Mercado")
+
+# --- NUEVO: FILTROS DE BÚSQUEDA ---
+with st.expander("🔎 Filtros de Búsqueda", expanded=True):
+    col_f1, col_f2 = st.columns(2)
+    # Por defecto seleccionamos la zona del usuario
+    filtro_zonas = col_f1.multiselect("Filtrar por Zona:", ZONAS_DISPONIBLES, default=[user['zone']])
+    filtro_num = col_f2.text_input("Buscar Figurita #:", placeholder="Ej: 10")
+
 market_df = db.fetch_market(user['id'])
 matches, ventas = db.find_matches(user['id'], market_df)
 
-t1, t2 = st.tabs([f"Canjes ({len(matches)})", f"Ventas ({len(ventas)})"])
+# --- APLICAR FILTROS ---
+def aplicar_filtros(lista_items):
+    filtrados = []
+    for item in lista_items:
+        # 1. Filtro Zona (Si no hay zonas seleccionadas, muestra todo)
+        if filtro_zonas and item['zone'] not in filtro_zonas:
+            continue
+        # 2. Filtro Número
+        if filtro_num and str(item['figu']) != filtro_num:
+            continue
+        filtrados.append(item)
+    return filtrados
+
+matches_filtrados = aplicar_filtros(matches)
+ventas_filtradas = aplicar_filtros(ventas)
+
+t1, t2 = st.tabs([f"Canjes ({len(matches_filtrados)})", f"Ventas ({len(ventas_filtradas)})"])
 
 def render_card(item, tipo):
     with st.container(border=True):
@@ -214,9 +234,9 @@ def render_card(item, tipo):
         # COLUMNA 1: INFO
         if tipo == 'canje':
             fig_entrego = item['te_pide']
-            c1.markdown(f"🔄 **{item['nick']}** (⭐{item['reputation']}) cambia **#{fig_recibo}** por tu **#{fig_entrego}**")
+            c1.markdown(f"🔄 **{item['nick']}** ({item['zone']}) cambia **#{fig_recibo}** por tu **#{fig_entrego}**")
         else:
-            c1.markdown(f"💰 **{item['nick']}** (⭐{item['reputation']}) vende **#{fig_recibo}** a **${item['price']}**")
+            c1.markdown(f"💰 **{item['nick']}** ({item['zone']}) vende **#{fig_recibo}** a **${item['price']}**")
 
         # COLUMNA 2: ACCIÓN
         is_unlocked = target_id in st.session_state.unlocked_users
@@ -224,8 +244,6 @@ def render_card(item, tipo):
         if is_unlocked:
             # DESBLOQUEADO
             c2.link_button("🟢 Abrir Chat", f"https://wa.me/549{item['phone']}", use_container_width=True)
-            
-            # CONFIRMACIÓN (SOLO SI ES CANJE Y YA ESTÁ DESBLOQUEADO)
             if tipo == 'canje':
                 with c1.expander("⚙️ Confirmar Canje"):
                     st.caption("Solo si ya realizaste el intercambio:")
@@ -248,8 +266,8 @@ def render_card(item, tipo):
             st.toast(m)
 
 with t1:
-    if not matches: st.info("Sin canjes.")
-    for m in matches: render_card(m, 'canje')
+    if not matches_filtrados: st.info("No hay canjes con estos filtros.")
+    for m in matches_filtrados: render_card(m, 'canje')
 with t2:
-    if not ventas: st.info("Sin ventas.")
-    for v in ventas: render_card(v, 'venta')
+    if not ventas_filtradas: st.info("No hay ventas con estos filtros.")
+    for v in ventas_filtradas: render_card(v, 'venta')
