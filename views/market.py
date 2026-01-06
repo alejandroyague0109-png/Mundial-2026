@@ -63,8 +63,8 @@ def mostrar_modal_premium():
     st.link_button("👉 Pagá con Mercado Pago", config.MP_LINK, type="primary", use_container_width=True)
 
 def render_card(item, tipo, user, is_pending_view=False):
-    # SOLUCIÓN DUPLICATE KEY: Creamos un sufijo único según la vista
-    view_tag = "pend" if is_pending_view else "market"
+    # Sufijo para evitar colisión de keys
+    suffix = "pend" if is_pending_view else "mkt"
     
     with st.container(border=True):
         col_info, col_actions = st.columns([0.75, 0.25])
@@ -124,10 +124,9 @@ def render_card(item, tipo, user, is_pending_view=False):
                 if phone_target: 
                     st.link_button("🟢 WhatsApp", link_wa, type="secondary", use_container_width=True)
                 
-                # Botones exclusivos de Pendientes
+                # PESTAÑA PENDIENTES
                 if is_pending_view:
-                    # Agregamos view_tag a la key para evitar colisiones
-                    if st.button("✅ Fichaje cerrado", key=f"pd_ok_{fig_recibo}_{target_id}_{view_tag}", help="Concretar y quitar de pendientes", width="stretch"):
+                    if st.button("✅ Fichaje cerrado", key=f"pd_ok_{fig_recibo}_{target_id}_{suffix}", help="Concretar y quitar de pendientes", width="stretch"):
                         with utils.spinner_futbolero():
                             if tipo == 'canje':
                                 ok, msg = db.register_exchange(user['id'], fig_entrego, fig_recibo, target_id_to_remove=target_id)
@@ -136,18 +135,18 @@ def render_card(item, tipo, user, is_pending_view=False):
                         
                         if ok: 
                             st.session_state.unlocked_users.discard(target_id)
-                            st.toast("¡Golazo!", icon="⚽"); st.success(msg); time.sleep(3); st.rerun()
+                            st.toast("¡Golazo!", icon="⚽"); st.success(msg); time.sleep(1.5); st.rerun()
                         else: st.error(msg)
                     
-                    if st.button("❌ Ocultar", key=f"pd_no_{fig_recibo}_{target_id}_{view_tag}", width="stretch"):
+                    # CAMBIO DE TEXTO: Ocultar -> Fichaje caído
+                    if st.button("❌ Fichaje caído", key=f"pd_no_{fig_recibo}_{target_id}_{suffix}", help="No se concretó, quitar de la lista", width="stretch"):
                          db.remove_unlock(user['id'], target_id)
                          st.session_state.unlocked_users.discard(target_id)
                          st.rerun()
 
             else:
-                # Botón de Desbloquear (Solo en Market/Global)
-                # Agregamos view_tag por seguridad aunque no debería aparecer en pendientes
-                if st.button("🔓 Desbloquear", key=f"ul_{tipo}_{fig_recibo}_{target_id}_{view_tag}", type="secondary", width="stretch"):
+                # PESTAÑA MERCADO (Bloqueados)
+                if st.button("🔓 Desbloquear", key=f"ul_{tipo}_{fig_recibo}_{target_id}_{suffix}", type="secondary", width="stretch"):
                     if db.check_contact_limit(user):
                         if st.session_state.skip_security_modal:
                             with utils.spinner_futbolero():
@@ -159,24 +158,27 @@ def render_card(item, tipo, user, is_pending_view=False):
                         else: modal_seguridad(target_id, user)
                     else: mostrar_modal_premium()
             
-            # Botón Recomendar (Aparece en ambos lados, este era el culpable del error)
-            if st.button("⭐ Recomendar", key=f"vt_{tipo}_{fig_recibo}_{target_id}_{view_tag}", help="Dar voto positivo", width="stretch"):
+            if st.button("⭐ Recomendar", key=f"vt_{tipo}_{fig_recibo}_{target_id}_{suffix}", help="Dar voto positivo", width="stretch"):
                 ok, m = db.votar_usuario(user['id'], target_id)
                 st.toast(m)
 
 def paginar_y_mostrar(lista_items, tipo_key, tipo_card, user, is_pending_view=False):
-    unique_id = time.time()
-    js = f"""
-    <script>
-        try {{
-            var doc = window.parent.document;
-            var target = doc.querySelector('[data-testid="stAppViewContainer"]');
-            if (target) {{ target.scrollTop = 0; }} else {{ doc.body.scrollTop = 0; doc.documentElement.scrollTop = 0; }}
-        }} catch(e) {{ console.log(e); }}
-    </script>
-    <div style="display:none;">{unique_id}</div>
-    """
-    components.html(js, height=0)
+    # --- SCROLL AUTOMÁTICO INTELIGENTE ---
+    # Solo hacemos scroll si NO estamos en la vista de pendientes.
+    # Esto evita el salto molesto cuando estás gestionando muchas confirmaciones seguidas.
+    if not is_pending_view:
+        unique_id = time.time()
+        js = f"""
+        <script>
+            try {{
+                var doc = window.parent.document;
+                var target = doc.querySelector('[data-testid="stAppViewContainer"]');
+                if (target) {{ target.scrollTop = 0; }} else {{ doc.body.scrollTop = 0; doc.documentElement.scrollTop = 0; }}
+            }} catch(e) {{ console.log(e); }}
+        </script>
+        <div style="display:none;">{unique_id}</div>
+        """
+        components.html(js, height=0)
     
     if not lista_items:
         st.info("No hay resultados visibles.")
