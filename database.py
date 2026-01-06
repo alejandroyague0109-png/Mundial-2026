@@ -37,12 +37,10 @@ def register_user(nick, phone, province, zone, password, secret_q, secret_a):
     if not nick or not password or not province or not zone: 
         return None, "Faltan datos obligatorios."
     if not secret_q or not secret_a:
-        return None, "La pregunta de seguridad es obligatoria (para recuperar tu cuenta)."
+        return None, "La pregunta de seguridad es obligatoria."
 
     p_hash = utils.hash_phone_searchable(phone)
     p_enc = utils.encrypt_phone(phone)
-    
-    # Hasheamos la respuesta secreta también para seguridad (en minúsculas)
     a_hash = utils.hash_password(secret_a.lower().strip())
 
     try:
@@ -67,43 +65,45 @@ def register_user(nick, phone, province, zone, password, secret_q, secret_a):
         return response.data[0], "OK"
     except Exception as e: return None, f"Error DB: {str(e)}"
 
-# --- RECUPERACIÓN DE CONTRASEÑA (NUEVO) ---
+# --- RECUPERACIÓN (Igual) ---
 def get_security_info(phone):
-    """Busca la pregunta secreta asociada al teléfono."""
     clean_phone = utils.limpiar_telefono(phone)
     if not clean_phone: return None, "Teléfono inválido."
     p_hash = utils.hash_phone_searchable(phone)
     try:
         resp = supabase.table("users").select("secret_question, secret_answer").eq("phone_hash", p_hash).execute()
-        if resp.data:
-            return resp.data[0], "OK"
+        if resp.data: return resp.data[0], "OK"
         return None, "No encontré ese número."
     except: return None, "Error de conexión."
 
 def reset_password(phone, answer_input, new_password):
-    """Verifica la respuesta secreta y actualiza la contraseña."""
     if not new_password: return False, "La nueva contraseña no puede estar vacía."
-    
     p_hash = utils.hash_phone_searchable(phone)
     try:
-        # Obtenemos el hash real de la respuesta
         resp = supabase.table("users").select("secret_answer").eq("phone_hash", p_hash).execute()
         if not resp.data: return False, "Usuario no encontrado."
-        
         real_answer_hash = resp.data[0]['secret_answer']
-        
-        # Verificamos la respuesta ingresada (hasheada)
         if utils.check_password(answer_input.lower().strip(), real_answer_hash):
-            # Si coincide, actualizamos la password
             new_pw_hash = utils.hash_password(new_password)
             supabase.table("users").update({"password": new_pw_hash}).eq("phone_hash", p_hash).execute()
             return True, "¡Contraseña cambiada! Ahora iniciá sesión."
-        else:
-            return False, "Respuesta incorrecta."
+        else: return False, "Respuesta incorrecta."
     except Exception as e: return False, str(e)
 
+# --- EDICIÓN DE PERFIL (NUEVO) ---
+def update_profile(user_id, province, zone):
+    """Actualiza la ubicación del usuario."""
+    try:
+        # Solo permitimos actualizar zona y provincia para no romper el hash del teléfono
+        supabase.table("users").update({
+            "province": province, 
+            "zone": zone
+        }).eq("id", user_id).execute()
+        return True, "Perfil actualizado correctamente."
+    except Exception as e:
+        return False, f"Error al actualizar: {str(e)}"
 
-# --- CONTACTOS ---
+# --- CONTACTOS (Igual) ---
 def log_unlock(user_id, target_id):
     try:
         supabase.table("contact_logs").insert({"user_id": user_id, "target_id": target_id}).execute()
@@ -122,7 +122,7 @@ def remove_unlock(user_id, target_id):
         return True
     except: return False
 
-# --- INVENTARIO ---
+# --- INVENTARIO (Igual) ---
 def get_inventory_status(user_id, start, end):
     try:
         response = supabase.table("inventory").select("*").eq("user_id", user_id).execute()
@@ -181,7 +181,7 @@ def save_inventory_positive(user_id, start, end, ui_owned_list, ui_wishlist_list
                 else: raise e
     fetch_market.clear()
 
-# --- GESTIÓN DE SOLICITUDES ---
+# --- GESTIÓN DE SOLICITUDES (Igual) ---
 def get_pending_transactions(user_id):
     try:
         resp = supabase.table("transaction_requests").select("*, users!sender_id(nick)").eq("receiver_id", user_id).eq("status", "pending").execute()
@@ -222,7 +222,7 @@ def reject_transaction_request(request_id):
         return True
     except: return False
 
-# --- INTERCAMBIO ---
+# --- INTERCAMBIO (Igual) ---
 def register_exchange(user_id, given_fig, received_fig, target_id_to_remove=None):
     try:
         given_fig = int(given_fig)
@@ -256,7 +256,7 @@ def register_purchase(user_id, received_fig, target_id_to_remove=None):
         return True, "¡Compra registrada! Le avisé al vendedor para que actualice su stock."
     except Exception as e: return False, f"Error: {str(e)}"
 
-# --- MERCADO ---
+# --- MERCADO (Igual) ---
 @st.cache_data(ttl=60, show_spinner=False)
 def fetch_market(user_id):
     try:

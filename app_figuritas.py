@@ -4,6 +4,7 @@ import time
 import config
 import database as db
 import utils 
+import locations 
 
 from views import auth, inventory, market
 
@@ -47,7 +48,7 @@ st.markdown("""
         margin-top: 0px !important;
     } 
 
-    /* Botón WhatsApp Blanco */
+    /* Botón WhatsApp/Footer Blanco */
     a[kind="secondary"] {
         background-color: #ffffff !important;
         color: #000000 !important;
@@ -60,7 +61,7 @@ st.markdown("""
         color: #000000 !important;
     }
     
-    /* Estilo Footer */
+    /* Footer Texto */
     .footer-text {
         text-align: center;
         font-size: 0.8em;
@@ -82,9 +83,8 @@ if 'barrera_superada' not in st.session_state: st.session_state.barrera_superada
 @st.dialog("⚠️ Bienvenido a Figus 26")
 def mostrar_barrera_entrada():
     st.warning("🔞 Esta aplicación es para mayores de 18 años.")
-    st.info("🤝 Facilitamos el contacto entre coleccionistas, pero no intervenimos en los canjes. No nos hacemos responsables de las reuniones pactadas por los usuarios ni de las transacciones realizadas.")
+    st.info("🤝 Facilitamos el contacto entre coleccionistas, pero no intervenimos en los canjes.")
     st.markdown("**Al continuar, declarás bajo juramento que sos mayor de edad.**")
-    
     if st.button("✅ Entendido, soy +18", type="primary", width="stretch"):
         st.session_state.barrera_superada = True
         st.rerun()
@@ -94,42 +94,56 @@ def mostrar_instrucciones_csv():
     st.markdown("""
     ### Formato del Archivo
     Debe tener 3 columnas obligatorias:
-    1. **num**: Número de la figurita (ej: 10, 150).
-    2. **status**: Escribí `tengo` o `repetida`.
-    3. **price**: Precio de venta (0 si es para canje).
-    *(Opcional: 'quantity')*
+    1. **num**: Número de la figurita.
+    2. **status**: `tengo` o `repetida`.
+    3. **price**: Precio (0 si es canje).
     """)
 
-# --- FUNCIONES POPUP FOOTER (NUEVAS) ---
+# --- NUEVO: DIALOGO EDITAR PERFIL ---
+@st.dialog("✏️ Editar Perfil")
+def mostrar_editar_perfil(user):
+    st.markdown("Actualizá tu ubicación para encontrar gente cerca.")
+    
+    current_prov = user.get('province', list(locations.ARGENTINA.keys())[0])
+    current_zone = user.get('zone', '')
+    
+    try: idx_prov = list(locations.ARGENTINA.keys()).index(current_prov)
+    except: idx_prov = 0
+
+    new_prov = st.selectbox("Provincia", list(locations.ARGENTINA.keys()), index=idx_prov)
+    
+    zones = locations.ARGENTINA[new_prov]
+    try: idx_zone = zones.index(current_zone) if current_zone in zones else 0
+    except: idx_zone = 0
+    
+    new_zone = st.selectbox("Zona", zones, index=idx_zone)
+
+    if st.button("💾 Guardar Cambios", type="primary", width="stretch"):
+        with utils.spinner_futbolero():
+            ok, msg = db.update_profile(user['id'], new_prov, new_zone)
+        
+        if ok:
+            st.session_state.user['province'] = new_prov
+            st.session_state.user['zone'] = new_zone
+            st.toast("Perfil actualizado!", icon="✅")
+            time.sleep(1)
+            st.rerun()
+        else:
+            st.error(msg)
+
+# --- POPUPS FOOTER ---
 @st.dialog("📧 Contacto")
 def mostrar_contacto():
-    st.markdown("""
-    ### ¿Necesitás ayuda?
-    Estamos para darte una mano con tu colección.
-    
-    * 📧 **Email:** soporte@figus26.com
-    * 📷 **Instagram:** @figus26_oficial
-    * 🕒 **Horario:** Lunes a Viernes de 9 a 18hs.
-    """)
-    st.info("Si tuviste un problema con un usuario, por favor reportalo enviando una captura de pantalla al mail.")
+    st.markdown("### ¿Necesitás ayuda?\nEmail: soporte@figus26.com\nInstagram: @figus26_oficial")
 
 @st.dialog("❓ Preguntas Frecuentes (FAQ)")
 def mostrar_faq():
-    with st.expander("¿Es gratis usar la app?"):
-        st.write("Sí, podés cargar tu álbum y ver el mercado gratis. Tenés 1 contacto diario gratuito.")
-    with st.expander("¿Cómo funciona el Premium?"):
-        st.write("Con Premium tenés contactos ilimitados, alertas de Wishlist y aparecés destacado en las búsquedas.")
-    with st.expander("¿Qué pasa si un usuario no responde?"):
-        st.write("Los tratos se cierran por WhatsApp. Si no responde, podés 'Ocultar' la negociación en la pestaña de Pendientes.")
-    with st.expander("¿Cómo cargo mis repetidas?"):
-        st.write("Podés hacerlo manualmente en la sección 'Mi Álbum' seleccionando las figus y luego 'Repes', o usando la Carga Masiva (CSV) en el menú lateral.")
+    with st.expander("¿Es gratis?"): st.write("Sí, con límite diario de 1 contacto.")
+    with st.expander("¿Cómo es Premium?"): st.write("Contactos ilimitados y alertas.")
 
 @st.dialog("⚖️ Términos Legales")
 def mostrar_legales():
-    st.markdown("### Términos y Condiciones")
-    st.markdown(config.TEXTO_LEGAL_COMPLETO)
-    st.divider()
-    st.caption("Al usar esta aplicación, aceptás que Figus 26 es solo un intermediario de contacto y no se responsabiliza por las transacciones físicas o monetarias entre usuarios.")
+    st.markdown("### Términos y Condiciones\n" + config.TEXTO_LEGAL_COMPLETO)
 
 # --- FLUJO LÓGICO ---
 if not st.session_state.barrera_superada:
@@ -142,9 +156,11 @@ if not st.session_state.user:
 else:
     user = st.session_state.user
     
+    # Persistencia Contactos
     if not st.session_state.unlocked_users:
         st.session_state.unlocked_users = db.get_unlocked_ids(user['id'])
 
+    # Reset Diario
     if db.verify_daily_reset(user):
         if not user.get('is_premium', False):
             st.toast("📅 ¡Nuevo día! Se renovaron tus créditos.", icon="☀️")
@@ -170,8 +186,14 @@ else:
     with st.sidebar:
         st.title(f"Hola {user['nick']}")
         st.caption(f"📍 {user.get('province', '')} - {user.get('zone', '')}")
+        
+        # --- NUEVO BOTÓN EDITAR PERFIL ---
+        if st.button("✏️ Editar Perfil", key="btn_edit_profile"):
+             mostrar_editar_perfil(user)
+             
         st.caption(f"⭐ Reputación: {user.get('reputation', 0)}")
         
+        # Notificaciones de Transacciones
         pending_requests = db.get_pending_transactions(user['id'])
         if pending_requests:
             st.divider()
@@ -186,7 +208,7 @@ else:
                     c1, c2 = st.columns(2)
                     if c1.button("✅ Sí", key=f"y_{req['id']}", use_container_width=True):
                         ok, msg = db.confirm_transaction_request(req['id'], user['id'])
-                        if ok: st.toast("¡Confirmado! Inventario actualizado."); time.sleep(1); st.rerun()
+                        if ok: st.toast("¡Confirmado!"); time.sleep(1); st.rerun()
                         else: st.error(msg)
                     if c2.button("❌ No", key=f"n_{req['id']}", use_container_width=True):
                         db.reject_transaction_request(req['id'])
@@ -195,6 +217,7 @@ else:
         st.divider()
         st.progress(min(tengo_total / total_album, 1.0), text="🏆 Mi Álbum")
         st.caption(f"Tenés **{tengo_total}** de {total_album}.")
+        
         st.divider()
         with st.expander("📤 Carga Masiva (CSV)"):
             col_a, col_b = st.columns(2)
@@ -207,6 +230,7 @@ else:
                     ok, msg = db.process_csv_upload(pd.read_csv(up), user['id'])
                 if ok: st.toast("¡Cargado!", icon="📦"); st.success(msg); time.sleep(1); st.rerun()
                 else: st.error(msg)
+        
         st.divider()
         if user.get('is_premium', False): 
             st.success("💎 PREMIUM")
@@ -228,17 +252,16 @@ else:
                     else: st.error(msg)
         if st.button("Chau / Salir"): st.session_state.user = None; st.rerun()
 
+    # --- PANTALLA PRINCIPAL ---
     st.header("📖 Mi Álbum")
     st.selectbox("Sección:", list(config.ALBUM_PAGES.keys()), key="seleccion_pais_key")
     inventory.render_inventory(user, start, end, seleccion_pais)
     st.divider()
     market.render_market(user)
 
-    # --- FOOTER (NUEVO) ---
+    # --- FOOTER ---
     st.divider()
     fc1, fc2, fc3 = st.columns(3)
-    
-    # Usamos type="secondary" (fondo blanco) para que no compitan visualmente
     if fc1.button("📧 Contacto", width="stretch", type="secondary"): mostrar_contacto()
     if fc2.button("❓ FAQ", width="stretch", type="secondary"): mostrar_faq()
     if fc3.button("⚖️ Legales", width="stretch", type="secondary"): mostrar_legales()
