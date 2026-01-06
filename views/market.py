@@ -38,7 +38,6 @@ def modal_seguridad(target_id, user):
         if db.check_contact_limit(user):
             with utils.spinner_futbolero():
                 db.consume_credit(user)
-                # GUARDAR EN DB
                 db.log_unlock(user['id'], target_id)
                 st.session_state.unlocked_users.add(target_id)
                 time.sleep(1)
@@ -63,7 +62,6 @@ def mostrar_modal_premium():
     st.link_button("👉 Pagá con Mercado Pago", config.MP_LINK, type="primary", use_container_width=True)
 
 def render_card(item, tipo, user, is_pending_view=False):
-    # Sufijo para evitar colisión de keys
     suffix = "pend" if is_pending_view else "mkt"
     
     with st.container(border=True):
@@ -124,13 +122,12 @@ def render_card(item, tipo, user, is_pending_view=False):
                 if phone_target: 
                     st.link_button("🟢 WhatsApp", link_wa, type="secondary", use_container_width=True)
                 
-                # PESTAÑA PENDIENTES
+                # BOTONES PENDIENTES
                 if is_pending_view:
                     if st.button("✅ Fichaje cerrado", key=f"pd_ok_{fig_recibo}_{target_id}_{suffix}", help="Concretar y quitar de pendientes", width="stretch"):
                         
-                        # --- LÓGICA PREMIUM: NO BORRAR CONTACTO ---
+                        # LOGICA PREMIUM: Si es premium, id_para_borrar es None (no borra)
                         es_premium = user.get('is_premium', False)
-                        # Si es Premium, mandamos None para que NO lo borre de la DB
                         id_para_borrar = None if es_premium else target_id
                         
                         with utils.spinner_futbolero():
@@ -140,11 +137,9 @@ def render_card(item, tipo, user, is_pending_view=False):
                                 ok, msg = db.register_purchase(user['id'], fig_recibo, target_id_to_remove=id_para_borrar)
                         
                         if ok: 
-                            # Si NO es premium, actualizamos también la memoria local
                             if not es_premium:
                                 st.session_state.unlocked_users.discard(target_id)
-                            
-                            st.toast("¡Golazo!", icon="⚽"); st.success(msg); time.sleep(1.5); st.rerun()
+                            st.toast("¡Golazo!", icon="⚽"); st.success(msg); time.sleep(1.0); st.rerun()
                         else: st.error(msg)
                     
                     if st.button("❌ Fichaje caído", key=f"pd_no_{fig_recibo}_{target_id}_{suffix}", help="No se concretó, quitar de la lista", width="stretch"):
@@ -153,7 +148,6 @@ def render_card(item, tipo, user, is_pending_view=False):
                          st.rerun()
 
             else:
-                # PESTAÑA MERCADO (Bloqueados)
                 if st.button("🔓 Desbloquear", key=f"ul_{tipo}_{fig_recibo}_{target_id}_{suffix}", type="secondary", width="stretch"):
                     if db.check_contact_limit(user):
                         if st.session_state.skip_security_modal:
@@ -171,7 +165,7 @@ def render_card(item, tipo, user, is_pending_view=False):
                 st.toast(m)
 
 def paginar_y_mostrar(lista_items, tipo_key, tipo_card, user, is_pending_view=False):
-    # Scroll automático (Solo si NO es pendiente, para evitar saltos molestos)
+    # SCROLL: Solo si NO es pendiente (para no saltar al confirmar multiples)
     if not is_pending_view:
         unique_id = time.time()
         js = f"""
@@ -193,10 +187,9 @@ def paginar_y_mostrar(lista_items, tipo_key, tipo_card, user, is_pending_view=Fa
     total_items = len(lista_items)
     total_pages = (total_items - 1) // ITEMS_POR_PAGINA + 1
     
-    if tipo_key not in st.session_state: 
-        st.session_state[tipo_key] = 1
-        
+    if tipo_key not in st.session_state: st.session_state[tipo_key] = 1
     if st.session_state[tipo_key] > total_pages: st.session_state[tipo_key] = 1
+    
     curr_page = st.session_state[tipo_key]
     start_idx = (curr_page - 1) * ITEMS_POR_PAGINA
     end_idx = start_idx + ITEMS_POR_PAGINA
@@ -258,13 +251,20 @@ def render_market(user):
     total_raw_v = len(ventas)
     
     if (total_raw_c > len(matches_filtrados)) or (total_raw_v > len(ventas_filtradas)):
-        st.caption(f"📊 **Resumen:** Se encontraron **{total_raw_c} canjes** y **{total_raw_v} ventas** en total. Estás viendo menos porque tenés filtros activados.")
+        st.caption(f"📊 **Resumen:** Se encontraron **{total_raw_c} canjes** y **{total_raw_v} ventas** en total.")
 
-    t1, t2, t3 = st.tabs([f"Canjes ({len(matches_filtrados)})", f"Ventas ({len(ventas_filtradas)})", f"🤝 Pendientes ({len(pendientes_filtrados)})"])
+    # --- SOLUCIÓN TABS FIJOS ---
+    # Usamos títulos estáticos para evitar que Streamlit reinicie la pestaña al cambiar el número
+    t1, t2, t3 = st.tabs(["🔄 Canjes", "💰 Ventas", "🤝 Pendientes"])
     
-    with t1: paginar_y_mostrar(matches_filtrados, 'page_canjes', 'canje', user, is_pending_view=False)
-    with t2: paginar_y_mostrar(ventas_filtradas, 'page_ventas', 'venta', user, is_pending_view=False)
+    with t1: 
+        st.caption(f"Resultados: {len(matches_filtrados)}")
+        paginar_y_mostrar(matches_filtrados, 'page_canjes', 'canje', user, is_pending_view=False)
+    with t2: 
+        st.caption(f"Resultados: {len(ventas_filtradas)}")
+        paginar_y_mostrar(ventas_filtradas, 'page_ventas', 'venta', user, is_pending_view=False)
     with t3: 
+        st.caption(f"Activos: {len(pendientes_filtrados)}")
         if not pendientes_filtrados:
             st.info("No hay negociaciones pendientes.")
         else:
