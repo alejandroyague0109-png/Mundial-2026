@@ -83,8 +83,10 @@ if 'barrera_superada' not in st.session_state: st.session_state.barrera_superada
 @st.dialog("⚠️ Bienvenido a Figus 26")
 def mostrar_barrera_entrada():
     st.warning("🔞 Esta aplicación es para mayores de 18 años.")
-    st.info("🤝 Facilitamos el contacto entre coleccionistas, pero no intervenimos en los canjes.")
+    # TEXTO RESTAURADO COMPLETO:
+    st.info("🤝 Facilitamos el contacto entre coleccionistas, pero no intervenimos en los canjes. No nos hacemos responsables de las reuniones pactadas por los usuarios ni de las transacciones realizadas.")
     st.markdown("**Al continuar, declarás bajo juramento que sos mayor de edad.**")
+    
     if st.button("✅ Entendido, soy +18", type="primary", width="stretch"):
         st.session_state.barrera_superada = True
         st.rerun()
@@ -99,7 +101,7 @@ def mostrar_instrucciones_csv():
     3. **price**: Precio (0 si es canje).
     """)
 
-# --- NUEVO: DIALOGO EDITAR PERFIL ---
+# --- DIALOGO EDITAR PERFIL ---
 @st.dialog("✏️ Editar Perfil")
 def mostrar_editar_perfil(user):
     st.markdown("Actualizá tu ubicación para encontrar gente cerca.")
@@ -187,7 +189,7 @@ else:
         st.title(f"Hola {user['nick']}")
         st.caption(f"📍 {user.get('province', '')} - {user.get('zone', '')}")
         
-        # --- NUEVO BOTÓN EDITAR PERFIL ---
+        # EDITAR PERFIL
         if st.button("✏️ Editar Perfil", key="btn_edit_profile"):
              mostrar_editar_perfil(user)
              
@@ -230,7 +232,6 @@ else:
                     ok, msg = db.process_csv_upload(pd.read_csv(up), user['id'])
                 if ok: st.toast("¡Cargado!", icon="📦"); st.success(msg); time.sleep(1); st.rerun()
                 else: st.error(msg)
-        
         st.divider()
         if user.get('is_premium', False): 
             st.success("💎 PREMIUM")
