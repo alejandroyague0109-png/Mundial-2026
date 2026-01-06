@@ -18,7 +18,7 @@ except Exception as e:
     st.error(f"Error de conexión DB/MP: {e}")
     st.stop()
 
-# --- USUARIOS (Igual) ---
+# --- USUARIOS ---
 def login_user(phone, password):
     clean_phone = utils.limpiar_telefono(phone)
     if not clean_phone: return None, "Che, poné un teléfono válido."
@@ -32,25 +32,76 @@ def login_user(phone, password):
     except Exception as e:
         return None, "Se cayó la conexión. Probá en un toque."
 
-def register_user(nick, phone, province, zone, password):
+def register_user(nick, phone, province, zone, password, secret_q, secret_a):
     if not utils.validar_formato_telefono(phone): return None, "El teléfono está mal escrito."
     if not nick or not password or not province or not zone: 
-        return None, "Faltan datos obligatorios (Provincia/Zona)."
+        return None, "Faltan datos obligatorios."
+    if not secret_q or not secret_a:
+        return None, "La pregunta de seguridad es obligatoria (para recuperar tu cuenta)."
+
     p_hash = utils.hash_phone_searchable(phone)
     p_enc = utils.encrypt_phone(phone)
+    
+    # Hasheamos la respuesta secreta también para seguridad (en minúsculas)
+    a_hash = utils.hash_password(secret_a.lower().strip())
+
     try:
         if supabase.table("users").select("*").eq("phone_hash", p_hash).execute().data: 
             return None, "Ese número ya está registrado, crack."
+        
         hashed_pw = utils.hash_password(password)
+        
         data = {
-            "nick": nick, "phone_hash": p_hash, "phone_encrypted": p_enc,
-            "province": province, "zone": zone, "password": hashed_pw, 
+            "nick": nick, 
+            "phone_hash": p_hash,
+            "phone_encrypted": p_enc,
+            "province": province, 
+            "zone": zone, 
+            "password": hashed_pw,
+            "secret_question": secret_q,
+            "secret_answer": a_hash,
             "is_admin": (utils.limpiar_telefono(phone) == config.ADMIN_PHONE), 
             "reputation": 0, "daily_contacts_count": 0, "last_contact_date": str(date.today())
         }
         response = supabase.table("users").insert(data).execute()
         return response.data[0], "OK"
     except Exception as e: return None, f"Error DB: {str(e)}"
+
+# --- RECUPERACIÓN DE CONTRASEÑA (NUEVO) ---
+def get_security_info(phone):
+    """Busca la pregunta secreta asociada al teléfono."""
+    clean_phone = utils.limpiar_telefono(phone)
+    if not clean_phone: return None, "Teléfono inválido."
+    p_hash = utils.hash_phone_searchable(phone)
+    try:
+        resp = supabase.table("users").select("secret_question, secret_answer").eq("phone_hash", p_hash).execute()
+        if resp.data:
+            return resp.data[0], "OK"
+        return None, "No encontré ese número."
+    except: return None, "Error de conexión."
+
+def reset_password(phone, answer_input, new_password):
+    """Verifica la respuesta secreta y actualiza la contraseña."""
+    if not new_password: return False, "La nueva contraseña no puede estar vacía."
+    
+    p_hash = utils.hash_phone_searchable(phone)
+    try:
+        # Obtenemos el hash real de la respuesta
+        resp = supabase.table("users").select("secret_answer").eq("phone_hash", p_hash).execute()
+        if not resp.data: return False, "Usuario no encontrado."
+        
+        real_answer_hash = resp.data[0]['secret_answer']
+        
+        # Verificamos la respuesta ingresada (hasheada)
+        if utils.check_password(answer_input.lower().strip(), real_answer_hash):
+            # Si coincide, actualizamos la password
+            new_pw_hash = utils.hash_password(new_password)
+            supabase.table("users").update({"password": new_pw_hash}).eq("phone_hash", p_hash).execute()
+            return True, "¡Contraseña cambiada! Ahora iniciá sesión."
+        else:
+            return False, "Respuesta incorrecta."
+    except Exception as e: return False, str(e)
+
 
 # --- CONTACTOS ---
 def log_unlock(user_id, target_id):
@@ -71,7 +122,7 @@ def remove_unlock(user_id, target_id):
         return True
     except: return False
 
-# --- INVENTARIO (Igual) ---
+# --- INVENTARIO ---
 def get_inventory_status(user_id, start, end):
     try:
         response = supabase.table("inventory").select("*").eq("user_id", user_id).execute()
@@ -130,68 +181,40 @@ def save_inventory_positive(user_id, start, end, ui_owned_list, ui_wishlist_list
                 else: raise e
     fetch_market.clear()
 
-# --- GESTIÓN DE SOLICITUDES DE CONFIRMACIÓN (NUEVO) ---
-
+# --- GESTIÓN DE SOLICITUDES ---
 def get_pending_transactions(user_id):
-    """Obtiene las solicitudes que OTROS me enviaron a MÍ."""
     try:
-        # Traemos datos del sender (el que inició la acción)
         resp = supabase.table("transaction_requests").select("*, users!sender_id(nick)").eq("receiver_id", user_id).eq("status", "pending").execute()
         return resp.data
-    except Exception as e:
-        return []
+    except Exception as e: return []
 
 def confirm_transaction_request(request_id, user_id_receiver):
-    """El receptor confirma: Se ejecuta la lógica espejo en SU inventario."""
     try:
-        # 1. Obtener datos de la request
         req = supabase.table("transaction_requests").select("*").eq("id", request_id).execute().data[0]
-        
         type_tx = req['type']
-        fig_sent_by_sender = req['fig_sent'] # Sender dio esta (yo recibo esta)
-        fig_received_by_sender = req['fig_received'] # Sender recibió esta (yo di esta)
-        
-        # LÓGICA ESPEJO PARA EL RECEPTOR (YO)
-        
-        # PARTE A: YO ENTREGUÉ 'fig_received_by_sender' (Restar de mi stock)
-        # Solo aplica si NO es una compra pura donde yo soy el vendedor (en compra yo solo entrego)
-        # Si es Exchange: Yo entregué fig_received_by_sender.
-        # Si es Purchase: Yo entregué fig_received_by_sender (la vendí).
+        fig_sent_by_sender = req['fig_sent']
+        fig_received_by_sender = req['fig_received']
         
         if fig_received_by_sender:
             target_fig = int(fig_received_by_sender)
-            # Buscar en mis repetidas
             resp = supabase.table("inventory").select("*").eq("user_id", user_id_receiver).eq("sticker_num", target_fig).eq("status", "repetida").execute()
             if resp.data:
                 row = resp.data[0]
                 curr = int(row.get('quantity') or 1)
-                if curr > 1:
-                    supabase.table("inventory").update({"quantity": curr - 1}).eq("id", row['id']).execute()
-                else:
-                    supabase.table("inventory").delete().eq("id", row['id']).execute()
+                if curr > 1: supabase.table("inventory").update({"quantity": curr - 1}).eq("id", row['id']).execute()
+                else: supabase.table("inventory").delete().eq("id", row['id']).execute()
         
-        # PARTE B: YO RECIBÍ 'fig_sent_by_sender' (Sumar a mi stock)
-        # Solo aplica si es Exchange (en compra yo recibo dinero, no figus, o al revés)
         if type_tx == 'exchange' and fig_sent_by_sender:
             target_get = int(fig_sent_by_sender)
-            # Borrar de wishlist
             supabase.table("inventory").delete().eq("user_id", user_id_receiver).eq("sticker_num", target_get).eq("status", "wishlist").execute()
-            # Agregar a tengo
             check = supabase.table("inventory").select("*").eq("user_id", user_id_receiver).eq("sticker_num", target_get).eq("status", "tengo").execute()
-            if not check.data:
-                supabase.table("inventory").insert({"user_id": user_id_receiver, "sticker_num": target_get, "status": "tengo", "price": 0, "quantity": 1}).execute()
+            if not check.data: supabase.table("inventory").insert({"user_id": user_id_receiver, "sticker_num": target_get, "status": "tengo", "price": 0, "quantity": 1}).execute()
 
-        # 3. Actualizar estado request
         supabase.table("transaction_requests").update({"status": "accepted"}).eq("id", request_id).execute()
-        
-        # 4. Limpiar Contact Log (opcional, si ya confirmamos se asume que terminó la gestión)
         remove_unlock(user_id_receiver, req['sender_id'])
-        
         fetch_market.clear()
         return True, "Confirmado: Tu inventario se actualizó."
-        
-    except Exception as e:
-        return False, str(e)
+    except Exception as e: return False, str(e)
 
 def reject_transaction_request(request_id):
     try:
@@ -199,70 +222,41 @@ def reject_transaction_request(request_id):
         return True
     except: return False
 
-# --- INTERCAMBIO (ACTUALIZADO) ---
+# --- INTERCAMBIO ---
 def register_exchange(user_id, given_fig, received_fig, target_id_to_remove=None):
     try:
         given_fig = int(given_fig)
         received_fig = int(received_fig)
-        
-        # Lógica Usuario A (Sender)
         resp = supabase.table("inventory").select("*").eq("user_id", user_id).eq("sticker_num", given_fig).eq("status", "repetida").execute()
         if not resp.data: return False, f"No tenés la #{given_fig} repetida."
         row = resp.data[0]
         current_qty = int(row.get('quantity') or 1)
-        if current_qty > 1:
-            supabase.table("inventory").update({"quantity": current_qty - 1}).eq("id", row['id']).execute()
-        else:
-            supabase.table("inventory").delete().eq("id", row['id']).execute()
-            
+        if current_qty > 1: supabase.table("inventory").update({"quantity": current_qty - 1}).eq("id", row['id']).execute()
+        else: supabase.table("inventory").delete().eq("id", row['id']).execute()
         supabase.table("inventory").delete().eq("user_id", user_id).eq("sticker_num", received_fig).eq("status", "wishlist").execute()
         check = supabase.table("inventory").select("*").eq("user_id", user_id).eq("sticker_num", received_fig).eq("status", "tengo").execute()
-        if not check.data:
-            supabase.table("inventory").insert({"user_id": user_id, "sticker_num": received_fig, "status": "tengo", "price": 0, "quantity": 1}).execute()
-        
-        # NUEVO: CREAR SOLICITUD PARA EL OTRO USUARIO
+        if not check.data: supabase.table("inventory").insert({"user_id": user_id, "sticker_num": received_fig, "status": "tengo", "price": 0, "quantity": 1}).execute()
         if target_id_to_remove:
-            supabase.table("transaction_requests").insert({
-                "sender_id": user_id,
-                "receiver_id": target_id_to_remove,
-                "fig_sent": given_fig,      # A dio esta
-                "fig_received": received_fig, # A recibió esta
-                "type": "exchange"
-            }).execute()
-            # Quitamos de pendientes localmente
+            supabase.table("transaction_requests").insert({"sender_id": user_id, "receiver_id": target_id_to_remove, "fig_sent": given_fig, "fig_received": received_fig, "type": "exchange"}).execute()
             remove_unlock(user_id, target_id_to_remove)
-            
         fetch_market.clear()
         return True, f"¡Listo! Actualicé tu álbum y le mandé la confirmación al otro usuario."
-    except Exception as e:
-        return False, f"Error: {str(e)}"
+    except Exception as e: return False, f"Error: {str(e)}"
 
 def register_purchase(user_id, received_fig, target_id_to_remove=None):
     try:
         received_fig = int(received_fig)
-        
         supabase.table("inventory").delete().eq("user_id", user_id).eq("sticker_num", received_fig).eq("status", "wishlist").execute()
         check = supabase.table("inventory").select("*").eq("user_id", user_id).eq("sticker_num", received_fig).eq("status", "tengo").execute()
-        if not check.data:
-            supabase.table("inventory").insert({"user_id": user_id, "sticker_num": received_fig, "status": "tengo", "price": 0, "quantity": 1}).execute()
-        
-        # NUEVO: CREAR SOLICITUD (TIPO COMPRA)
+        if not check.data: supabase.table("inventory").insert({"user_id": user_id, "sticker_num": received_fig, "status": "tengo", "price": 0, "quantity": 1}).execute()
         if target_id_to_remove:
-            supabase.table("transaction_requests").insert({
-                "sender_id": user_id,
-                "receiver_id": target_id_to_remove,
-                "fig_sent": None,           # En compra solo recibo la figu, doy dinero (no trackeable)
-                "fig_received": received_fig,
-                "type": "purchase"
-            }).execute()
+            supabase.table("transaction_requests").insert({"sender_id": user_id, "receiver_id": target_id_to_remove, "fig_sent": None, "fig_received": received_fig, "type": "purchase"}).execute()
             remove_unlock(user_id, target_id_to_remove)
-            
         fetch_market.clear()
         return True, "¡Compra registrada! Le avisé al vendedor para que actualice su stock."
-    except Exception as e:
-        return False, f"Error: {str(e)}"
+    except Exception as e: return False, f"Error: {str(e)}"
 
-# --- MERCADO (Igual) ---
+# --- MERCADO ---
 @st.cache_data(ttl=60, show_spinner=False)
 def fetch_market(user_id):
     try:
@@ -298,12 +292,7 @@ def find_matches(user_id, market_df):
         figu = int(row['sticker_num'])
         if figu not in mis_tengo_set:
             es_wishlist = figu in mis_wishlist_set
-            match = {
-                'nick': row['nick'], 'province': row['province'], 'zone': row['zone'], 
-                'phone_encrypted': row['phone_encrypted'], 
-                'figu': figu, 'price': row['price'], 
-                'reputation': row['reputation'], 'target_id': row['user_id'], 'is_wishlist': es_wishlist
-            }
+            match = {'nick': row['nick'], 'province': row['province'], 'zone': row['zone'], 'phone_encrypted': row['phone_encrypted'], 'figu': figu, 'price': row['price'], 'reputation': row['reputation'], 'target_id': row['user_id'], 'is_wishlist': es_wishlist}
             if row['price'] > 0: ventas.append(match)
             else:
                 sus_tengo_df = market_df[(market_df['user_id'] == row['user_id']) & (market_df['status'] == 'tengo')]
