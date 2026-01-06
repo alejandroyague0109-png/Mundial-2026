@@ -69,3 +69,19 @@ def check_password(password, hashed):
         return bcrypt.checkpw(password.encode('utf-8'), hashed.encode('utf-8'))
     except:
         return False
+
+from urllib.parse import quote
+
+# ... (otras funciones existentes) ...
+
+def generar_link_whatsapp_wishlist(wishlist_ids):
+    if not wishlist_ids:
+        return None
+    
+    # Agrupamos los números en un string separado por comas
+    lista_str = ", ".join(map(str, wishlist_ids))
+    
+    texto = f"¡Hola! 👋 Me faltan estas figus del Mundial 2026:\n\n{lista_str}\n\nSi tenés alguna, avisame! 🙏\n\n_Gestionado por Figus26_"
+    
+    # Creamos el link universal de WhatsApp (sin número destino, para que el usuario elija contacto)
+    return f"https://wa.me/?text={quote(texto)}"

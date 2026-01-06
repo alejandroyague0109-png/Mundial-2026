@@ -181,6 +181,17 @@ def save_inventory_positive(user_id, start, end, ui_owned_list, ui_wishlist_list
                 else: raise e
     fetch_market.clear()
 
+# ... (dentro de database.py, al final de la sección INVENTARIO)
+
+def get_full_wishlist(user_id):
+    """Trae TODA la wishlist completa del usuario para compartir."""
+    try:
+        resp = supabase.table("inventory").select("sticker_num").eq("user_id", user_id).eq("status", "wishlist").execute()
+        # Retornamos lista ordenada de números
+        return sorted([int(x['sticker_num']) for x in resp.data])
+    except:
+        return []
+
 # --- GESTIÓN DE SOLICITUDES (Igual) ---
 def get_pending_transactions(user_id):
     try:

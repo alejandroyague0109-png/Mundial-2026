@@ -83,7 +83,6 @@ if 'barrera_superada' not in st.session_state: st.session_state.barrera_superada
 @st.dialog("⚠️ Bienvenido a Figus 26")
 def mostrar_barrera_entrada():
     st.warning("🔞 Esta aplicación es para mayores de 18 años.")
-    # TEXTO RESTAURADO COMPLETO:
     st.info("🤝 Facilitamos el contacto entre coleccionistas, pero no intervenimos en los canjes. No nos hacemos responsables de las reuniones pactadas por los usuarios ni de las transacciones realizadas.")
     st.markdown("**Al continuar, declarás bajo juramento que sos mayor de edad.**")
     
@@ -219,6 +218,15 @@ else:
         st.divider()
         st.progress(min(tengo_total / total_album, 1.0), text="🏆 Mi Álbum")
         st.caption(f"Tenés **{tengo_total}** de {total_album}.")
+        
+        # --- NUEVA FUNCIONALIDAD: COMPARTIR FALTANTES ---
+        # Consultamos toda la wishlist (sin paginación)
+        full_wishlist = db.get_full_wishlist(user['id'])
+        if full_wishlist:
+            link_share = utils.generar_link_whatsapp_wishlist(full_wishlist)
+            # Usamos type="primary" para que resalte en verde/color principal
+            st.link_button("📢 Compartir Faltantes", link_share, type="primary", use_container_width=True)
+        # ------------------------------------------------
         
         st.divider()
         with st.expander("📤 Carga Masiva (CSV)"):
