@@ -3,6 +3,7 @@ import time
 import database as db
 import locations
 import utils
+import config # Importante para los términos legales
 
 def mostrar_login():
     col1, col2, col3 = st.columns([1, 2, 1])
@@ -14,7 +15,6 @@ def mostrar_login():
         if st.session_state.get('modo_recuperacion', False):
             st.warning("🔐 Recuperar Cuenta")
             
-            # Paso 1: Pedir teléfono
             if 'recup_phone' not in st.session_state:
                 phone_input = st.text_input("Ingresá tu celular:", placeholder="Ej: 2604123456")
                 if st.button("Buscar Cuenta", width="stretch"):
@@ -30,13 +30,11 @@ def mostrar_login():
                 if st.button("🔙 Volver al Login"):
                     st.session_state.modo_recuperacion = False
                     st.rerun()
-            
-            # Paso 2: Responder pregunta
             else:
                 if not st.session_state.recup_has_q:
                     st.error("Esta cuenta no tiene configurada una pregunta de seguridad.")
                     st.info("Contactá al soporte con tu DNI en mano para blanquear la clave.")
-                    st.link_button("💬 Contactar Soporte", "https://wa.me/5492604000000", type="primary") # Poner tu número real
+                    st.link_button("💬 Contactar Soporte", "https://wa.me/5492604000000", type="primary")
                     if st.button("🔙 Volver"): 
                         del st.session_state.recup_phone
                         st.rerun()
@@ -61,7 +59,7 @@ def mostrar_login():
                         st.session_state.modo_recuperacion = False
                         st.rerun()
 
-        # --- MODO LOGIN/REGISTRO NORMAL ---
+        # --- MODO LOGIN/REGISTRO ---
         else:
             tab1, tab2 = st.tabs(["Ingresar", "Registrarse"])
             
@@ -82,7 +80,6 @@ def mostrar_login():
                     else:
                         st.error(msg)
                 
-                # Botón Olvidé contraseña
                 if st.button("¿Te olvidaste la contraseña?", type="secondary", width="stretch"):
                     st.session_state.modo_recuperacion = True
                     st.rerun()
@@ -108,11 +105,21 @@ def mostrar_login():
                 ])
                 secret_a = st.text_input("Respuesta Secreta", type="password", help="Acordate de esto, es la única forma de recuperar tu clave.")
 
+                # SECCIÓN LEGALES RESTAURADA
+                st.markdown("---")
+                with st.expander("Ver Términos y Condiciones"):
+                    st.caption(config.TEXTO_LEGAL_COMPLETO) # O un resumen
+                
+                acepto_tyc = st.checkbox("He leído y acepto los Términos y Condiciones", key="chk_tyc")
+
                 if st.button("Crear Cuenta", type="primary", use_container_width=True):
-                    with utils.spinner_futbolero():
-                        user, msg = db.register_user(new_nick, new_phone, prov, zone, new_pass, secret_q, secret_a)
-                    
-                    if user:
-                        st.success("¡Cuenta creada! Ya podés ingresar.")
+                    if not acepto_tyc:
+                        st.error("⚠️ Debés aceptar los Términos y Condiciones para registrarte.")
                     else:
-                        st.error(msg)
+                        with utils.spinner_futbolero():
+                            user, msg = db.register_user(new_nick, new_phone, prov, zone, new_pass, secret_q, secret_a)
+                        
+                        if user:
+                            st.success("¡Cuenta creada! Ya podés ingresar.")
+                        else:
+                            st.error(msg)
