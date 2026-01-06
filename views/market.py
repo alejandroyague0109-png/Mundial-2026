@@ -127,18 +127,26 @@ def render_card(item, tipo, user, is_pending_view=False):
                 # PESTAÑA PENDIENTES
                 if is_pending_view:
                     if st.button("✅ Fichaje cerrado", key=f"pd_ok_{fig_recibo}_{target_id}_{suffix}", help="Concretar y quitar de pendientes", width="stretch"):
+                        
+                        # --- LÓGICA PREMIUM: NO BORRAR CONTACTO ---
+                        es_premium = user.get('is_premium', False)
+                        # Si es Premium, mandamos None para que NO lo borre de la DB
+                        id_para_borrar = None if es_premium else target_id
+                        
                         with utils.spinner_futbolero():
                             if tipo == 'canje':
-                                ok, msg = db.register_exchange(user['id'], fig_entrego, fig_recibo, target_id_to_remove=target_id)
+                                ok, msg = db.register_exchange(user['id'], fig_entrego, fig_recibo, target_id_to_remove=id_para_borrar)
                             else:
-                                ok, msg = db.register_purchase(user['id'], fig_recibo, target_id_to_remove=target_id)
+                                ok, msg = db.register_purchase(user['id'], fig_recibo, target_id_to_remove=id_para_borrar)
                         
                         if ok: 
-                            st.session_state.unlocked_users.discard(target_id)
+                            # Si NO es premium, actualizamos también la memoria local
+                            if not es_premium:
+                                st.session_state.unlocked_users.discard(target_id)
+                            
                             st.toast("¡Golazo!", icon="⚽"); st.success(msg); time.sleep(1.5); st.rerun()
                         else: st.error(msg)
                     
-                    # CAMBIO DE TEXTO: Ocultar -> Fichaje caído
                     if st.button("❌ Fichaje caído", key=f"pd_no_{fig_recibo}_{target_id}_{suffix}", help="No se concretó, quitar de la lista", width="stretch"):
                          db.remove_unlock(user['id'], target_id)
                          st.session_state.unlocked_users.discard(target_id)
@@ -163,9 +171,7 @@ def render_card(item, tipo, user, is_pending_view=False):
                 st.toast(m)
 
 def paginar_y_mostrar(lista_items, tipo_key, tipo_card, user, is_pending_view=False):
-    # --- SCROLL AUTOMÁTICO INTELIGENTE ---
-    # Solo hacemos scroll si NO estamos en la vista de pendientes.
-    # Esto evita el salto molesto cuando estás gestionando muchas confirmaciones seguidas.
+    # Scroll automático (Solo si NO es pendiente, para evitar saltos molestos)
     if not is_pending_view:
         unique_id = time.time()
         js = f"""
