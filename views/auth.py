@@ -2,59 +2,117 @@ import streamlit as st
 import time
 import database as db
 import locations
-import config
 import utils
 
 def mostrar_login():
-    st.title("🏆 Figus 26")
-    is_locked = not st.session_state.get('barrera_superada', False)
-    
-    t1, t2 = st.tabs(["Ingresar", "Registrarse"])
-    
-    with t1:
-        p = st.text_input("Teléfono", key="l_p", placeholder="Ej: 2604...")
-        pw = st.text_input("Contraseña", type="password", key="l_pw")
+    col1, col2, col3 = st.columns([1, 2, 1])
+    with col2:
+        st.markdown("<h1 style='text-align: center;'>⚽ Figus 26</h1>", unsafe_allow_html=True)
+        st.markdown("<p style='text-align: center;'>Tu álbum digital de intercambios</p>", unsafe_allow_html=True)
         
-        # FIX 2026: width="stretch"
-        if st.button("Entrar", type="primary", disabled=is_locked, width="stretch"):
-            with utils.spinner_futbolero():
-                u, m = db.login_user(p, pw)
-            if u: 
-                st.session_state.user = u
-                st.rerun()
-            else: 
-                st.error(m)
+        # --- MODO RECUPERACIÓN ---
+        if st.session_state.get('modo_recuperacion', False):
+            st.warning("🔐 Recuperar Cuenta")
             
-    with t2:
-        n = st.text_input("Nick / Apodo")
-        ph = st.text_input("Teléfono", key="r_p", placeholder="Ej: 2604...")
-        pw2 = st.text_input("Contraseña", type="password", key="r_pw")
-        col_prov, col_dep = st.columns(2)
-        reg_prov = col_prov.selectbox("Provincia", list(locations.ARGENTINA.keys()), index=None, placeholder="Seleccioná Provincia...")
-        opciones_deptos = locations.ARGENTINA.get(reg_prov, []) if reg_prov else []
-        reg_zone = col_dep.selectbox("Departamento / Barrio", opciones_deptos, index=None, placeholder="Seleccioná Zona...")
-        
-        st.divider()
-        col_legales, col_check = st.columns([1, 2])
-        
-        def ver_contrato():
-             @st.dialog("📄 Términos", width="large")
-             def _dialog(): st.markdown(config.TEXTO_LEGAL_COMPLETO)
-             _dialog()
+            # Paso 1: Pedir teléfono
+            if 'recup_phone' not in st.session_state:
+                phone_input = st.text_input("Ingresá tu celular:", placeholder="Ej: 2604123456")
+                if st.button("Buscar Cuenta", width="stretch"):
+                    user_data, msg = db.get_security_info(phone_input)
+                    if user_data:
+                        st.session_state.recup_phone = phone_input
+                        st.session_state.recup_question = user_data['secret_question']
+                        st.session_state.recup_has_q = True if user_data['secret_question'] else False
+                        st.rerun()
+                    else:
+                        st.error(msg)
+                
+                if st.button("🔙 Volver al Login"):
+                    st.session_state.modo_recuperacion = False
+                    st.rerun()
+            
+            # Paso 2: Responder pregunta
+            else:
+                if not st.session_state.recup_has_q:
+                    st.error("Esta cuenta no tiene configurada una pregunta de seguridad.")
+                    st.info("Contactá al soporte con tu DNI en mano para blanquear la clave.")
+                    st.link_button("💬 Contactar Soporte", "https://wa.me/5492604000000", type="primary") # Poner tu número real
+                    if st.button("🔙 Volver"): 
+                        del st.session_state.recup_phone
+                        st.rerun()
+                else:
+                    st.info(f"Pregunta: **{st.session_state.recup_question}**")
+                    ans = st.text_input("Tu Respuesta Secreta:", type="password")
+                    new_pass = st.text_input("Nueva Contraseña:", type="password")
+                    
+                    if st.button("🔄 Cambiar Contraseña", type="primary", width="stretch"):
+                        ok, msg = db.reset_password(st.session_state.recup_phone, ans, new_pass)
+                        if ok:
+                            st.success(msg)
+                            time.sleep(2)
+                            del st.session_state.recup_phone
+                            st.session_state.modo_recuperacion = False
+                            st.rerun()
+                        else:
+                            st.error(msg)
+                    
+                    if st.button("Cancelar"):
+                        del st.session_state.recup_phone
+                        st.session_state.modo_recuperacion = False
+                        st.rerun()
 
-        # FIX 2026: width="stretch"
-        col_legales.button("📄 Leer Legales", type="secondary", on_click=ver_contrato, width="stretch")
-        acepto = col_check.checkbox("Acepto términos y condiciones")
-        
-        campos_completos = n and ph and pw2 and reg_prov and reg_zone and acepto
-        
-        # FIX 2026: width="stretch"
-        if st.button("Registrarme", type="primary", disabled=(is_locked or not campos_completos), width="stretch"):
-            with utils.spinner_futbolero():
-                u, m = db.register_user(n, ph, reg_prov, reg_zone, pw2)
-            if u: 
-                st.toast("¡Alta incorporación! Bienvenido al equipo.", icon="⚽")
-                st.success("Cuenta creada, crack. Ahora iniciá sesión en la otra pestaña.")
-                time.sleep(3)
-            else: 
-                st.error(m)
+        # --- MODO LOGIN/REGISTRO NORMAL ---
+        else:
+            tab1, tab2 = st.tabs(["Ingresar", "Registrarse"])
+            
+            with tab1:
+                phone = st.text_input("Celular (sin 0 ni 15)", placeholder="Ej: 2604445566", key="l_phone")
+                password = st.text_input("Contraseña", type="password", key="l_pass")
+                
+                if st.button("Ingresar", type="primary", use_container_width=True):
+                    with utils.spinner_futbolero():
+                        user, msg = db.login_user(phone, password)
+                        time.sleep(1)
+                    
+                    if user:
+                        st.session_state.user = user
+                        st.toast(f"¡Hola {user['nick']}!", icon="👋")
+                        time.sleep(0.5)
+                        st.rerun()
+                    else:
+                        st.error(msg)
+                
+                # Botón Olvidé contraseña
+                if st.button("¿Te olvidaste la contraseña?", type="secondary", width="stretch"):
+                    st.session_state.modo_recuperacion = True
+                    st.rerun()
+
+            with tab2:
+                new_nick = st.text_input("Tu Apodo / Nick", placeholder="El 10")
+                new_phone = st.text_input("Celular", placeholder="Ej: 2604...", key="r_phone")
+                
+                c_prov, c_zone = st.columns(2)
+                prov = c_prov.selectbox("Provincia", list(locations.ARGENTINA.keys()))
+                zone = c_zone.selectbox("Zona", locations.ARGENTINA[prov])
+                
+                new_pass = st.text_input("Contraseña", type="password", key="r_pass")
+                
+                st.markdown("---")
+                st.caption("🔐 **Seguridad (Para recuperar tu cuenta)**")
+                secret_q = st.selectbox("Pregunta Secreta", [
+                    "¿Cómo se llamaba tu primera mascota?",
+                    "¿En qué calle vivías de niño?",
+                    "¿Cuál es tu comida favorita?",
+                    "¿Cuál fue tu primer recital?",
+                    "¿Equipo de fútbol favorito?"
+                ])
+                secret_a = st.text_input("Respuesta Secreta", type="password", help="Acordate de esto, es la única forma de recuperar tu clave.")
+
+                if st.button("Crear Cuenta", type="primary", use_container_width=True):
+                    with utils.spinner_futbolero():
+                        user, msg = db.register_user(new_nick, new_phone, prov, zone, new_pass, secret_q, secret_a)
+                    
+                    if user:
+                        st.success("¡Cuenta creada! Ya podés ingresar.")
+                    else:
+                        st.error(msg)
