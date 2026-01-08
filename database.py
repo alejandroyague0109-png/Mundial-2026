@@ -390,3 +390,15 @@ def process_csv_upload(df, user_id):
         return False, "CSV vacío."
     except Exception as e: return False, str(e)
 
+# ... (Mantené todo lo anterior igual)
+
+# --- AUTO-LOGIN (RECUPERAR POR ID) ---
+def get_user_by_id(user_id):
+    try:
+        # Busca el usuario solo por su ID
+        response = supabase.table("users").select("*").eq("id", user_id).execute()
+        if response.data:
+            return response.data[0]
+        return None
+    except:
+        return None

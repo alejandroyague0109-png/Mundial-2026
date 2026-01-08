@@ -84,11 +84,12 @@ def generar_link_whatsapp_wishlist(wishlist_ids):
 
 # ... (MANTENER TODO EL CÓDIGO ANTERIOR IGUAL) ...
 
+# ... (Mantené todo lo anterior igual)
+
 # --- GESTIÓN DE SESIÓN (PERSISTENCIA) ---
 def crear_token_sesion(user_id):
     """Crea un token seguro: ID + Hash"""
     salt = "FIGUS_MENDOZA_2026"
-    # Creamos una firma digital para que nadie pueda inventar un ID falso
     hash_val = hashlib.sha256(f"{user_id}{salt}".encode()).hexdigest()
     return f"{user_id}::{hash_val}"
 
