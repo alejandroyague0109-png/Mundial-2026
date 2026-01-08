@@ -82,11 +82,19 @@ def mostrar_login():
                         user, msg = db.login_user(phone, password)
                         time.sleep(1)
                     
+               # ... (código previo) ...
                     if user:
                         st.session_state.user = user
+                        
+                        # --- NUEVO: PERSISTENCIA DE SESIÓN ---
+                        token = utils.crear_token_sesion(user['id'])
+                        st.query_params["token"] = token 
+                        # -------------------------------------
+
                         st.toast(f"¡Hola {user['nick']}!", icon="👋")
                         time.sleep(0.5)
                         st.rerun()
+                    # ... (resto del código) ...
                     else:
                         st.error(msg)
                 
