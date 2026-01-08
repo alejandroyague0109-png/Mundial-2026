@@ -163,27 +163,48 @@ def mostrar_legales():
     st.divider()
     st.caption("Al usar esta aplicación, aceptás que Figus 26 es solo un intermediario de contacto.")
 
-# --- FLUJO LÓGICO ---
 
-# --- BARRERA DE ENTRADA (BLOQUEANTE) ---
+# ==========================================
+#      FLUJO LÓGICO PRINCIPAL
+# ==========================================
+
+# 1. BARRERA DE EDAD (BLOQUEANTE)
 if not st.session_state.barrera_superada:
     mostrar_barrera_entrada()
-    st.stop() # <--- ESTO BLOQUEA TODO HASTA QUE SE SUPERE LA BARRERA
+    st.stop() # <--- IMPORTANTE: Detiene la ejecución aquí hasta que se acepte
 
+# 2. LÓGICA DE AUTO-LOGIN (PERSISTENCIA DE SESIÓN)
+if 'user' not in st.session_state or st.session_state.user is None:
+    # Verificamos si hay un token en la URL para recuperar la sesión tras recargar
+    query_params = st.query_params
+    if "token" in query_params:
+        uid = utils.validar_token_sesion(query_params["token"])
+        if uid:
+            # Intentamos recuperar el usuario sin frenar la UI con spinners largos
+            restored_user = db.get_user_by_id(uid)
+            if restored_user:
+                st.session_state.user = restored_user
+
+# 3. VERIFICACIÓN DE ESTADO DE USUARIO
 if 'user' not in st.session_state: st.session_state.user = None
 
 if not st.session_state.user:
+    # Si no hay usuario (ni en sesión ni recuperado por token), mostramos Login
     auth.mostrar_login()
 else:
+    # --- USUARIO LOGUEADO ---
     user = st.session_state.user
     
+    # Inicializar desbloqueos en memoria
     if not st.session_state.unlocked_users:
         st.session_state.unlocked_users = db.get_unlocked_ids(user['id'])
 
+    # Verificar Reset Diario
     if db.verify_daily_reset(user):
         if not user.get('is_premium', False):
             st.toast("📅 ¡Nuevo día! Se renovaron tus créditos.", icon="☀️")
 
+    # Notificaciones Wishlist (Premium)
     if user.get('is_premium', False) and 'wishlist_notified' not in st.session_state:
         m_df = db.fetch_market(user['id'])
         matches, ventas = db.find_matches(user['id'], m_df)
@@ -193,6 +214,7 @@ else:
             st.toast(f"🔔 ¡Atención! Hay {qty} figuritas de tu Wishlist disponibles.", icon="🎉")
         st.session_state.wishlist_notified = True
 
+    # Preparación de datos del álbum
     seleccion_pais = st.session_state.get("seleccion_pais_key", list(config.ALBUM_PAGES.keys())[0])
     start, end = config.ALBUM_PAGES[seleccion_pais]
     total_album = sum([(v[1] - v[0] + 1) for v in config.ALBUM_PAGES.values()])
@@ -201,6 +223,7 @@ else:
     try: tengo_total = df_full[df_full['status'] == 'tengo'].shape[0]
     except: tengo_total = 0
     
+    # --- SIDEBAR ---
     with st.sidebar:
         st.title(f"Hola {user['nick']}")
         st.caption(f"📍 {user.get('province', '')} - {user.get('zone', '')}")
@@ -211,6 +234,7 @@ else:
              
         st.caption(f"⭐ Reputación: {user.get('reputation', 0)}")
         
+        # TRANSACCIONES PENDIENTES
         pending_requests = db.get_pending_transactions(user['id'])
         if pending_requests:
             st.divider()
@@ -242,6 +266,8 @@ else:
             st.link_button("📢 Compartir Deseados", link_share, type="primary", use_container_width=True)
         
         st.divider()
+        
+        # CARGA MASIVA
         with st.expander("📤 Carga Masiva (CSV)"):
             col_a, col_b = st.columns(2)
             if col_a.button("❓ Ayuda", width="stretch"): mostrar_instrucciones_csv()
@@ -254,6 +280,8 @@ else:
                 if ok: st.toast("¡Cargado!", icon="📦"); st.success(msg); time.sleep(1); st.rerun()
                 else: st.error(msg)
         st.divider()
+        
+        # ESTADO PREMIUM
         if user.get('is_premium', False): 
             st.success("💎 PREMIUM")
         else:
@@ -272,7 +300,12 @@ else:
                         ok, msg = db.verificar_pago_mp(op, user['id'])
                     if ok: st.toast("¡Premium!", icon="💎"); st.rerun()
                     else: st.error(msg)
-        if st.button("Chau / Salir"): st.session_state.user = None; st.rerun()
+                    
+        # LOGOUT
+        if st.button("Chau / Salir"):
+            st.session_state.user = None
+            st.query_params.clear() # Limpiamos el token de la URL al salir
+            st.rerun()
 
     # --- PANTALLA PRINCIPAL ---
     st.header("📖 Mi Álbum")

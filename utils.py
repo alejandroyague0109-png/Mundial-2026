@@ -81,3 +81,28 @@ def generar_link_whatsapp_wishlist(wishlist_ids):
     texto = f"¡Hola! 👋 Me faltan estas figus del Mundial 2026:\n\n{lista_str}\n\nSi tenés alguna, avisame! 🙏\n\n_Gestionado por Figus26_\n¡Sumate y cambiá las tuyas! ⚽ 👉 {app_url}"
     
     return f"https://wa.me/?text={quote(texto)}"
+
+# ... (MANTENER TODO EL CÓDIGO ANTERIOR IGUAL) ...
+
+# --- GESTIÓN DE SESIÓN (PERSISTENCIA) ---
+def crear_token_sesion(user_id):
+    """Crea un token seguro: ID + Hash"""
+    salt = "FIGUS_MENDOZA_2026"
+    # Creamos una firma digital para que nadie pueda inventar un ID falso
+    hash_val = hashlib.sha256(f"{user_id}{salt}".encode()).hexdigest()
+    return f"{user_id}::{hash_val}"
+
+def validar_token_sesion(token):
+    """Verifica si el token de la URL es válido."""
+    try:
+        if not token or "::" not in token: return None
+        user_id, hash_recibido = token.split("::")
+        
+        salt = "FIGUS_MENDOZA_2026"
+        hash_real = hashlib.sha256(f"{user_id}{salt}".encode()).hexdigest()
+        
+        if hash_recibido == hash_real:
+            return int(user_id)
+        return None
+    except:
+        return None
