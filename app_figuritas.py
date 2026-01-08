@@ -97,22 +97,37 @@ def mostrar_barrera_entrada():
         st.query_params["over18"] = "true"
         st.rerun()
 
-# --- NUEVO MODAL DE NAVEGACIÓN SEGURA ---
+# --- NUEVO MODAL DE NAVEGACIÓN SEGURA (CON GUARDADO INTELIGENTE) ---
 @st.dialog("⚠️ Cambios sin guardar")
-def confirmar_cambio_pais(target_pais):
+def confirmar_cambio_pais(target_pais, user):
     st.write(f"Tenés cambios pendientes en **{st.session_state.current_country}**.")
-    st.warning("Si cambiás de país ahora, perderás lo que no guardaste.")
+    st.warning("¿Querés guardar antes de salir?")
     
     col1, col2 = st.columns(2)
     
-    # Opción 1: Volver (Cancelar navegación)
-    if col1.button("🔙 Volver para Guardar", width="stretch"):
-        # Revertimos el selector visualmente al país actual
-        st.session_state.nav_pais_selector = st.session_state.current_country
+    # Opción 1: Guardar y Continuar (Mejora UX)
+    if col1.button("💾 Guardar y Continuar", type="primary", width="stretch"):
+        # 1. Recuperamos los datos de la memoria para el país actual
+        curr = st.session_state.current_country
+        tengo_data = st.session_state.get(f"pills_tengo_{curr}", [])
+        wish_data = st.session_state.get(f"pills_wish_{curr}", [])
+        
+        # Recuperamos la tabla de repetidas
+        editor_data = st.session_state.get(f"editor_{curr}", [])
+        df_repes = pd.DataFrame(editor_data) if editor_data is not None else pd.DataFrame()
+        
+        # 2. Guardamos en DB
+        with utils.spinner_futbolero():
+             s, e = config.ALBUM_PAGES[curr]
+             db.save_inventory_positive(user['id'], s, e, tengo_data, wish_data, df_repes)
+        
+        # 3. Navegamos
+        st.session_state.unsaved_changes = False
+        st.session_state.current_country = target_pais
         st.rerun()
         
-    # Opción 2: Descartar (Confirmar navegación)
-    if col2.button("🗑️ Descartar Cambios", type="primary", width="stretch"):
+    # Opción 2: Descartar
+    if col2.button("🗑️ Descartar Cambios", width="stretch"):
         st.session_state.unsaved_changes = False
         st.session_state.current_country = target_pais
         st.rerun()
@@ -233,7 +248,6 @@ else:
     # ----------------------------------------------------
     if user.get('is_admin', False):
         # Si es admin, mostramos SU panel y detenemos el resto
-        # Agregamos botón de salir en el sidebar para él también
         with st.sidebar:
             st.title("Admin Panel")
             if st.button("Salir / Logout"):
@@ -241,6 +255,7 @@ else:
                 st.query_params.clear()
                 st.rerun()
         
+        # Renderizamos el panel admin importado
         admin.render_admin_panel(user)
         
     else:
@@ -267,15 +282,18 @@ else:
                 st.toast(f"🔔 ¡Atención! Hay {qty} figuritas de tu Wishlist disponibles.", icon="🎉")
             st.session_state.wishlist_notified = True
 
-        # --- SIDEBAR ---
-        seleccion_pais_key_sidebar = "nav_pais_selector" # Referencia interna
+        # Preparación de datos del álbum
+        seleccion_pais = st.session_state.get("seleccion_pais_key", list(config.ALBUM_PAGES.keys())[0])
+        start, end = config.ALBUM_PAGES[seleccion_pais]
         
-        # Preparación de datos del álbum (Pre-cálculo para barra de progreso)
+        # Calculo de total para barra de progreso
         total_album = sum([(v[1] - v[0] + 1) for v in config.ALBUM_PAGES.values()])
-        # Nota: El calculo exacto del total 'tengo' global requeriría una query más pesada.
-        # Por ahora usamos el del país actual o 0 para no frenar la UI.
-        tengo_total = 0 
+        # (Para visualización usamos el estado del país actual como aproximación o habría que traer todo)
+        _, _, _, df_full = db.get_inventory_status(user['id'], start, end)
+        try: tengo_total = df_full[df_full['status'] == 'tengo'].shape[0]
+        except: tengo_total = 0
         
+        # --- SIDEBAR ---
         with st.sidebar:
             st.title(f"Hola {user['nick']}")
             st.caption(f"📍 {user.get('province', '')} - {user.get('zone', '')}")
@@ -308,8 +326,7 @@ else:
                             st.rerun()
             
             st.divider()
-            # st.progress(min(tengo_total / total_album, 1.0), text="🏆 Mi Álbum")
-            # st.caption(f"Tenés **{tengo_total}** de {total_album}.")
+            st.progress(min(tengo_total / total_album, 1.0), text="🏆 Mi Álbum")
             
             # COMPARTIR DESEADOS
             full_wishlist = db.get_full_wishlist(user['id'])
@@ -377,7 +394,7 @@ else:
         # Interceptamos el cambio si hay cosas sin guardar
         if nuevo_pais != st.session_state.current_country:
             if st.session_state.unsaved_changes:
-                confirmar_cambio_pais(nuevo_pais)
+                confirmar_cambio_pais(nuevo_pais, user)
             else:
                 st.session_state.current_country = nuevo_pais
                 st.rerun()
