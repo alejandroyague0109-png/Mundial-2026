@@ -88,6 +88,8 @@ def mostrar_barrera_entrada():
     
     if st.button("✅ Entendido, soy +18", type="primary", width="stretch"):
         st.session_state.barrera_superada = True
+        # FIX: Guardamos en la URL para que persista al recargar
+        st.query_params["over18"] = "true"
         st.rerun()
 
 @st.dialog("📤 Ayuda CSV")
@@ -168,28 +170,35 @@ def mostrar_legales():
 #      FLUJO LÓGICO PRINCIPAL
 # ==========================================
 
-# 1. BARRERA DE EDAD (BLOQUEANTE)
-if not st.session_state.barrera_superada:
-    mostrar_barrera_entrada()
-    st.stop() # <--- IMPORTANTE: Detiene la ejecución aquí hasta que se acepte
+# 1. RECUPERAR ESTADO +18 DESDE LA URL
+if "over18" in st.query_params:
+    st.session_state.barrera_superada = True
 
 # 2. LÓGICA DE AUTO-LOGIN (PERSISTENCIA DE SESIÓN)
 if 'user' not in st.session_state or st.session_state.user is None:
-    # Verificamos si hay un token en la URL para recuperar la sesión tras recargar
+    # Verificamos si hay un token en la URL
     query_params = st.query_params
     if "token" in query_params:
         uid = utils.validar_token_sesion(query_params["token"])
         if uid:
-            # Intentamos recuperar el usuario sin frenar la UI con spinners largos
+            # Recuperamos usuario silenciosamente
             restored_user = db.get_user_by_id(uid)
             if restored_user:
                 st.session_state.user = restored_user
+                # FIX: Si ya tiene sesión válida, asumimos que es +18
+                st.session_state.barrera_superada = True
 
-# 3. VERIFICACIÓN DE ESTADO DE USUARIO
+# 3. BARRERA DE EDAD (BLOQUEANTE)
+# Si después de verificar la URL y el Login, todavía es False -> Bloquear.
+if not st.session_state.barrera_superada:
+    mostrar_barrera_entrada()
+    st.stop() # Detiene la ejecución aquí
+
+# 4. VERIFICACIÓN DE ESTADO DE USUARIO
 if 'user' not in st.session_state: st.session_state.user = None
 
 if not st.session_state.user:
-    # Si no hay usuario (ni en sesión ni recuperado por token), mostramos Login
+    # Si no hay usuario, mostramos Login
     auth.mostrar_login()
 else:
     # --- USUARIO LOGUEADO ---
@@ -300,11 +309,11 @@ else:
                         ok, msg = db.verificar_pago_mp(op, user['id'])
                     if ok: st.toast("¡Premium!", icon="💎"); st.rerun()
                     else: st.error(msg)
-                    
+        
         # LOGOUT
         if st.button("Chau / Salir"):
             st.session_state.user = None
-            st.query_params.clear() # Limpiamos el token de la URL al salir
+            st.query_params.clear() # FIX: Borrar token al salir
             st.rerun()
 
     # --- PANTALLA PRINCIPAL ---
