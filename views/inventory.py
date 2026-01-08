@@ -29,12 +29,12 @@ def render_inventory(user, start, end, seleccion_pais):
     if col_btn_all.button("Todas", width="stretch", key=f"all_{seleccion_pais}"):
         st.session_state[key_pills] = list(range(start, end + 1))
         st.session_state[key_wish] = [] 
-        st.session_state.unsaved_changes = True # <--- CAMBIO
+        st.session_state.unsaved_changes = True 
         st.rerun()
 
     if col_btn_none.button("Ninguna", width="stretch", key=f"none_{seleccion_pais}"):
         st.session_state[key_pills] = []
-        st.session_state.unsaved_changes = True # <--- CAMBIO
+        st.session_state.unsaved_changes = True 
         st.rerun()
 
     # --- WIDGET TENGO (Con on_change) ---
@@ -44,7 +44,7 @@ def render_inventory(user, start, end, seleccion_pais):
         selection_mode="multi", 
         key=key_pills, 
         label_visibility="collapsed",
-        on_change=marcar_cambio # <--- DETECTOR
+        on_change=marcar_cambio 
     )
 
     # --- SECCIÓN WISHLIST ---
@@ -65,7 +65,7 @@ def render_inventory(user, start, end, seleccion_pais):
         faltantes, 
         selection_mode="multi", 
         key=key_wish,
-        on_change=marcar_cambio # <--- DETECTOR
+        on_change=marcar_cambio 
     )
 
     # --- SECCIÓN REPETIDAS ---
@@ -87,7 +87,7 @@ def render_inventory(user, start, end, seleccion_pais):
         posibles_repes, 
         selection_mode="multi", 
         key=key_repes,
-        on_change=marcar_cambio # <--- DETECTOR
+        on_change=marcar_cambio 
     )
 
     # --- EDITOR DE DATOS ---
@@ -97,8 +97,6 @@ def render_inventory(user, start, end, seleccion_pais):
         data = []
         for n in seleccion_repes:
             info = repetidas_info.get(n, {})
-            # Si ya se editó algo en la sesión, usamos eso, sino la DB
-            # (Nota: Streamlit maneja el estado del editor internamente, pero el on_change nos avisa)
             precio = info.get('price', 0)
             qty = info.get('quantity', 1)
             modo = "💰 Venta" if precio > 0 else "🔄 Canje"
@@ -114,7 +112,8 @@ def render_inventory(user, start, end, seleccion_pais):
             }, 
             hide_index=True, 
             use_container_width=True,
-            on_change=marcar_cambio # <--- DETECTOR
+            key=f"editor_{seleccion_pais}", # <--- ESTA LÍNEA ES LA CLAVE PARA EL GUARDADO EXTERNO
+            on_change=marcar_cambio 
         )
     
     st.divider()
@@ -126,7 +125,7 @@ def render_inventory(user, start, end, seleccion_pais):
     if st.button(btn_lbl, type=btn_type, width="stretch"):
         with utils.spinner_futbolero():
             db.save_inventory_positive(user['id'], start, end, seleccion_tengo, seleccion_wishlist, edited_df)
-            st.session_state.unsaved_changes = False # <--- RESETEAMOS LA BANDERA
+            st.session_state.unsaved_changes = False 
         
         st.toast("¡Cambios guardados!", icon="✅")
         time.sleep(0.5)
