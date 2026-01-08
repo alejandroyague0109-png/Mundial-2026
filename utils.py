@@ -1,87 +1,68 @@
-import re
-import hashlib
-import bcrypt
 import streamlit as st
-import random # <--- Necesario para elegir frases al azar
-from cryptography.fernet import Fernet
-from contextlib import contextmanager
+import hashlib
+import re
+from urllib.parse import quote
 
-# --- FEEDBACK VISUAL (SPINNER FUTBOLERO) ---
-@contextmanager
-def spinner_futbolero():
-    """Muestra un mensaje de carga aleatorio con temática de fútbol/figuritas."""
-    frases = [
-        "⚽ Abriendo paquete...",
-        "🔎 Buscando la difícil...",
-        "🔄 Mezclando el mazo...",
-        "📞 Llamando al VAR...",
-        "🧤 Calentando los guantes...",
-        "🏟️ Cortando el pasto...",
-        "📝 Anotando en la planilla...",
-        "🏃‍♂️ Saliendo de contra..."
-    ]
-    mensaje = random.choice(frases)
-    with st.spinner(mensaje):
-        yield
+def validar_formato_telefono(phone):
+    """Valida que el teléfono tenga entre 7 y 15 dígitos numéricos."""
+    if not phone: return False
+    return bool(re.match(r'^\d{7,15}$', phone))
 
-# --- CRIPTOGRAFÍA DE DATOS ---
-def get_fernet():
+def limpiar_telefono(phone):
+    """Elimina espacios, guiones y +."""
+    if not phone: return ""
+    return re.sub(r'\D', '', phone)
+
+def encrypt_phone(phone):
+    """
+    Simulación de encriptación reversible (XOR simple) para la demo.
+    En producción real, usar criptografía asimétrica o Fernet.
+    """
+    key = 12345 # Key simple para MVP
     try:
-        key = st.secrets["ENCRYPTION_KEY"]
-        return Fernet(key.encode())
-    except Exception:
+        clean = int(limpiar_telefono(phone))
+        encrypted = clean ^ key
+        return str(encrypted)
+    except:
+        return None
+
+def decrypt_phone(encrypted_phone):
+    key = 12345
+    try:
+        enc = int(encrypted_phone)
+        decrypted = enc ^ key
+        return str(decrypted)
+    except:
         return None
 
 def hash_phone_searchable(phone):
+    """Hash SHA256 para búsquedas exactas (login/registro)."""
     clean = limpiar_telefono(phone)
     return hashlib.sha256(clean.encode()).hexdigest()
 
-def encrypt_phone(phone):
-    f = get_fernet()
-    if f:
-        clean = limpiar_telefono(phone)
-        return f.encrypt(clean.encode()).decode()
-    return None
-
-def decrypt_phone(encrypted_phone):
-    f = get_fernet()
-    if f and encrypted_phone:
-        try:
-            return f.decrypt(encrypted_phone.encode()).decode()
-        except:
-            return None
-    return None
-
-# --- FORMATO Y LIMPIEZA ---
-def validar_formato_telefono(phone):
-    patron = r'^(\+?54)?(9)?\d{10}$'
-    return bool(re.match(patron, str(phone)))
-
-def limpiar_telefono(phone):
-    return re.sub(r'\D', '', str(phone))
-
-# --- SEGURIDAD DE CONTRASEÑAS ---
 def hash_password(password):
-    return bcrypt.hashpw(password.encode('utf-8'), bcrypt.gensalt()).decode('utf-8')
+    """Hash simple para contraseñas."""
+    return hashlib.sha256(password.encode()).hexdigest()
 
-def check_password(password, hashed):
-    try:
-        return bcrypt.checkpw(password.encode('utf-8'), hashed.encode('utf-8'))
-    except:
-        return False
+def check_password(plain_password, hashed_password):
+    return hash_password(plain_password) == hashed_password
 
-from urllib.parse import quote
-
-# ... (otras funciones existentes) ...
+def spinner_futbolero():
+    """Genera un spinner con mensaje aleatorio."""
+    import random
+    msgs = ["Calentando motores...", "Atándose los botines...", "Revisando el VAR...", "Inflando las pelotas...", "Cortando el pasto..."]
+    return st.spinner(random.choice(msgs))
 
 def generar_link_whatsapp_wishlist(wishlist_ids):
     if not wishlist_ids:
         return None
     
-    # Agrupamos los números en un string separado por comas
+    # Agrupamos los números
     lista_str = ", ".join(map(str, wishlist_ids))
     
-    texto = f"¡Hola! 👋 Me faltan estas figus del Mundial 2026:\n\n{lista_str}\n\nSi tenés alguna, avisame! 🙏\n\n_Gestionado por Figus26_"
+    # LINK DE LA APP (Ajustalo cuando tengas el deploy final)
+    app_url = "https://figus26.streamlit.app" 
     
-    # Creamos el link universal de WhatsApp (sin número destino, para que el usuario elija contacto)
+    texto = f"¡Hola! 👋 Me faltan estas figus del Mundial 2026:\n\n{lista_str}\n\nSi tenés alguna, avisame! 🙏\n\n_Gestionado por Figus26_\n¡Sumate y cambiá las tuyas! ⚽ 👉 {app_url}"
+    
     return f"https://wa.me/?text={quote(texto)}"
