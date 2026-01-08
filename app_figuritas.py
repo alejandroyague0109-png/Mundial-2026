@@ -164,8 +164,11 @@ def mostrar_legales():
     st.caption("Al usar esta aplicación, aceptás que Figus 26 es solo un intermediario de contacto.")
 
 # --- FLUJO LÓGICO ---
+
+# --- BARRERA DE ENTRADA (BLOQUEANTE) ---
 if not st.session_state.barrera_superada:
     mostrar_barrera_entrada()
+    st.stop() # <--- ESTO BLOQUEA TODO HASTA QUE SE SUPERE LA BARRERA
 
 if 'user' not in st.session_state: st.session_state.user = None
 
@@ -232,7 +235,7 @@ else:
         st.progress(min(tengo_total / total_album, 1.0), text="🏆 Mi Álbum")
         st.caption(f"Tenés **{tengo_total}** de {total_album}.")
         
-        # COMPARTIR DESEADOS (TEXTO MODIFICADO)
+        # COMPARTIR DESEADOS
         full_wishlist = db.get_full_wishlist(user['id'])
         if full_wishlist:
             link_share = utils.generar_link_whatsapp_wishlist(full_wishlist)
