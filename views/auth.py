@@ -3,7 +3,12 @@ import time
 import database as db
 import locations
 import utils
-import config # Importante para los términos legales
+import config
+
+# --- DIALOGO PARA TÉRMINOS Y CONDICIONES (POP-UP) ---
+@st.dialog("📜 Términos y Condiciones")
+def mostrar_tyc_dialog():
+    st.markdown(config.TEXTO_LEGAL_COMPLETO)
 
 def mostrar_login():
     col1, col2, col3 = st.columns([1, 2, 1])
@@ -11,12 +16,14 @@ def mostrar_login():
         st.markdown("<h1 style='text-align: center;'>⚽ Figus 26</h1>", unsafe_allow_html=True)
         st.markdown("<p style='text-align: center;'>Tu álbum digital de intercambios</p>", unsafe_allow_html=True)
         
-        # --- MODO RECUPERACIÓN ---
+        # --- MODO RECUPERACIÓN DE CONTRASEÑA ---
         if st.session_state.get('modo_recuperacion', False):
             st.warning("🔐 Recuperar Cuenta")
             
+            # Paso 1: Ingresar teléfono
             if 'recup_phone' not in st.session_state:
                 phone_input = st.text_input("Ingresá tu celular:", placeholder="Ej: 2604123456")
+                
                 if st.button("Buscar Cuenta", width="stretch"):
                     user_data, msg = db.get_security_info(phone_input)
                     if user_data:
@@ -30,6 +37,8 @@ def mostrar_login():
                 if st.button("🔙 Volver al Login"):
                     st.session_state.modo_recuperacion = False
                     st.rerun()
+            
+            # Paso 2: Responder pregunta de seguridad
             else:
                 if not st.session_state.recup_has_q:
                     st.error("Esta cuenta no tiene configurada una pregunta de seguridad.")
@@ -59,10 +68,11 @@ def mostrar_login():
                         st.session_state.modo_recuperacion = False
                         st.rerun()
 
-        # --- MODO LOGIN/REGISTRO ---
+        # --- MODO LOGIN / REGISTRO NORMAL ---
         else:
             tab1, tab2 = st.tabs(["Ingresar", "Registrarse"])
             
+            # Pestaña 1: Login
             with tab1:
                 phone = st.text_input("Celular (sin 0 ni 15)", placeholder="Ej: 2604445566", key="l_phone")
                 password = st.text_input("Contraseña", type="password", key="l_pass")
@@ -84,6 +94,7 @@ def mostrar_login():
                     st.session_state.modo_recuperacion = True
                     st.rerun()
 
+            # Pestaña 2: Registro
             with tab2:
                 new_nick = st.text_input("Tu Apodo / Nick", placeholder="El 10")
                 new_phone = st.text_input("Celular", placeholder="Ej: 2604...", key="r_phone")
@@ -105,10 +116,10 @@ def mostrar_login():
                 ])
                 secret_a = st.text_input("Respuesta Secreta", type="password", help="Acordate de esto, es la única forma de recuperar tu clave.")
 
-                # SECCIÓN LEGALES RESTAURADA
+                # TÉRMINOS Y CONDICIONES (CON BOTÓN POP-UP)
                 st.markdown("---")
-                with st.expander("Ver Términos y Condiciones"):
-                    st.caption(config.TEXTO_LEGAL_COMPLETO) # O un resumen
+                if st.button("📄 Leer Términos y Condiciones", type="secondary", use_container_width=True):
+                    mostrar_tyc_dialog()
                 
                 acepto_tyc = st.checkbox("He leído y acepto los Términos y Condiciones", key="chk_tyc")
 
