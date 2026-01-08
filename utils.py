@@ -1,24 +1,27 @@
 import streamlit as st
 import hashlib
 import re
+import random
 from urllib.parse import quote
 
+# --- VALIDACIONES ---
 def validar_formato_telefono(phone):
     """Valida que el teléfono tenga entre 7 y 15 dígitos numéricos."""
     if not phone: return False
     return bool(re.match(r'^\d{7,15}$', phone))
 
 def limpiar_telefono(phone):
-    """Elimina espacios, guiones y +."""
+    """Elimina espacios, guiones y símbolos no numéricos."""
     if not phone: return ""
     return re.sub(r'\D', '', phone)
 
+# --- CRIPTOGRAFÍA SIMPLE (PARA DATOS SENSIBLES) ---
 def encrypt_phone(phone):
     """
     Simulación de encriptación reversible (XOR simple) para la demo.
-    En producción real, usar criptografía asimétrica o Fernet.
+    Nota: En producción real, usar criptografía asimétrica o Fernet.
     """
-    key = 12345 # Key simple para MVP
+    key = 12345 # Clave simple para el MVP
     try:
         clean = int(limpiar_telefono(phone))
         encrypted = clean ^ key
@@ -35,24 +38,36 @@ def decrypt_phone(encrypted_phone):
     except:
         return None
 
+# --- HASHING (CONTRASEÑAS Y BÚSQUEDAS) ---
 def hash_phone_searchable(phone):
     """Hash SHA256 para búsquedas exactas (login/registro)."""
     clean = limpiar_telefono(phone)
     return hashlib.sha256(clean.encode()).hexdigest()
 
 def hash_password(password):
-    """Hash simple para contraseñas."""
-    return hashlib.sha256(password.encode()).hexdigest()
+    """Hash SHA256 para contraseñas. Incluye .strip() para evitar errores por espacios."""
+    # Convertimos a string y quitamos espacios al inicio/final por seguridad
+    clean_pass = str(password).strip()
+    return hashlib.sha256(clean_pass.encode()).hexdigest()
 
 def check_password(plain_password, hashed_password):
+    """Verifica si la contraseña ingresada coincide con la guardada."""
     return hash_password(plain_password) == hashed_password
 
+# --- UI / UX ---
 def spinner_futbolero():
     """Genera un spinner con mensaje aleatorio."""
-    import random
-    msgs = ["Calentando motores...", "Atándose los botines...", "Revisando el VAR...", "Inflando las pelotas...", "Cortando el pasto..."]
+    msgs = [
+        "Calentando motores...", 
+        "Atándose los botines...", 
+        "Revisando el VAR...", 
+        "Inflando las pelotas...", 
+        "Cortando el pasto...",
+        "Charlando con el árbitro..."
+    ]
     return st.spinner(random.choice(msgs))
 
+# --- WHATSAPP ---
 def generar_link_whatsapp_wishlist(wishlist_ids):
     if not wishlist_ids:
         return None
