@@ -132,7 +132,7 @@ def mostrar_editar_perfil(user):
         else:
             st.error(msg)
 
-# --- POPUPS FOOTER (TEXTOS RECUPERADOS) ---
+# --- POPUPS FOOTER ---
 @st.dialog("📧 Contacto")
 def mostrar_contacto():
     st.markdown("""
@@ -232,11 +232,11 @@ else:
         st.progress(min(tengo_total / total_album, 1.0), text="🏆 Mi Álbum")
         st.caption(f"Tenés **{tengo_total}** de {total_album}.")
         
-        # COMPARTIR FALTANTES
+        # COMPARTIR DESEADOS (TEXTO MODIFICADO)
         full_wishlist = db.get_full_wishlist(user['id'])
         if full_wishlist:
             link_share = utils.generar_link_whatsapp_wishlist(full_wishlist)
-            st.link_button("📢 Compartir Faltantes", link_share, type="primary", use_container_width=True)
+            st.link_button("📢 Compartir Deseados", link_share, type="primary", use_container_width=True)
         
         st.divider()
         with st.expander("📤 Carga Masiva (CSV)"):
