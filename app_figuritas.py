@@ -107,25 +107,46 @@ def confirmar_cambio_pais(target_pais, user):
     
     # Opción 1: Guardar y Continuar
     if col1.button("💾 Guardar y Continuar", type="primary", width="stretch"):
-        # 1. Recuperamos los datos de la memoria para el país actual
         curr = st.session_state.current_country
+        s, e = config.ALBUM_PAGES[curr]
+        
+        # 1. Recuperamos datos de Pills (Tengo / Wishlist)
         tengo_data = st.session_state.get(f"pills_tengo_{curr}", [])
         wish_data = st.session_state.get(f"pills_wish_{curr}", [])
         
-        # 2. Recuperamos Repetidas desde el SNAPSHOT (Fix del error ValueError)
-        snapshot_key = f"snapshot_df_{curr}"
+        # 2. RECONSTRUCCIÓN DE LA TABLA DE REPETIDAS (Lógica Robusta)
+        # Paso A: Obtenemos los IDs seleccionados actualmente
+        repes_ids = st.session_state.get(f"repes_{curr}", [])
         
-        if snapshot_key in st.session_state:
-            # Usamos el DataFrame limpio guardado por inventory.py
-            df_repes = st.session_state[snapshot_key]
-        else:
-            # Fallback por si acaso: Si no hay snapshot, usamos los IDs seleccionados con valores default
-            repes_ids = st.session_state.get(f"repes_{curr}", [])
-            df_repes = pd.DataFrame([{"Figurita": r, "Modo": "Canje", "Precio": 0, "Cantidad": 1} for r in repes_ids])
+        # Paso B: Consultamos la DB para obtener los valores originales (Precio/Modo)
+        # Esto evita que si una fila NO fue editada, se sobrescriba con defaults (0/Canje)
+        _, _, repes_info_db, _ = db.get_inventory_status(user['id'], s, e)
+        
+        # Paso C: Creamos el DataFrame Base con la info de la DB
+        data_base = []
+        for r in repes_ids:
+            info = repes_info_db.get(r, {})
+            p = info.get('price', 0)
+            q = info.get('quantity', 1)
+            m = "💰 Venta" if p > 0 else "🔄 Canje"
+            data_base.append({"Figurita": r, "Cantidad": q, "Modo": m, "Precio": p})
+        
+        df_repes = pd.DataFrame(data_base)
+        
+        # Paso D: APLICAMOS LOS CAMBIOS PENDIENTES (DELTAS)
+        # Leemos el estado interno del editor para ver qué modificó el usuario antes de cambiar de pag
+        editor_val = st.session_state.get(f"editor_{curr}")
+        
+        if editor_val and isinstance(editor_val, dict) and "edited_rows" in editor_val:
+            # Iteramos sobre las filas editadas y actualizamos el DataFrame Base
+            for idx_str, changes in editor_val["edited_rows"].items():
+                idx = int(idx_str)
+                if idx < len(df_repes):
+                    for c, v in changes.items():
+                        df_repes.at[idx, c] = v
         
         # 3. Guardamos en DB
         with utils.spinner_futbolero():
-             s, e = config.ALBUM_PAGES[curr]
              db.save_inventory_positive(user['id'], s, e, tengo_data, wish_data, df_repes)
         
         # 4. Navegamos
