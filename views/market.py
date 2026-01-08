@@ -214,7 +214,8 @@ def render_market(user):
     st.subheader("🔍 Mercado")
     with st.expander("🔎 Filtros", expanded=True):
         col_f1, col_f2, col_f3 = st.columns(3)
-        filtro_prov = col_f1.multiselect("Provincia:", list(locations.ARGENTINA.keys()), default=[user.get('province', 'Mendoza')], on_change=reset_pagination)
+        # 1. FIX: Eliminado default=[...] para que empiece mostrando todo
+        filtro_prov = col_f1.multiselect("Provincia:", list(locations.ARGENTINA.keys()), on_change=reset_pagination)
         avail_zones = []
         if filtro_prov:
             for p in filtro_prov: avail_zones.extend(locations.ARGENTINA.get(p, []))
@@ -253,8 +254,7 @@ def render_market(user):
     if (total_raw_c > len(matches_filtrados)) or (total_raw_v > len(ventas_filtradas)):
         st.caption(f"📊 **Resumen:** Se encontraron **{total_raw_c} canjes** y **{total_raw_v} ventas** en total.")
 
-    # --- SOLUCIÓN TABS FIJOS ---
-    # Usamos títulos estáticos para evitar que Streamlit reinicie la pestaña al cambiar el número
+    # --- TABS ---
     t1, t2, t3 = st.tabs(["🔄 Canjes", "💰 Ventas", "🤝 Pendientes"])
     
     with t1: 
