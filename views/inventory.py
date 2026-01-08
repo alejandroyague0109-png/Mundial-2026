@@ -1,155 +1,115 @@
 import streamlit as st
 import pandas as pd
+import time
 import database as db
-import utils
+import utils 
 
-def marcar_cambio():
-    st.session_state.unsaved_changes = True
-
-def render_inventory(user, start, end, country_name):
-    # 1. Inicialización
-    if 'unsaved_changes' not in st.session_state: st.session_state.unsaved_changes = False
-
-    # 2. Carga de datos
-    session_key = f"inv_state_{country_name}"
-    if session_key not in st.session_state:
-        db_tengo, db_wishlist, db_repes_info, _ = db.get_inventory_status(user['id'], start, end)
-        repes_rows = []
-        for num, info in db_repes_info.items():
-            modo = "Venta" if info['price'] > 0 else "Canje"
-            repes_rows.append({"Figurita": num, "Modo": modo, "Precio": info['price'], "Cantidad": info['quantity']})
-        st.session_state[session_key] = {'owned': db_tengo, 'wishlist': db_wishlist, 'repes': repes_rows}
-        st.session_state.unsaved_changes = False
-
-    state = st.session_state[session_key]
-    numeros_pagina = list(range(start, end + 1))
-
-    # --- ENCABEZADO ---
-    c1, c2 = st.columns([3, 1])
-    c1.subheader(f"{country_name} ({start}-{end})")
+def render_inventory(user, start, end, seleccion_pais):
+    # Desempaquetamos 4 valores
+    ids_tengo_db, ids_wishlist_db, repetidas_info, _ = db.get_inventory_status(user['id'], start, end)
     
-    btn_type = "primary" if st.session_state.unsaved_changes else "secondary"
-    btn_text = "💾 Guardar Cambios (*)" if st.session_state.unsaved_changes else "💾 Guardar Cambios"
-    
-    if c2.button(btn_text, type=btn_type, use_container_width=True):
-        with utils.spinner_futbolero():
-            df_repes_tosave = pd.DataFrame(state['repes'])
-            db.save_inventory_positive(user['id'], start, end, state['owned'], state['wishlist'], df_repes_tosave)
-            st.session_state.unsaved_changes = False
-        st.toast("¡Guardado!", icon="✅"); st.rerun()
+    # Definimos las claves para la Session State
+    key_pills = f"pills_tengo_{seleccion_pais}"
+    key_wish = f"pills_wish_{seleccion_pais}"
+    key_repes = f"repes_{seleccion_pais}" # Clave para repes
 
-    st.markdown("---")
+    # --- 1. INICIALIZACIÓN DE ESTADO (Solo si no existen) ---
+    if key_pills not in st.session_state: st.session_state[key_pills] = ids_tengo_db
+    if key_wish not in st.session_state: st.session_state[key_wish] = ids_wishlist_db
+    
+    # --- ENCABEZADO Y BOTONES MASIVOS ---
+    col_head_1, col_btn_all, col_btn_none = st.columns([4, 1, 1])
+    col_head_1.markdown("### 1️⃣ Tus Figus")
 
-    # --- SECCIÓN 1: TENGO ---
-    st.markdown("### ✅ ¿Cuáles Tenés?")
-    
-    # --- ARREGLO DE LOS BOTONES ---
-    # Para que funcionen, hay que modificar directamente la key del widget en session_state
-    key_tengo = f"pills_tengo_{country_name}"
-    
-    col_sel1, col_sel2, _ = st.columns([1, 1, 3])
-    
-    if col_sel1.button("Seleccionar Todas"):
-        state['owned'] = list(numeros_pagina)
-        state['wishlist'] = [] 
-        st.session_state[key_tengo] = list(numeros_pagina) # ESTO ACTUALIZA LA VISUAL
-        marcar_cambio()
-        st.rerun()
-        
-    if col_sel2.button("Borrar Todas"):
-        state['owned'] = []
-        state['repes'] = []
-        st.session_state[key_tengo] = [] # ESTO ACTUALIZA LA VISUAL
-        marcar_cambio()
+    if col_btn_all.button("Todas", width="stretch", key=f"all_{seleccion_pais}"):
+        st.session_state[key_pills] = list(range(start, end + 1))
+        st.session_state[key_wish] = [] # Si tengo todas, borro wishlist
         st.rerun()
 
-    seleccion_tengo = st.pills(
-        "Seleccioná las que tenés",
-        options=numeros_pagina,
-        default=state['owned'],
-        selection_mode="multi",
-        key=key_tengo,
-        on_change=marcar_cambio
-    )
-    
-    # Sincronización lógica
-    state['owned'] = seleccion_tengo
-    state['wishlist'] = [x for x in state['wishlist'] if x not in state['owned']]
+    if col_btn_none.button("Ninguna", width="stretch", key=f"none_{seleccion_pais}"):
+        st.session_state[key_pills] = []
+        st.rerun()
 
-    st.markdown("---")
+    # --- WIDGET TENGO ---
+    # Nota: Aquí no usábamos default, así que estaba bien.
+    seleccion_tengo = st.pills("Tengo", list(range(start, end + 1)), selection_mode="multi", key=key_pills, label_visibility="collapsed")
 
-    # --- SECCIÓN 2: WISHLIST ---
-    st.markdown("### ❤️ ¿Cuáles Buscás?")
-    opciones_wishlist = [n for n in numeros_pagina if n not in state['owned']]
-    current_wishlist_clean = [n for n in state['wishlist'] if n in opciones_wishlist]
+    # --- SECCIÓN WISHLIST (CORREGIDA) ---
+    st.markdown("### ❤️ Wishlist (Prioridad)")
+    st.caption("Marcá las que **TE FALTAN** y querés conseguir urgente. Te aparecerán primero en el mercado.")
     
-    seleccion_wishlist = st.pills(
-        "Seleccioná tus faltantes",
-        options=opciones_wishlist,
-        default=current_wishlist_clean,
-        selection_mode="multi",
-        key=f"pills_wish_{country_name}",
-        on_change=marcar_cambio
-    )
-    state['wishlist'] = seleccion_wishlist
+    # Calculamos qué figuritas faltan (Universo - Tengo)
+    todas = set(range(start, end + 1))
+    tengo_set = set(seleccion_tengo) if seleccion_tengo else set()
+    faltantes = sorted(list(todas - tengo_set))
+    
+    # LÓGICA DE CORRECCIÓN:
+    # 1. Obtenemos lo que hay en memoria actualmente para la wishlist
+    current_wish = st.session_state.get(key_wish, [])
+    # 2. "Sanitizamos": Solo mantenemos en la wishlist las que realmente me faltan.
+    #    (Si marqué una como "Tengo", debe salir de la wishlist automáticamente).
+    clean_wish = [x for x in current_wish if x in faltantes]
+    # 3. Actualizamos la memoria ANTES de crear el widget
+    st.session_state[key_wish] = clean_wish
+    
+    # 4. Creamos el widget SIN 'default', leyendo directo de la key
+    seleccion_wishlist = st.pills("Deseo", faltantes, selection_mode="multi", key=key_wish)
 
-    st.markdown("---")
+    # --- SECCIÓN REPETIDAS (CORREGIDA PROACTIVAMENTE) ---
+    st.markdown("### 2️⃣ Repes")
     
-    # --- SECCIÓN 3: REPETIDAS (ARREGLADO: USANDO CASILLAS/PILLS) ---
-    st.markdown("### 🔁 Mis Repetidas")
+    # Calculamos cuáles pueden ser repetidas (tienen que estar en "Tengo")
+    posibles_repes = sorted(seleccion_tengo) if seleccion_tengo else []
     
-    posibles_repes = sorted(state['owned'])
+    # Si la clave de repes no existe o necesitamos reinicializarla basada en la DB la primera vez
+    # Pero como 'repes' depende dinámicamente de 'tengo', hacemos una validación:
     
-    if not posibles_repes:
-        st.info("👆 Primero marcá figuritas en '¿Cuáles Tenés?' para poder cargar repetidas.")
-        state['repes'] = [] 
+    # 1. Recuperamos valores actuales de la UI o inicializamos con DB si es la primera vez
+    if key_repes not in st.session_state:
+        # Primera vez: Usamos lo que vino de la base de datos
+        ids_repes_val = [k for k in repetidas_info.keys() if k in posibles_repes]
+        st.session_state[key_repes] = ids_repes_val
     else:
-        st.caption("Tocá las casillas de las que tengas repetidas:")
-        
-        # Identificamos cuáles ya están marcadas
-        repes_actuales_nums = [r['Figurita'] for r in state['repes'] if r['Figurita'] in posibles_repes]
-        
-        # USAMOS PILLS (CASILLAS) EN LUGAR DE MULTISELECT
-        seleccion_repes = st.pills(
-            "Seleccioná repetidas",
-            options=posibles_repes,
-            default=repes_actuales_nums,
-            selection_mode="multi",
-            key=f"pills_repes_{country_name}",
-            on_change=marcar_cambio
+        # Ya existe: Aseguramos que lo seleccionado sea válido (que siga estando en 'posibles_repes')
+        current_repes = st.session_state[key_repes]
+        valid_repes = [x for x in current_repes if x in posibles_repes]
+        st.session_state[key_repes] = valid_repes
+
+    # 2. Creamos el widget SIN 'default'
+    seleccion_repes = st.pills("Repes", posibles_repes, selection_mode="multi", key=key_repes)
+
+    # --- EDITOR DE DATOS ---
+    edited_df = pd.DataFrame()
+    if seleccion_repes:
+        st.info("👇 **Data:** Hacé doble clic en 'Modo' para cambiar entre **Canje** y **Venta**. Ajustá la 'Cantidad'.")
+        data = []
+        for n in seleccion_repes:
+            # Intentamos recuperar info previa (memoria o DB)
+            info = repetidas_info.get(n, {})
+            precio = info.get('price', 0)
+            qty = info.get('quantity', 1)
+            modo = "💰 Venta" if precio > 0 else "🔄 Canje"
+            data.append({"Figurita": n, "Cantidad": qty, "Modo": modo, "Precio": precio})
+            
+        edited_df = st.data_editor(
+            pd.DataFrame(data), 
+            column_config={
+                "Figurita": st.column_config.NumberColumn(disabled=True),
+                "Cantidad": st.column_config.NumberColumn(min_value=1, step=1, help="Copias disponibles"),
+                "Modo": st.column_config.SelectboxColumn(options=["🔄 Canje", "💰 Venta"], required=True),
+                "Precio": st.column_config.NumberColumn(min_value=0, step=100)
+            }, 
+            hide_index=True, use_container_width=True
         )
+    
+    st.divider()
+
+    # --- BOTÓN GUARDAR ---
+    if st.button("💾 GUARDAR CAMBIOS", type="primary", width="stretch"):
+        with utils.spinner_futbolero():
+            # Pasamos TAMBIÉN la wishlist al guardar
+            db.save_inventory_positive(user['id'], start, end, seleccion_tengo, seleccion_wishlist, edited_df)
         
-        # Reconstruimos la data manteniendo precios viejos
-        new_repes_data = []
-        for num in seleccion_repes:
-            existing_data = next((r for r in state['repes'] if r['Figurita'] == num), None)
-            if existing_data:
-                new_repes_data.append(existing_data)
-            else:
-                new_repes_data.append({"Figurita": num, "Modo": "Canje", "Precio": 0, "Cantidad": 1})
-        
-        state['repes'] = new_repes_data
-        
-        # Tabla solo para editar detalles (sin columna de selección)
-        if state['repes']:
-            df_repes = pd.DataFrame(state['repes'])
-            
-            column_config = {
-                "Figurita": st.column_config.NumberColumn("Número", disabled=True),
-                "Modo": st.column_config.SelectboxColumn("Objetivo", options=["Canje", "Venta"], required=True, default="Canje"),
-                "Precio": st.column_config.NumberColumn("Precio ($)", min_value=0, step=100, default=0),
-                "Cantidad": st.column_config.NumberColumn("Cant.", min_value=1, step=1, default=1)
-            }
-            
-            edited_df = st.data_editor(
-                df_repes, 
-                num_rows="fixed", 
-                column_config=column_config, 
-                use_container_width=True, 
-                hide_index=True,
-                key=f"editor_{country_name}",
-                on_change=marcar_cambio
-            )
-            
-            if not edited_df.equals(pd.DataFrame(state['repes'])):
-                state['repes'] = edited_df.to_dict('records')
+        st.toast("Joyas guardadas (y wishlist actualizada)", icon="💾")
+        time.sleep(0.5)
+        st.rerun()
