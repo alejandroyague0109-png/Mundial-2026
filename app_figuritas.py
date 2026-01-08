@@ -132,19 +132,36 @@ def mostrar_editar_perfil(user):
         else:
             st.error(msg)
 
-# --- POPUPS FOOTER ---
+# --- POPUPS FOOTER (TEXTOS RECUPERADOS) ---
 @st.dialog("📧 Contacto")
 def mostrar_contacto():
-    st.markdown("### ¿Necesitás ayuda?\nEmail: soporte@figus26.com\nInstagram: @figus26_oficial")
+    st.markdown("""
+    ### ¿Necesitás ayuda?
+    Estamos para darte una mano con tu colección.
+    
+    * 📧 **Email:** soporte@figus26.com
+    * 📷 **Instagram:** @figus26_oficial
+    * 🕒 **Horario:** Lunes a Viernes de 9 a 18hs.
+    """)
+    st.info("Si tuviste un problema con un usuario, por favor reportalo enviando una captura de pantalla al mail.")
 
 @st.dialog("❓ Preguntas Frecuentes (FAQ)")
 def mostrar_faq():
-    with st.expander("¿Es gratis?"): st.write("Sí, con límite diario de 1 contacto.")
-    with st.expander("¿Cómo es Premium?"): st.write("Contactos ilimitados y alertas.")
+    with st.expander("¿Es gratis usar la app?"):
+        st.write("Sí, podés cargar tu álbum y ver el mercado gratis. Tenés 1 contacto diario gratuito.")
+    with st.expander("¿Cómo funciona el Premium?"):
+        st.write("Con Premium tenés contactos ilimitados, alertas de Wishlist y aparecés destacado en las búsquedas.")
+    with st.expander("¿Qué pasa si un usuario no responde?"):
+        st.write("Los tratos se cierran por WhatsApp. Si no responde, podés 'Fichaje caído' en la pestaña de Pendientes para sacarlo de tu lista.")
+    with st.expander("¿Cómo cargo mis repetidas?"):
+        st.write("Podés hacerlo manualmente en la sección 'Mi Álbum' seleccionando las figus y luego 'Repes', o usando la Carga Masiva (CSV) en el menú lateral.")
 
 @st.dialog("⚖️ Términos Legales")
 def mostrar_legales():
-    st.markdown("### Términos y Condiciones\n" + config.TEXTO_LEGAL_COMPLETO)
+    st.markdown("### Términos y Condiciones")
+    st.markdown(config.TEXTO_LEGAL_COMPLETO)
+    st.divider()
+    st.caption("Al usar esta aplicación, aceptás que Figus 26 es solo un intermediario de contacto.")
 
 # --- FLUJO LÓGICO ---
 if not st.session_state.barrera_superada:
@@ -157,16 +174,13 @@ if not st.session_state.user:
 else:
     user = st.session_state.user
     
-    # Persistencia Contactos
     if not st.session_state.unlocked_users:
         st.session_state.unlocked_users = db.get_unlocked_ids(user['id'])
 
-    # Reset Diario
     if db.verify_daily_reset(user):
         if not user.get('is_premium', False):
             st.toast("📅 ¡Nuevo día! Se renovaron tus créditos.", icon="☀️")
 
-    # Notificaciones Premium Wishlist
     if user.get('is_premium', False) and 'wishlist_notified' not in st.session_state:
         m_df = db.fetch_market(user['id'])
         matches, ventas = db.find_matches(user['id'], m_df)
@@ -194,7 +208,6 @@ else:
              
         st.caption(f"⭐ Reputación: {user.get('reputation', 0)}")
         
-        # Notificaciones de Transacciones
         pending_requests = db.get_pending_transactions(user['id'])
         if pending_requests:
             st.divider()
@@ -219,14 +232,11 @@ else:
         st.progress(min(tengo_total / total_album, 1.0), text="🏆 Mi Álbum")
         st.caption(f"Tenés **{tengo_total}** de {total_album}.")
         
-        # --- NUEVA FUNCIONALIDAD: COMPARTIR FALTANTES ---
-        # Consultamos toda la wishlist (sin paginación)
+        # COMPARTIR FALTANTES
         full_wishlist = db.get_full_wishlist(user['id'])
         if full_wishlist:
             link_share = utils.generar_link_whatsapp_wishlist(full_wishlist)
-            # Usamos type="primary" para que resalte en verde/color principal
             st.link_button("📢 Compartir Faltantes", link_share, type="primary", use_container_width=True)
-        # ------------------------------------------------
         
         st.divider()
         with st.expander("📤 Carga Masiva (CSV)"):
