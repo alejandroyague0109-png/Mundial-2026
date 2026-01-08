@@ -6,7 +6,8 @@ import database as db
 import utils 
 import locations 
 
-from views import auth, inventory, market
+# IMPORTAMOS EL NUEVO MÓDULO ADMIN
+from views import auth, inventory, market, admin 
 
 # --- CONFIGURACIÓN UI ---
 st.set_page_config(page_title="Figus 26 | Colección", layout="wide", page_icon="⚽")
@@ -79,6 +80,10 @@ if 'page_ventas' not in st.session_state: st.session_state.page_ventas = 1
 if 'page_pendientes' not in st.session_state: st.session_state.page_pendientes = 1
 if 'barrera_superada' not in st.session_state: st.session_state.barrera_superada = False
 
+# --- NUEVAS VARIABLES PARA NAVEGACIÓN SEGURA ---
+if 'current_country' not in st.session_state: st.session_state.current_country = list(config.ALBUM_PAGES.keys())[0]
+if 'unsaved_changes' not in st.session_state: st.session_state.unsaved_changes = False
+
 # --- MODALES ---
 @st.dialog("⚠️ Bienvenido a Figus 26")
 def mostrar_barrera_entrada():
@@ -90,6 +95,26 @@ def mostrar_barrera_entrada():
         st.session_state.barrera_superada = True
         # FIX: Guardamos en la URL para que persista al recargar
         st.query_params["over18"] = "true"
+        st.rerun()
+
+# --- NUEVO MODAL DE NAVEGACIÓN SEGURA ---
+@st.dialog("⚠️ Cambios sin guardar")
+def confirmar_cambio_pais(target_pais):
+    st.write(f"Tenés cambios pendientes en **{st.session_state.current_country}**.")
+    st.warning("Si cambiás de país ahora, perderás lo que no guardaste.")
+    
+    col1, col2 = st.columns(2)
+    
+    # Opción 1: Volver (Cancelar navegación)
+    if col1.button("🔙 Volver para Guardar", width="stretch"):
+        # Revertimos el selector visualmente al país actual
+        st.session_state.nav_pais_selector = st.session_state.current_country
+        st.rerun()
+        
+    # Opción 2: Descartar (Confirmar navegación)
+    if col2.button("🗑️ Descartar Cambios", type="primary", width="stretch"):
+        st.session_state.unsaved_changes = False
+        st.session_state.current_country = target_pais
         st.rerun()
 
 @st.dialog("📤 Ayuda CSV")
@@ -189,7 +214,6 @@ if 'user' not in st.session_state or st.session_state.user is None:
                 st.session_state.barrera_superada = True
 
 # 3. BARRERA DE EDAD (BLOQUEANTE)
-# Si después de verificar la URL y el Login, todavía es False -> Bloquear.
 if not st.session_state.barrera_superada:
     mostrar_barrera_entrada()
     st.stop() # Detiene la ejecución aquí
@@ -204,130 +228,171 @@ else:
     # --- USUARIO LOGUEADO ---
     user = st.session_state.user
     
-    # Inicializar desbloqueos en memoria
-    if not st.session_state.unlocked_users:
-        st.session_state.unlocked_users = db.get_unlocked_ids(user['id'])
-
-    # Verificar Reset Diario
-    if db.verify_daily_reset(user):
-        if not user.get('is_premium', False):
-            st.toast("📅 ¡Nuevo día! Se renovaron tus créditos.", icon="☀️")
-
-    # Notificaciones Wishlist (Premium)
-    if user.get('is_premium', False) and 'wishlist_notified' not in st.session_state:
-        m_df = db.fetch_market(user['id'])
-        matches, ventas = db.find_matches(user['id'], m_df)
-        wish_hits = [x for x in matches + ventas if x.get('is_wishlist', False)]
-        if wish_hits:
-            qty = len(wish_hits)
-            st.toast(f"🔔 ¡Atención! Hay {qty} figuritas de tu Wishlist disponibles.", icon="🎉")
-        st.session_state.wishlist_notified = True
-
-    # Preparación de datos del álbum
-    seleccion_pais = st.session_state.get("seleccion_pais_key", list(config.ALBUM_PAGES.keys())[0])
-    start, end = config.ALBUM_PAGES[seleccion_pais]
-    total_album = sum([(v[1] - v[0] + 1) for v in config.ALBUM_PAGES.values()])
-    
-    _, _, _, df_full = db.get_inventory_status(user['id'], start, end)
-    try: tengo_total = df_full[df_full['status'] == 'tengo'].shape[0]
-    except: tengo_total = 0
-    
-    # --- SIDEBAR ---
-    with st.sidebar:
-        st.title(f"Hola {user['nick']}")
-        st.caption(f"📍 {user.get('province', '')} - {user.get('zone', '')}")
+    # ----------------------------------------------------
+    #  LÓGICA DE ADMINISTRADOR (IMPLEMENTACIÓN N° 4)
+    # ----------------------------------------------------
+    if user.get('is_admin', False):
+        # Si es admin, mostramos SU panel y detenemos el resto
+        # Agregamos botón de salir en el sidebar para él también
+        with st.sidebar:
+            st.title("Admin Panel")
+            if st.button("Salir / Logout"):
+                st.session_state.user = None
+                st.query_params.clear()
+                st.rerun()
         
-        # EDITAR PERFIL
-        if st.button("✏️ Editar Perfil", key="btn_edit_profile"):
-             mostrar_editar_perfil(user)
-             
-        st.caption(f"⭐ Reputación: {user.get('reputation', 0)}")
+        admin.render_admin_panel(user)
         
-        # TRANSACCIONES PENDIENTES
-        pending_requests = db.get_pending_transactions(user['id'])
-        if pending_requests:
+    else:
+        # ----------------------------------------------------
+        #  FLUJO DE USUARIO NORMAL
+        # ----------------------------------------------------
+        
+        # Inicializar desbloqueos en memoria
+        if not st.session_state.unlocked_users:
+            st.session_state.unlocked_users = db.get_unlocked_ids(user['id'])
+
+        # Verificar Reset Diario
+        if db.verify_daily_reset(user):
+            if not user.get('is_premium', False):
+                st.toast("📅 ¡Nuevo día! Se renovaron tus créditos.", icon="☀️")
+
+        # Notificaciones Wishlist (Premium)
+        if user.get('is_premium', False) and 'wishlist_notified' not in st.session_state:
+            m_df = db.fetch_market(user['id'])
+            matches, ventas = db.find_matches(user['id'], m_df)
+            wish_hits = [x for x in matches + ventas if x.get('is_wishlist', False)]
+            if wish_hits:
+                qty = len(wish_hits)
+                st.toast(f"🔔 ¡Atención! Hay {qty} figuritas de tu Wishlist disponibles.", icon="🎉")
+            st.session_state.wishlist_notified = True
+
+        # --- SIDEBAR ---
+        seleccion_pais_key_sidebar = "nav_pais_selector" # Referencia interna
+        
+        # Preparación de datos del álbum (Pre-cálculo para barra de progreso)
+        total_album = sum([(v[1] - v[0] + 1) for v in config.ALBUM_PAGES.values()])
+        # Nota: El calculo exacto del total 'tengo' global requeriría una query más pesada.
+        # Por ahora usamos el del país actual o 0 para no frenar la UI.
+        tengo_total = 0 
+        
+        with st.sidebar:
+            st.title(f"Hola {user['nick']}")
+            st.caption(f"📍 {user.get('province', '')} - {user.get('zone', '')}")
+            
+            # EDITAR PERFIL
+            if st.button("✏️ Editar Perfil", key="btn_edit_profile"):
+                 mostrar_editar_perfil(user)
+                 
+            st.caption(f"⭐ Reputación: {user.get('reputation', 0)}")
+            
+            # TRANSACCIONES PENDIENTES
+            pending_requests = db.get_pending_transactions(user['id'])
+            if pending_requests:
+                st.divider()
+                st.warning(f"🔔 Tenés {len(pending_requests)} confirmaciones")
+                for req in pending_requests:
+                    with st.expander(f"De {req['users']['nick']}", expanded=True):
+                        if req['type'] == 'exchange':
+                            st.caption(f"Te dio la **#{req['fig_sent']}** y vos la **#{req['fig_received']}**")
+                        else:
+                            st.caption(f"Te compró la **#{req['fig_received']}**")
+                        
+                        c1, c2 = st.columns(2)
+                        if c1.button("✅ Sí", key=f"y_{req['id']}", use_container_width=True):
+                            ok, msg = db.confirm_transaction_request(req['id'], user['id'])
+                            if ok: st.toast("¡Confirmado!"); time.sleep(1); st.rerun()
+                            else: st.error(msg)
+                        if c2.button("❌ No", key=f"n_{req['id']}", use_container_width=True):
+                            db.reject_transaction_request(req['id'])
+                            st.rerun()
+            
             st.divider()
-            st.warning(f"🔔 Tenés {len(pending_requests)} confirmaciones")
-            for req in pending_requests:
-                with st.expander(f"De {req['users']['nick']}", expanded=True):
-                    if req['type'] == 'exchange':
-                        st.caption(f"Te dio la **#{req['fig_sent']}** y vos la **#{req['fig_received']}**")
-                    else:
-                        st.caption(f"Te compró la **#{req['fig_received']}**")
-                    
-                    c1, c2 = st.columns(2)
-                    if c1.button("✅ Sí", key=f"y_{req['id']}", use_container_width=True):
-                        ok, msg = db.confirm_transaction_request(req['id'], user['id'])
-                        if ok: st.toast("¡Confirmado!"); time.sleep(1); st.rerun()
-                        else: st.error(msg)
-                    if c2.button("❌ No", key=f"n_{req['id']}", use_container_width=True):
-                        db.reject_transaction_request(req['id'])
-                        st.rerun()
-        
-        st.divider()
-        st.progress(min(tengo_total / total_album, 1.0), text="🏆 Mi Álbum")
-        st.caption(f"Tenés **{tengo_total}** de {total_album}.")
-        
-        # COMPARTIR DESEADOS
-        full_wishlist = db.get_full_wishlist(user['id'])
-        if full_wishlist:
-            link_share = utils.generar_link_whatsapp_wishlist(full_wishlist)
-            st.link_button("📢 Compartir Deseados", link_share, type="primary", use_container_width=True)
-        
-        st.divider()
-        
-        # CARGA MASIVA
-        with st.expander("📤 Carga Masiva (CSV)"):
-            col_a, col_b = st.columns(2)
-            if col_a.button("❓ Ayuda", width="stretch"): mostrar_instrucciones_csv()
-            df_plantilla = pd.DataFrame([{"num": 10, "status": "tengo", "price": 0}, {"num": 25, "status": "repetida", "price": 500}])
-            col_b.download_button("⬇️ Plantilla", df_plantilla.to_csv(index=False).encode('utf-8'), "plantilla.csv", "text/csv", width="stretch")
-            up = st.file_uploader("Subí tu CSV", type="csv")
-            if up and st.button("🚀 Procesar", type="primary", width="stretch"):
-                with utils.spinner_futbolero():
-                    ok, msg = db.process_csv_upload(pd.read_csv(up), user['id'])
-                if ok: st.toast("¡Cargado!", icon="📦"); st.success(msg); time.sleep(1); st.rerun()
-                else: st.error(msg)
-        st.divider()
-        
-        # ESTADO PREMIUM
-        if user.get('is_premium', False): 
-            st.success("💎 PREMIUM")
-        else:
-            st.info("👤 GRATIS")
-            contacts = user.get('daily_contacts_count', 0)
-            if contacts >= 1: st.progress(1.0, text="Límite: 1/1 (Agotado)")
-            else: st.progress(0.0, text="Límite: 0/1 (Disponible)")
+            # st.progress(min(tengo_total / total_album, 1.0), text="🏆 Mi Álbum")
+            # st.caption(f"Tenés **{tengo_total}** de {total_album}.")
             
-            if st.button("💎 Hacete Premium", width="stretch"): 
-                market.mostrar_modal_premium()
+            # COMPARTIR DESEADOS
+            full_wishlist = db.get_full_wishlist(user['id'])
+            if full_wishlist:
+                link_share = utils.generar_link_whatsapp_wishlist(full_wishlist)
+                st.link_button("📢 Compartir Deseados", link_share, type="primary", use_container_width=True)
             
-            with st.expander("Validar Pago"):
-                op = st.text_input("ID Op")
-                if op and st.button("Validar"):
+            st.divider()
+            
+            # CARGA MASIVA
+            with st.expander("📤 Carga Masiva (CSV)"):
+                col_a, col_b = st.columns(2)
+                if col_a.button("❓ Ayuda", width="stretch"): mostrar_instrucciones_csv()
+                df_plantilla = pd.DataFrame([{"num": 10, "status": "tengo", "price": 0}, {"num": 25, "status": "repetida", "price": 500}])
+                col_b.download_button("⬇️ Plantilla", df_plantilla.to_csv(index=False).encode('utf-8'), "plantilla.csv", "text/csv", width="stretch")
+                up = st.file_uploader("Subí tu CSV", type="csv")
+                if up and st.button("🚀 Procesar", type="primary", width="stretch"):
                     with utils.spinner_futbolero():
-                        ok, msg = db.verificar_pago_mp(op, user['id'])
-                    if ok: st.toast("¡Premium!", icon="💎"); st.rerun()
+                        ok, msg = db.process_csv_upload(pd.read_csv(up), user['id'])
+                    if ok: st.toast("¡Cargado!", icon="📦"); st.success(msg); time.sleep(1); st.rerun()
                     else: st.error(msg)
+            st.divider()
+            
+            # ESTADO PREMIUM
+            if user.get('is_premium', False): 
+                st.success("💎 PREMIUM")
+            else:
+                st.info("👤 GRATIS")
+                contacts = user.get('daily_contacts_count', 0)
+                if contacts >= 1: st.progress(1.0, text="Límite: 1/1 (Agotado)")
+                else: st.progress(0.0, text="Límite: 0/1 (Disponible)")
+                
+                if st.button("💎 Hacete Premium", width="stretch"): 
+                    market.mostrar_modal_premium()
+                
+                with st.expander("Validar Pago"):
+                    op = st.text_input("ID Op")
+                    if op and st.button("Validar"):
+                        with utils.spinner_futbolero():
+                            ok, msg = db.verificar_pago_mp(op, user['id'])
+                        if ok: st.toast("¡Premium!", icon="💎"); st.rerun()
+                        else: st.error(msg)
+            
+            # LOGOUT
+            if st.button("Chau / Salir"):
+                st.session_state.user = None
+                st.query_params.clear() # FIX: Borrar token al salir
+                st.rerun()
+
+        # --- PANTALLA PRINCIPAL ---
+        st.header("📖 Mi Álbum")
         
-        # LOGOUT
-        if st.button("Chau / Salir"):
-            st.session_state.user = None
-            st.query_params.clear() # FIX: Borrar token al salir
-            st.rerun()
+        # --- NAVEGACIÓN SEGURA (POP-UP CAMBIOS) ---
+        paises = list(config.ALBUM_PAGES.keys())
+        try: idx = paises.index(st.session_state.current_country)
+        except: idx = 0
+        
+        nuevo_pais = st.selectbox(
+            "Sección:", 
+            paises, 
+            index=idx, 
+            key="nav_pais_selector"
+        )
+        
+        # Interceptamos el cambio si hay cosas sin guardar
+        if nuevo_pais != st.session_state.current_country:
+            if st.session_state.unsaved_changes:
+                confirmar_cambio_pais(nuevo_pais)
+            else:
+                st.session_state.current_country = nuevo_pais
+                st.rerun()
+        
+        start, end = config.ALBUM_PAGES[st.session_state.current_country]
+        inventory.render_inventory(user, start, end, st.session_state.current_country)
+        
+        st.divider()
+        market.render_market(user)
 
-    # --- PANTALLA PRINCIPAL ---
-    st.header("📖 Mi Álbum")
-    st.selectbox("Sección:", list(config.ALBUM_PAGES.keys()), key="seleccion_pais_key")
-    inventory.render_inventory(user, start, end, seleccion_pais)
-    st.divider()
-    market.render_market(user)
-
-    # --- FOOTER ---
-    st.divider()
-    fc1, fc2, fc3 = st.columns(3)
-    if fc1.button("📧 Contacto", width="stretch", type="secondary"): mostrar_contacto()
-    if fc2.button("❓ FAQ", width="stretch", type="secondary"): mostrar_faq()
-    if fc3.button("⚖️ Legales", width="stretch", type="secondary"): mostrar_legales()
-    
-    st.markdown("<div class='footer-text'>© 2026 Figus 26. Hecho en Mendoza 🍷</div>", unsafe_allow_html=True)
+        # --- FOOTER ---
+        st.divider()
+        fc1, fc2, fc3 = st.columns(3)
+        if fc1.button("📧 Contacto", width="stretch", type="secondary"): mostrar_contacto()
+        if fc2.button("❓ FAQ", width="stretch", type="secondary"): mostrar_faq()
+        if fc3.button("⚖️ Legales", width="stretch", type="secondary"): mostrar_legales()
+        
+        st.markdown("<div class='footer-text'>© 2026 Figus 26. Hecho en Mendoza 🍷</div>", unsafe_allow_html=True)
