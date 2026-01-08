@@ -6,58 +6,78 @@ from urllib.parse import quote
 
 # --- VALIDACIONES ---
 def validar_formato_telefono(phone):
+    """Valida que el teléfono tenga entre 7 y 15 dígitos numéricos."""
     if not phone: return False
     return bool(re.match(r'^\d{7,15}$', phone))
 
 def limpiar_telefono(phone):
+    """Elimina espacios, guiones y símbolos no numéricos."""
     if not phone: return ""
     return re.sub(r'\D', '', phone)
 
-# --- CRIPTOGRAFÍA SEGURA (ANTI-ERROR) ---
+# --- CRIPTOGRAFÍA SIMPLE (PARA DATOS SENSIBLES) ---
 def encrypt_phone(phone):
-    key = 12345 
+    """
+    Simulación de encriptación reversible (XOR simple) para la demo.
+    Nota: En producción real, usar criptografía asimétrica o Fernet.
+    """
+    key = 12345 # Clave simple para el MVP
     try:
         clean = int(limpiar_telefono(phone))
         encrypted = clean ^ key
         return str(encrypted)
     except:
-        return phone 
+        return None
 
 def decrypt_phone(encrypted_phone):
-    """
-    Si falla la desencriptación (porque el dato es viejo o texto),
-    devuelve el dato original en lugar de romper la app.
-    """
     key = 12345
     try:
         enc = int(encrypted_phone)
         decrypted = enc ^ key
         return str(decrypted)
     except:
-        # Si da error, devolvemos el valor original (fallback)
-        return str(encrypted_phone) if encrypted_phone else "No disponible"
+        return None
 
-# --- HASHING ---
+# --- HASHING (CONTRASEÑAS Y BÚSQUEDAS) ---
 def hash_phone_searchable(phone):
+    """Hash SHA256 para búsquedas exactas (login/registro)."""
     clean = limpiar_telefono(phone)
     return hashlib.sha256(clean.encode()).hexdigest()
 
 def hash_password(password):
+    """Hash SHA256 para contraseñas. Incluye .strip() para evitar errores por espacios."""
+    # Convertimos a string y quitamos espacios al inicio/final por seguridad
     clean_pass = str(password).strip()
     return hashlib.sha256(clean_pass.encode()).hexdigest()
 
 def check_password(plain_password, hashed_password):
+    """Verifica si la contraseña ingresada coincide con la guardada."""
     return hash_password(plain_password) == hashed_password
 
-# --- UI ---
+# --- UI / UX ---
 def spinner_futbolero():
-    msgs = ["Calentando motores...", "Revisando el VAR...", "Inflando las pelotas..."]
+    """Genera un spinner con mensaje aleatorio."""
+    msgs = [
+        "Calentando motores...", 
+        "Atándose los botines...", 
+        "Revisando el VAR...", 
+        "Inflando las pelotas...", 
+        "Cortando el pasto...",
+        "Charlando con el árbitro..."
+    ]
     return st.spinner(random.choice(msgs))
 
 # --- WHATSAPP ---
 def generar_link_whatsapp_wishlist(wishlist_ids):
-    if not wishlist_ids: return None
+    if not wishlist_ids:
+        return None
+    
+    # Agrupamos los números
     lista_str = ", ".join(map(str, wishlist_ids))
+    
+    # LINK DE LA APP (Ajustalo cuando tengas el deploy final)
     app_url = "https://figus26.streamlit.app" 
+    
     texto = f"¡Hola! 👋 Me faltan estas figus del Mundial 2026:\n\n{lista_str}\n\nSi tenés alguna, avisame! 🙏\n\n_Gestionado por Figus26_\n¡Sumate y cambiá las tuyas! ⚽ 👉 {app_url}"
+    
     return f"https://wa.me/?text={quote(texto)}"

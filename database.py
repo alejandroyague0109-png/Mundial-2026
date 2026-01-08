@@ -192,6 +192,7 @@ def get_full_wishlist(user_id):
     except:
         return []
 
+
 # --- GESTIÓN DE SOLICITUDES (Igual) ---
 def get_pending_transactions(user_id):
     try:
@@ -388,3 +389,4 @@ def process_csv_upload(df, user_id):
             return True, f"Cargadas {len(rows_to_insert)}."
         return False, "CSV vacío."
     except Exception as e: return False, str(e)
+
