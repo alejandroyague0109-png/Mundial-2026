@@ -71,13 +71,18 @@ st.markdown("""
     </style>
 """, unsafe_allow_html=True)
 
-# --- MEMORIA ---
+# --- MEMORIA GLOBAL ---
 if 'unlocked_users' not in st.session_state: st.session_state.unlocked_users = set()
 if 'skip_security_modal' not in st.session_state: st.session_state.skip_security_modal = False
 if 'page_canjes' not in st.session_state: st.session_state.page_canjes = 1
 if 'page_ventas' not in st.session_state: st.session_state.page_ventas = 1
 if 'page_pendientes' not in st.session_state: st.session_state.page_pendientes = 1
 if 'barrera_superada' not in st.session_state: st.session_state.barrera_superada = False
+
+# Variables para Navegación Segura
+if 'current_country' not in st.session_state: st.session_state.current_country = list(config.ALBUM_PAGES.keys())[0]
+if 'pending_country' not in st.session_state: st.session_state.pending_country = None
+if 'unsaved_changes' not in st.session_state: st.session_state.unsaved_changes = False
 
 # --- MODALES ---
 @st.dialog("⚠️ Bienvenido a Figus 26")
@@ -100,37 +105,58 @@ def mostrar_instrucciones_csv():
     3. **price**: Precio (0 si es canje).
     """)
 
-# --- DIALOGO EDITAR PERFIL ---
 @st.dialog("✏️ Editar Perfil")
 def mostrar_editar_perfil(user):
     st.markdown("Actualizá tu ubicación para encontrar gente cerca.")
-    
     current_prov = user.get('province', list(locations.ARGENTINA.keys())[0])
     current_zone = user.get('zone', '')
-    
     try: idx_prov = list(locations.ARGENTINA.keys()).index(current_prov)
     except: idx_prov = 0
-
     new_prov = st.selectbox("Provincia", list(locations.ARGENTINA.keys()), index=idx_prov)
-    
     zones = locations.ARGENTINA[new_prov]
     try: idx_zone = zones.index(current_zone) if current_zone in zones else 0
     except: idx_zone = 0
-    
     new_zone = st.selectbox("Zona", zones, index=idx_zone)
 
     if st.button("💾 Guardar Cambios", type="primary", width="stretch"):
         with utils.spinner_futbolero():
             ok, msg = db.update_profile(user['id'], new_prov, new_zone)
-        
         if ok:
             st.session_state.user['province'] = new_prov
             st.session_state.user['zone'] = new_zone
             st.toast("Perfil actualizado!", icon="✅")
             time.sleep(1)
             st.rerun()
-        else:
-            st.error(msg)
+        else: st.error(msg)
+
+# --- POPUP NAVEGACIÓN SEGURA (NUEVO) ---
+@st.dialog("⚠️ Cambios sin guardar")
+def confirmar_navegacion(user_id, current_country, target_country):
+    st.warning(f"Tenés cambios pendientes en **{current_country}**.")
+    st.write("Si cambiás de país ahora, se perderán.")
+    
+    col1, col2 = st.columns(2)
+    
+    if col1.button("💾 Guardar y Salir", type="primary"):
+        # Lógica de guardado manual invocada desde el modal
+        session_key = f"inv_state_{current_country}"
+        if session_key in st.session_state:
+            state = st.session_state[session_key]
+            start, end = config.ALBUM_PAGES[current_country]
+            
+            # Reconstruir dataframe de repetidas
+            df_repes = pd.DataFrame(state['repes'])
+            
+            with utils.spinner_futbolero():
+                db.save_inventory_positive(user_id, start, end, state['owned'], state['wishlist'], df_repes)
+                st.session_state.unsaved_changes = False
+                st.session_state.current_country = target_country
+                st.rerun()
+                
+    if col2.button("🗑️ Descartar"):
+        st.session_state.unsaved_changes = False
+        st.session_state.current_country = target_country
+        st.rerun()
 
 # --- POPUPS FOOTER ---
 @st.dialog("📧 Contacto")
@@ -152,9 +178,9 @@ def mostrar_faq():
     with st.expander("¿Cómo funciona el Premium?"):
         st.write("Con Premium tenés contactos ilimitados, alertas de Wishlist y aparecés destacado en las búsquedas.")
     with st.expander("¿Qué pasa si un usuario no responde?"):
-        st.write("Los tratos se cierran por WhatsApp. Si no responde, podés 'Fichaje caído' en la pestaña de Pendientes para sacarlo de tu lista.")
+        st.write("Los tratos se cierran por WhatsApp. Si no responde, podés 'Fichaje caído' en la pestaña de Pendientes.")
     with st.expander("¿Cómo cargo mis repetidas?"):
-        st.write("Podés hacerlo manualmente en la sección 'Mi Álbum' seleccionando las figus y luego 'Repes', o usando la Carga Masiva (CSV) en el menú lateral.")
+        st.write("Podés hacerlo manualmente en la sección 'Mi Álbum' seleccionando las figus y luego 'Repes', o usando la Carga Masiva (CSV).")
 
 @st.dialog("⚖️ Términos Legales")
 def mostrar_legales():
@@ -190,22 +216,11 @@ else:
             st.toast(f"🔔 ¡Atención! Hay {qty} figuritas de tu Wishlist disponibles.", icon="🎉")
         st.session_state.wishlist_notified = True
 
-    seleccion_pais = st.session_state.get("seleccion_pais_key", list(config.ALBUM_PAGES.keys())[0])
-    start, end = config.ALBUM_PAGES[seleccion_pais]
-    total_album = sum([(v[1] - v[0] + 1) for v in config.ALBUM_PAGES.values()])
-    
-    _, _, _, df_full = db.get_inventory_status(user['id'], start, end)
-    try: tengo_total = df_full[df_full['status'] == 'tengo'].shape[0]
-    except: tengo_total = 0
-    
+    # --- SIDEBAR ---
     with st.sidebar:
         st.title(f"Hola {user['nick']}")
         st.caption(f"📍 {user.get('province', '')} - {user.get('zone', '')}")
-        
-        # EDITAR PERFIL
-        if st.button("✏️ Editar Perfil", key="btn_edit_profile"):
-             mostrar_editar_perfil(user)
-             
+        if st.button("✏️ Editar Perfil", key="btn_edit_profile"): mostrar_editar_perfil(user)
         st.caption(f"⭐ Reputación: {user.get('reputation', 0)}")
         
         pending_requests = db.get_pending_transactions(user['id'])
@@ -214,25 +229,26 @@ else:
             st.warning(f"🔔 Tenés {len(pending_requests)} confirmaciones")
             for req in pending_requests:
                 with st.expander(f"De {req['users']['nick']}", expanded=True):
-                    if req['type'] == 'exchange':
-                        st.caption(f"Te dio la **#{req['fig_sent']}** y vos la **#{req['fig_received']}**")
-                    else:
-                        st.caption(f"Te compró la **#{req['fig_received']}**")
-                    
+                    if req['type'] == 'exchange': st.caption(f"Te dio la **#{req['fig_sent']}** y vos la **#{req['fig_received']}**")
+                    else: st.caption(f"Te compró la **#{req['fig_received']}**")
                     c1, c2 = st.columns(2)
                     if c1.button("✅ Sí", key=f"y_{req['id']}", use_container_width=True):
                         ok, msg = db.confirm_transaction_request(req['id'], user['id'])
                         if ok: st.toast("¡Confirmado!"); time.sleep(1); st.rerun()
-                        else: st.error(msg)
                     if c2.button("❌ No", key=f"n_{req['id']}", use_container_width=True):
                         db.reject_transaction_request(req['id'])
                         st.rerun()
         
         st.divider()
-        st.progress(min(tengo_total / total_album, 1.0), text="🏆 Mi Álbum")
-        st.caption(f"Tenés **{tengo_total}** de {total_album}.")
+        start, end = config.ALBUM_PAGES[st.session_state.current_country]
+        _, _, _, df_full = db.get_inventory_status(user['id'], 1, 800) # Check global aproximado
+        try: tengo_total = df_full[df_full['status'] == 'tengo'].shape[0]
+        except: tengo_total = 0
+        total_album_glob = sum([(v[1] - v[0] + 1) for v in config.ALBUM_PAGES.values()])
         
-        # COMPARTIR DESEADOS (TEXTO MODIFICADO)
+        st.progress(min(tengo_total / total_album_glob, 1.0), text="🏆 Mi Álbum")
+        st.caption(f"Tenés **{tengo_total}** de {total_album_glob}.")
+        
         full_wishlist = db.get_full_wishlist(user['id'])
         if full_wishlist:
             link_share = utils.generar_link_whatsapp_wishlist(full_wishlist)
@@ -258,23 +274,50 @@ else:
             contacts = user.get('daily_contacts_count', 0)
             if contacts >= 1: st.progress(1.0, text="Límite: 1/1 (Agotado)")
             else: st.progress(0.0, text="Límite: 0/1 (Disponible)")
-            
-            if st.button("💎 Hacete Premium", width="stretch"): 
-                market.mostrar_modal_premium()
-            
+            if st.button("💎 Hacete Premium", width="stretch"): market.mostrar_modal_premium()
             with st.expander("Validar Pago"):
                 op = st.text_input("ID Op")
                 if op and st.button("Validar"):
-                    with utils.spinner_futbolero():
-                        ok, msg = db.verificar_pago_mp(op, user['id'])
+                    with utils.spinner_futbolero(): ok, msg = db.verificar_pago_mp(op, user['id'])
                     if ok: st.toast("¡Premium!", icon="💎"); st.rerun()
                     else: st.error(msg)
         if st.button("Chau / Salir"): st.session_state.user = None; st.rerun()
 
-    # --- PANTALLA PRINCIPAL ---
+    # --- CUERPO PRINCIPAL ---
     st.header("📖 Mi Álbum")
-    st.selectbox("Sección:", list(config.ALBUM_PAGES.keys()), key="seleccion_pais_key")
-    inventory.render_inventory(user, start, end, seleccion_pais)
+    
+    # 1. SELECTOR CON INTERCEPTOR
+    # Usamos una lista de países
+    paises = list(config.ALBUM_PAGES.keys())
+    
+    # Encontramos el índice actual
+    try: idx_actual = paises.index(st.session_state.current_country)
+    except: idx_actual = 0
+    
+    # El selectbox muestra el país actual, pero al cambiar actualiza 'nav_selection'
+    seleccion_usuario = st.selectbox(
+        "Sección:", 
+        paises, 
+        index=idx_actual,
+        key="nav_selection"
+    )
+
+    # 2. LÓGICA DE INTERCEPCIÓN
+    if seleccion_usuario != st.session_state.current_country:
+        if st.session_state.unsaved_changes:
+            # Hay cambios -> Lanzamos el modal y NO cambiamos el current_country todavía
+            confirmar_navegacion(user['id'], st.session_state.current_country, seleccion_usuario)
+            # Truco visual: forzamos el rerun para que el modal aparezca, 
+            # aunque el selectbox visualmente ya cambió.
+        else:
+            # No hay cambios -> Navegación directa
+            st.session_state.current_country = seleccion_usuario
+            st.rerun()
+
+    # 3. RENDERIZADO
+    start, end = config.ALBUM_PAGES[st.session_state.current_country]
+    inventory.render_inventory(user, start, end, st.session_state.current_country)
+    
     st.divider()
     market.render_market(user)
 
@@ -284,5 +327,4 @@ else:
     if fc1.button("📧 Contacto", width="stretch", type="secondary"): mostrar_contacto()
     if fc2.button("❓ FAQ", width="stretch", type="secondary"): mostrar_faq()
     if fc3.button("⚖️ Legales", width="stretch", type="secondary"): mostrar_legales()
-    
     st.markdown("<div class='footer-text'>© 2026 Figus 26. Hecho en Mendoza 🍷</div>", unsafe_allow_html=True)
