@@ -25,7 +25,7 @@ def render_inventory(user, start, end, seleccion_pais):
     col_head_1, col_btn_all, col_btn_none = st.columns([4, 1, 1])
     col_head_1.markdown("### 1️⃣ Tus Figus")
 
-    # Botones masivos (Marcan cambio explícitamente)
+    # Botones masivos
     if col_btn_all.button("Todas", width="stretch", key=f"all_{seleccion_pais}"):
         st.session_state[key_pills] = list(range(start, end + 1))
         st.session_state[key_wish] = [] 
@@ -37,7 +37,7 @@ def render_inventory(user, start, end, seleccion_pais):
         st.session_state.unsaved_changes = True 
         st.rerun()
 
-    # --- WIDGET TENGO (Con on_change) ---
+    # --- WIDGET TENGO ---
     seleccion_tengo = st.pills(
         "Tengo", 
         list(range(start, end + 1)), 
@@ -59,7 +59,7 @@ def render_inventory(user, start, end, seleccion_pais):
     clean_wish = [x for x in current_wish if x in faltantes]
     st.session_state[key_wish] = clean_wish
     
-    # Widget Wishlist (Con on_change)
+    # Widget Wishlist
     seleccion_wishlist = st.pills(
         "Deseo", 
         faltantes, 
@@ -81,7 +81,7 @@ def render_inventory(user, start, end, seleccion_pais):
         valid_repes = [x for x in current_repes if x in posibles_repes]
         st.session_state[key_repes] = valid_repes
 
-    # Widget Repes (Con on_change)
+    # Widget Repes
     seleccion_repes = st.pills(
         "Repes", 
         posibles_repes, 
@@ -112,13 +112,18 @@ def render_inventory(user, start, end, seleccion_pais):
             }, 
             hide_index=True, 
             use_container_width=True,
-            key=f"editor_{seleccion_pais}", # <--- ESTA LÍNEA ES LA CLAVE PARA EL GUARDADO EXTERNO
+            key=f"editor_{seleccion_pais}",
             on_change=marcar_cambio 
         )
     
+    # --- FIX CRÍTICO: GUARDAR SNAPSHOT PARA EL MODAL DE SALIDA ---
+    # Guardamos el DF resultante en una variable simple para que app_figuritas pueda leerlo sin error
+    st.session_state[f"snapshot_df_{seleccion_pais}"] = edited_df
+    # -------------------------------------------------------------
+
     st.divider()
 
-    # --- BOTÓN GUARDAR (Cambia color si hay cambios) ---
+    # --- BOTÓN GUARDAR ---
     btn_type = "primary" if st.session_state.get('unsaved_changes', False) else "secondary"
     btn_lbl = "💾 GUARDAR CAMBIOS (*)" if st.session_state.get('unsaved_changes', False) else "💾 GUARDAR CAMBIOS"
 
