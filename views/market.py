@@ -227,6 +227,11 @@ def render_market(user):
     
     matches, ventas = db.find_matches(user['id'], market_df)
 
+    # --- CAMBIO: ORDENAR POR NÚMERO DE FIGURITA BUSCADA (Menor a Mayor) ---
+    matches = sorted(matches, key=lambda x: x['figu'])
+    ventas = sorted(ventas, key=lambda x: x['figu'])
+    # ----------------------------------------------------------------------
+
     # Pendientes
     unlocked_ids = st.session_state.unlocked_users
     pendientes_total = []

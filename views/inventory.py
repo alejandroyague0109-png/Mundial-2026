@@ -95,7 +95,9 @@ def render_inventory(user, start, end, seleccion_pais):
     if seleccion_repes:
         st.info("👇 **Data:** Hacé doble clic en 'Modo' para cambiar entre **Canje** y **Venta**.")
         data = []
-        for n in seleccion_repes:
+        
+        # --- CAMBIO: Se agrega sorted() para ordenar la tabla ---
+        for n in sorted(seleccion_repes):
             info = repetidas_info.get(n, {})
             precio = info.get('price', 0)
             qty = info.get('quantity', 1)
@@ -117,7 +119,6 @@ def render_inventory(user, start, end, seleccion_pais):
         )
     
     # --- FIX CRÍTICO: GUARDAR SNAPSHOT PARA EL MODAL DE SALIDA ---
-    # Guardamos el DF resultante en una variable simple para que app_figuritas pueda leerlo sin error
     st.session_state[f"snapshot_df_{seleccion_pais}"] = edited_df
     # -------------------------------------------------------------
 
