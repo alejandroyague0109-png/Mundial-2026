@@ -97,7 +97,7 @@ def mostrar_barrera_entrada():
         st.query_params["over18"] = "true"
         st.rerun()
 
-# --- NUEVO MODAL DE NAVEGACIÓN SEGURA (CORREGIDO) ---
+# --- NUEVO MODAL DE NAVEGACIÓN SEGURA (CORREGIDO Y BLINDADO) ---
 @st.dialog("⚠️ Cambios sin guardar")
 def confirmar_cambio_pais(target_pais, user):
     st.write(f"Tenés cambios pendientes en **{st.session_state.current_country}**.")
@@ -112,15 +112,14 @@ def confirmar_cambio_pais(target_pais, user):
         tengo_data = st.session_state.get(f"pills_tengo_{curr}", [])
         wish_data = st.session_state.get(f"pills_wish_{curr}", [])
         
-        # 2. Recuperamos la tabla de repetidas (DATOS COMPLETOS)
-        # Intentamos buscar el estado del editor en la memoria primero
-        editor_key = f"editor_{curr}"
+        # 2. Recuperamos Repetidas desde el SNAPSHOT (Fix del error ValueError)
+        snapshot_key = f"snapshot_df_{curr}"
         
-        if editor_key in st.session_state:
-            # ¡Éxito! Tenemos los datos editados (precios y modos)
-            df_repes = pd.DataFrame(st.session_state[editor_key])
+        if snapshot_key in st.session_state:
+            # Usamos el DataFrame limpio guardado por inventory.py
+            df_repes = st.session_state[snapshot_key]
         else:
-            # Fallback: Si no hay editor en memoria, usamos los IDs seleccionados
+            # Fallback por si acaso: Si no hay snapshot, usamos los IDs seleccionados con valores default
             repes_ids = st.session_state.get(f"repes_{curr}", [])
             df_repes = pd.DataFrame([{"Figurita": r, "Modo": "Canje", "Precio": 0, "Cantidad": 1} for r in repes_ids])
         
