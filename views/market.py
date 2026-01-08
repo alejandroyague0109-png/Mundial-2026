@@ -121,7 +121,7 @@ def render_market(user):
                             time.sleep(1.5)
                             mostrar_modal_premium()
 
-    # --- RENDERIZADO TAB CANJES ---
+    # --- RENDERIZADO TAB CANJES (CON PAGINACIÓN) ---
     with tab_canjes:
         if not matches:
             st.info("No hay canjes directos (Match) en tu zona por ahora.")
@@ -154,7 +154,7 @@ def render_market(user):
                     st.session_state.page_canjes += 1
                     st.rerun()
 
-    # --- RENDERIZADO TAB VENTAS ---
+    # --- RENDERIZADO TAB VENTAS (CON PAGINACIÓN) ---
     with tab_ventas:
         if not ventas:
             st.info("No hay figuritas a la venta que te sirvan.")

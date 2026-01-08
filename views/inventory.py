@@ -7,10 +7,10 @@ def marcar_cambio():
     st.session_state.unsaved_changes = True
 
 def render_inventory(user, start, end, country_name):
-    # 1. Init bandera cambios
+    # 1. Inicialización
     if 'unsaved_changes' not in st.session_state: st.session_state.unsaved_changes = False
 
-    # 2. Carga Inicial de Datos (Solo si no están en memoria)
+    # 2. Carga de datos
     session_key = f"inv_state_{country_name}"
     if session_key not in st.session_state:
         db_tengo, db_wishlist, db_repes_info, _ = db.get_inventory_status(user['id'], start, end)
@@ -18,15 +18,13 @@ def render_inventory(user, start, end, country_name):
         for num, info in db_repes_info.items():
             modo = "Venta" if info['price'] > 0 else "Canje"
             repes_rows.append({"Figurita": num, "Modo": modo, "Precio": info['price'], "Cantidad": info['quantity']})
-            
         st.session_state[session_key] = {'owned': db_tengo, 'wishlist': db_wishlist, 'repes': repes_rows}
         st.session_state.unsaved_changes = False
 
-    # Alias
     state = st.session_state[session_key]
     numeros_pagina = list(range(start, end + 1))
 
-    # --- ENCABEZADO Y GUARDAR ---
+    # --- ENCABEZADO ---
     c1, c2 = st.columns([3, 1])
     c1.subheader(f"{country_name} ({start}-{end})")
     
@@ -38,14 +36,15 @@ def render_inventory(user, start, end, country_name):
             df_repes_tosave = pd.DataFrame(state['repes'])
             db.save_inventory_positive(user['id'], start, end, state['owned'], state['wishlist'], df_repes_tosave)
             st.session_state.unsaved_changes = False
-        st.toast("¡Álbum actualizado!", icon="✅"); st.rerun()
+        st.toast("¡Guardado!", icon="✅"); st.rerun()
 
     st.markdown("---")
 
     # --- SECCIÓN 1: TENGO ---
     st.markdown("### ✅ ¿Cuáles Tenés?")
     
-    # Lógica corregida para "Seleccionar Todas" / "Borrar Todas"
+    # --- ARREGLO DE LOS BOTONES ---
+    # Para que funcionen, hay que modificar directamente la key del widget en session_state
     key_tengo = f"pills_tengo_{country_name}"
     
     col_sel1, col_sel2, _ = st.columns([1, 1, 3])
@@ -53,14 +52,14 @@ def render_inventory(user, start, end, country_name):
     if col_sel1.button("Seleccionar Todas"):
         state['owned'] = list(numeros_pagina)
         state['wishlist'] = [] 
-        st.session_state[key_tengo] = list(numeros_pagina) # Forzar actualización visual
+        st.session_state[key_tengo] = list(numeros_pagina) # ESTO ACTUALIZA LA VISUAL
         marcar_cambio()
         st.rerun()
         
     if col_sel2.button("Borrar Todas"):
         state['owned'] = []
         state['repes'] = []
-        st.session_state[key_tengo] = [] # Forzar actualización visual
+        st.session_state[key_tengo] = [] # ESTO ACTUALIZA LA VISUAL
         marcar_cambio()
         st.rerun()
 
@@ -73,7 +72,7 @@ def render_inventory(user, start, end, country_name):
         on_change=marcar_cambio
     )
     
-    # Actualizar lógica
+    # Sincronización lógica
     state['owned'] = seleccion_tengo
     state['wishlist'] = [x for x in state['wishlist'] if x not in state['owned']]
 
@@ -96,20 +95,21 @@ def render_inventory(user, start, end, country_name):
 
     st.markdown("---")
     
-    # --- SECCIÓN 3: REPETIDAS (AHORA CON PILLS) ---
+    # --- SECCIÓN 3: REPETIDAS (ARREGLADO: USANDO CASILLAS/PILLS) ---
     st.markdown("### 🔁 Mis Repetidas")
     
     posibles_repes = sorted(state['owned'])
     
     if not posibles_repes:
         st.info("👆 Primero marcá figuritas en '¿Cuáles Tenés?' para poder cargar repetidas.")
-        state['repes'] = [] # Limpiar si no hay owned
+        state['repes'] = [] 
     else:
         st.caption("Tocá las casillas de las que tengas repetidas:")
         
-        # 1. SELECTOR TIPO PILLS (CASILLAS)
+        # Identificamos cuáles ya están marcadas
         repes_actuales_nums = [r['Figurita'] for r in state['repes'] if r['Figurita'] in posibles_repes]
         
+        # USAMOS PILLS (CASILLAS) EN LUGAR DE MULTISELECT
         seleccion_repes = st.pills(
             "Seleccioná repetidas",
             options=posibles_repes,
@@ -119,7 +119,7 @@ def render_inventory(user, start, end, country_name):
             on_change=marcar_cambio
         )
         
-        # 2. CONSTRUCCIÓN DATA TABLE
+        # Reconstruimos la data manteniendo precios viejos
         new_repes_data = []
         for num in seleccion_repes:
             existing_data = next((r for r in state['repes'] if r['Figurita'] == num), None)
@@ -130,7 +130,7 @@ def render_inventory(user, start, end, country_name):
         
         state['repes'] = new_repes_data
         
-        # 3. TABLA DE EDICIÓN
+        # Tabla solo para editar detalles (sin columna de selección)
         if state['repes']:
             df_repes = pd.DataFrame(state['repes'])
             
