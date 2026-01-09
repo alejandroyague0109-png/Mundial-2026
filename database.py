@@ -122,66 +122,151 @@ def remove_unlock(user_id, target_id):
         return True
     except: return False
 
-# --- INVENTARIO (Igual) ---
+# --- INVENTARIO Y ESTADÍSTICAS ---
+
 def get_inventory_status(user_id, start, end):
+    """
+    Recupera el estado para la vista de inventario.
+    Retorna: ids_tengo, ids_wishlist, repetidas_info, stats
+    """
     try:
-        response = supabase.table("inventory").select("*").eq("user_id", user_id).execute()
-        df = pd.DataFrame(response.data)
-        if df.empty: df = pd.DataFrame(columns=['sticker_num', 'status', 'price', 'quantity', 'user_id'])
-        else:
-            df['sticker_num'] = pd.to_numeric(df['sticker_num'], errors='coerce').fillna(0).astype(int)
+        # Usamos sticker_num
+        response = supabase.table("inventory")\
+            .select("*")\
+            .eq("user_id", user_id)\
+            .gte("sticker_num", start)\
+            .lte("sticker_num", end)\
+            .execute()
+            
+        tengo = []
+        wish = []
+        repes_info = {}
         
-        db_tengo = []
-        db_wishlist = []
-        db_repetidas_info = {}
-        
-        if not df.empty:
-            mask = (df['sticker_num'] >= start) & (df['sticker_num'] <= end)
-            df_page = df[mask]
-            db_tengo = df_page[df_page['status'] == 'tengo']['sticker_num'].tolist()
-            db_wishlist = df_page[df_page['status'] == 'wishlist']['sticker_num'].tolist()
-            for _, row in df_page[df_page['status'] == 'repetida'].iterrows():
-                qty = row.get('quantity', 1)
-                if pd.isna(qty): qty = 1
-                db_repetidas_info[row['sticker_num']] = {'price': row['price'], 'quantity': int(qty)}
-                if row['sticker_num'] not in db_tengo: db_tengo.append(row['sticker_num'])
-        return db_tengo, db_wishlist, db_repetidas_info, df
-    except Exception: return [], [], {}, pd.DataFrame()
+        for row in response.data:
+            num_val = row['sticker_num'] 
+            status = row['status']
+            
+            if status == 'tengo':
+                tengo.append(num_val)
+            elif status == 'wishlist':
+                wish.append(num_val)
+            elif status in ['repetida', 'repe']:
+                # Si es repe, cuenta como tengo TAMBIÉN
+                tengo.append(num_val)
+                repes_info[num_val] = {
+                    'price': row.get('price', 0),
+                    'quantity': row.get('quantity', 1)
+                }
+                
+        # Eliminamos duplicados en listas
+        return list(set(tengo)), list(set(wish)), repes_info, {}
 
-def save_inventory_positive(user_id, start, end, ui_owned_list, ui_wishlist_list, ui_repe_df):
-    page_numbers = list(range(start, end + 1))
-    max_retries = 3
-    for attempt in range(max_retries):
-        try:
-            supabase.table("inventory").delete().eq("user_id", user_id).in_("sticker_num", page_numbers).execute()
-            break 
-        except Exception as e:
-            if attempt < max_retries - 1: time.sleep(1); continue
-            else: st.error("Error de conexión."); raise e
+    except Exception as e:
+        print(f"Error get_inventory_status: {e}")
+        return [], [], {}, {}
 
-    new_rows = []
-    for num in ui_owned_list:
-        new_rows.append({"user_id": user_id, "sticker_num": num, "status": "tengo", "price": 0, "quantity": 1})
-    for num in ui_wishlist_list:
-        if num not in ui_owned_list:
-            new_rows.append({"user_id": user_id, "sticker_num": num, "status": "wishlist", "price": 0, "quantity": 1})
-    if not ui_repe_df.empty:
-        for _, row in ui_repe_df.iterrows():
-            es_venta = "Venta" in str(row['Modo'])
-            qty = int(row.get('Cantidad', 1))
-            new_rows.append({"user_id": user_id, "sticker_num": row['Figurita'], "status": "repetida", "price": int(row['Precio']) if es_venta else 0, "quantity": qty})
-    
-    if new_rows:
-        for attempt in range(max_retries):
+def save_inventory_positive(user_id, start, end, tengo_list, wish_list, df_repes):
+    """
+    Guarda los cambios borrando el rango y reinsertando.
+    Convierte todo a int para evitar errores de tipo en la DB.
+    """
+    try:
+        # 1. Limpieza de zona (Borrar rango actual)
+        supabase.table("inventory")\
+            .delete()\
+            .eq("user_id", user_id)\
+            .gte("sticker_num", start)\
+            .lte("sticker_num", end)\
+            .execute()
+
+        new_rows = []
+        inserted_nums = set()
+
+        # 2. Procesar REPETIDAS (Prioridad 1)
+        if not df_repes.empty:
+            for _, row in df_repes.iterrows():
+                try:
+                    num = int(row['Figurita'])
+                    if start <= num <= end:
+                        # Detectar si es Venta o Canje basado en la columna Modo
+                        modo_texto = str(row.get('Modo', ''))
+                        es_venta = "Venta" in modo_texto or "venta" in modo_texto
+                        precio = float(row.get('Precio', 0)) if es_venta else 0
+                        
+                        new_rows.append({
+                            "user_id": user_id,
+                            "sticker_num": num,
+                            "status": "repetida",
+                            "quantity": int(row.get('Cantidad', 1)),
+                            "price": precio
+                        })
+                        inserted_nums.add(num)
+                except ValueError:
+                    continue
+
+        # 3. Procesar TENGO (Prioridad 2)
+        for val in tengo_list:
             try:
-                supabase.table("inventory").insert(new_rows).execute()
-                break
-            except Exception as e:
-                if attempt < max_retries - 1: time.sleep(1)
-                else: raise e
-    fetch_market.clear()
+                num = int(val)
+                if num not in inserted_nums and start <= num <= end:
+                    new_rows.append({
+                        "user_id": user_id,
+                        "sticker_num": num,
+                        "status": "tengo",
+                        "quantity": 1,
+                        "price": 0
+                    })
+                    inserted_nums.add(num)
+            except: continue
 
-# ... (dentro de database.py, al final de la sección INVENTARIO)
+        # 4. Procesar WISHLIST (Prioridad 3)
+        for val in wish_list:
+            try:
+                num = int(val)
+                if num not in inserted_nums and start <= num <= end:
+                    new_rows.append({
+                        "user_id": user_id,
+                        "sticker_num": num,
+                        "status": "wishlist",
+                        "quantity": 0,
+                        "price": 0
+                    })
+            except: continue
+
+        # 5. Insertar en lotes
+        if new_rows:
+            batch_size = 100
+            for i in range(0, len(new_rows), batch_size):
+                batch = new_rows[i:i + batch_size]
+                supabase.table("inventory").insert(batch).execute()
+        
+        # Limpiamos caché del mercado para que se actualicen los cambios
+        fetch_market.clear()
+        return True, "Guardado exitoso"
+
+    except Exception as e:
+        print(f"Error save_inventory: {e}")
+        return False, str(e)
+
+def get_completion_stats(user_id):
+    """
+    Calcula el progreso real del álbum para la barra de progreso.
+    """
+    try:
+        # Traemos todas las figuritas que el usuario TIENE (tengo o repetida)
+        data = supabase.table("inventory")\
+            .select("sticker_num")\
+            .eq("user_id", user_id)\
+            .in_("status", ["tengo", "repetida", "repe"])\
+            .execute()
+            
+        # Usamos un set para contar figuritas únicas (evita duplicados si tiene una pegada y otra repe)
+        unique_stickers = {row['sticker_num'] for row in data.data}
+        return len(unique_stickers)
+        
+    except Exception as e:
+        print(f"Error stats: {e}")
+        return 0
 
 def get_full_wishlist(user_id):
     """Trae TODA la wishlist completa del usuario para compartir."""
@@ -447,89 +532,6 @@ def get_user_by_id(user_id):
         return None
     except:
         return None
-
-# --- FUNCIONES DE INVENTARIO (USANDO sticker_num) ---
-
-def fetch_inventory(user_id, start, end):
-    """
-    Recupera el inventario del usuario para el rango de páginas actual.
-    Usa 'sticker_num' que es el nombre real en la DB.
-    """
-    try:
-        response = supabase.table("inventory")\
-            .select("sticker_num, status, price")\
-            .eq("user_id", user_id)\
-            .gte("sticker_num", start)\
-            .lte("sticker_num", end)\
-            .execute()
-        return response.data
-    except Exception as e:
-        print(f"Error fetch_inventory: {e}")
-        return []
-
-def save_inventory_positive(user_id, start, end, tengo_list, wish_list, df_repes):
-    """
-    Guarda los cambios usando 'sticker_num'.
-    Estrategia: Borrar todo en el rango y volver a insertar (más seguro y limpio).
-    """
-    try:
-        # 1. Borrar todo el rango actual para este usuario
-        supabase.table("inventory")\
-            .delete()\
-            .eq("user_id", user_id)\
-            .gte("sticker_num", start)\
-            .lte("sticker_num", end)\
-            .execute()
-
-        new_rows = []
-
-        # 2. Preparar insert de TENGO
-        for num in tengo_list:
-            # Solo si NO está en repetidas (prioridad a repetidas que tienen más data)
-            is_repe = str(num) in df_repes['Figurita'].astype(str).values
-            if not is_repe:
-                new_rows.append({
-                    "user_id": user_id,
-                    "sticker_num": int(num),
-                    "status": "tengo",
-                    "quantity": 1,
-                    "price": 0
-                })
-
-        # 3. Preparar insert de WISHLIST
-        for num in wish_list:
-            new_rows.append({
-                "user_id": user_id,
-                "sticker_num": int(num),
-                "status": "wishlist",
-                "quantity": 0,
-                "price": 0
-            })
-
-        # 4. Preparar insert de REPETIDAS (Desde el DataFrame)
-        for _, row in df_repes.iterrows():
-            if str(row['Figurita']).strip():
-                new_rows.append({
-                    "user_id": user_id,
-                    "sticker_num": int(row['Figurita']),
-                    "status": "repetida", # Guardamos siempre como 'repetida'
-                    "quantity": 2, # Asumimos >1
-                    "price": float(row.get('Precio', 0))
-                })
-
-        # 5. Insertar en lotes (Batch)
-        if new_rows:
-            # Insertar de a 100 para no saturar
-            batch_size = 100
-            for i in range(0, len(new_rows), batch_size):
-                batch = new_rows[i:i + batch_size]
-                supabase.table("inventory").insert(batch).execute()
-        
-        return True, "Guardado exitoso"
-
-    except Exception as e:
-        print(f"Error save_inventory: {e}")
-        return False, str(e)
 
 # --- FUNCIONES DE SOPORTE PARA TRIANGULACIÓN (CON TELÉFONO DE PUENTE) ---
 
