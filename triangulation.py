@@ -1,80 +1,59 @@
 import pandas as pd
 import database as db
+import streamlit as st
 
 def buscar_triangulacion(user, figu_objetivo, mis_repes_ids):
     """
-    Busca triangulación con validación de zona flexible (strip).
+    VERSIÓN DEBUG: Diagnóstico detallado en pantalla.
     """
-    # Normalizamos mi ubicación (quitar espacios extra)
-    mi_provincia = str(user.get('province', '')).strip()
-    mi_zona = str(user.get('zone', '')).strip()
+    st.markdown("### 🕵️‍♂️ Iniciando Diagnóstico de Triangulación")
+    
+    # 1. Verificar mis datos
+    st.write(f"**YO:** ID {user['id']} | Zona: '{user['zone']}' | Prov: '{user['province']}'")
+    st.write(f"**BUSCO:** #{figu_objetivo}")
+    st.write(f"**OFREZCO (Mis Repes IDs):** {mis_repes_ids}")
+    
+    if 146 in mis_repes_ids:
+        st.success("✅ El sistema detecta que tenés la #146 para ofrecer.")
+    else:
+        st.error(f"❌ El sistema NO ve la #146 en tus repetidas. Revisa `get_inventory_status`.")
 
-    # 1. ENCONTRAR TARGETS
-    raw_targets = db.get_users_with_sticker(figu_objetivo)
+    # 2. Análisis del Target (Usuario 2 - Figu 176)
+    st.markdown("---")
+    st.markdown(f"#### 🔎 Buscando la #{figu_objetivo} en la DB...")
     
-    targets_validos = []
-    target_ids = []
+    # Consulta RAW para ver todo sin filtros
+    response = db.supabase.table("inventory").select("user_id, status, users(nick, province, zone)").eq("num", figu_objetivo).execute()
     
-    for t in raw_targets:
-        if t['user_id'] != user['id']:
-            # Comparación flexible de zona
-            t_prov = str(t['province']).strip()
-            t_zona = str(t['zone']).strip()
-            
-            if t_prov == mi_provincia and t_zona == mi_zona:
-                targets_validos.append(t)
-                target_ids.append(t['user_id'])
-    
-    if not target_ids:
-        return [] 
-
-    # 2. OBTENER WISHLIST
-    targets_wishlists = db.get_wishlists_of_users(target_ids)
-    
-    # 3. BUSCAR EL PUENTE
-    figus_necesarias = set()
-    for t_id, deseos in targets_wishlists.items():
-        figus_necesarias.update(deseos)
-        
-    if not figus_necesarias:
+    if not response.data:
+        st.error(f"❌ No hay NINGÚN registro de la #{figu_objetivo} en la tabla inventory.")
         return []
-
-    posibles_puentes = db.find_potential_bridges(list(figus_necesarias), mis_repes_ids)
-    
-    posibles_triangulaciones = []
-
-    # 4. ARMAR EL ROMPECABEZAS
-    for puente in posibles_puentes:
-        # Comparación flexible de zona para el puente también
-        p_prov = str(puente['province']).strip()
-        p_zona = str(puente['zone']).strip()
-
-        if p_prov != mi_provincia or p_zona != mi_zona:
-            continue
-
-        bridge_uid = puente['user_id']
-        bridge_tiene = puente['has_figu'] 
-        bridge_quiere = puente['wants_figu'] 
         
-        for t_id, deseos in targets_wishlists.items():
-            if bridge_tiene in deseos:
-                target_info = next((t for t in targets_validos if t['user_id'] == t_id), None)
-                
-                if target_info:
-                    cadena = {
-                        "tipo": "triangulacion",
-                        "target_id": t_id,
-                        "target_nick": target_info.get('nick', 'Vecino'),
-                        "target_tiene": figu_objetivo,
-                        
-                        "bridge_id": bridge_uid,
-                        "bridge_nick": puente['nick'],
-                        "bridge_tiene": bridge_tiene,
-                        "bridge_quiere": bridge_quiere,
-                    }
-                    posibles_triangulaciones.append(cadena)
-                    
-                    if len(posibles_triangulaciones) >= 5:
-                        return posibles_triangulaciones
+    for row in response.data:
+        uid = row['user_id']
+        status = row['status']
+        user_data = row.get('users')
+        
+        st.write(f"👉 Encontrada en usuario ID: **{uid}** | Status: **'{status}'**")
+        
+        if not user_data:
+            st.error(f"   ❌ CRÍTICO: El usuario {uid} NO existe en la tabla `users` o la relación está rota.")
+            continue
+            
+        u_prov = user_data.get('province')
+        u_zone = user_data.get('zone')
+        
+        st.write(f"   📍 Ubicación: '{u_prov}' - '{u_zone}'")
+        
+        # Chequeos
+        check_status = str(status).lower().strip() in ['repetida', 'repe']
+        check_zone = (str(u_zone).strip() == str(user['zone']).strip())
+        
+        if check_status and check_zone:
+            st.success(f"   ✅ Candidato Válido (Target)")
+        else:
+            st.warning(f"   ⚠️ Descartado: Status OK? {check_status} | Zona OK? {check_zone}")
 
-    return posibles_triangulaciones
+    # 3. Análisis del Puente (Usuario 5 - Figu 166)
+    # (Solo si pasamos la etapa anterior, pero mostramos lógica general)
+    return [] # Cortamos aquí para que veas el reporte.
