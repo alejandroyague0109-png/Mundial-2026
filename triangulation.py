@@ -10,7 +10,7 @@ def buscar_triangulacion(user, figu_objetivo, mis_repes_ids):
     mi_provincia = str(user.get('province', '')).strip()
     mi_zona = str(user.get('zone', '')).strip()
 
-    # 1. ENCONTRAR TARGETS (Trae phone_encrypted ahora)
+    # 1. ENCONTRAR TARGETS
     raw_targets = db.get_users_with_sticker(figu_objetivo)
     
     targets_validos = []
@@ -65,11 +65,12 @@ def buscar_triangulacion(user, figu_objetivo, mis_repes_ids):
                         "tipo": "triangulacion",
                         "target_id": t_id,
                         "target_nick": target_info.get('nick', 'Vecino'),
-                        "target_phone_enc": target_info.get('phone_encrypted', ''), # <-- NUEVO
+                        "target_phone_enc": target_info.get('phone_encrypted', ''),
                         "target_tiene": figu_objetivo,
                         
                         "bridge_id": bridge_uid,
                         "bridge_nick": puente['nick'],
+                        "bridge_phone_enc": puente.get('phone_encrypted', ''), # <-- NUEVO
                         "bridge_tiene": bridge_tiene,
                         "bridge_quiere": bridge_quiere,
                     }

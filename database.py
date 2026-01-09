@@ -402,15 +402,15 @@ def get_user_by_id(user_id):
         return None
     except:
         return None
-# --- FUNCIONES DE SOPORTE PARA TRIANGULACIÓN (EFICIENTE + STICKER_NUM + TELÉFONO) ---
+
+# --- FUNCIONES DE SOPORTE PARA TRIANGULACIÓN (CON TELÉFONO DE PUENTE) ---
 
 def get_users_with_sticker(figu_num):
     """
     Busca usuarios con la figurita (JOIN eficiente).
-    Trae phone_encrypted para poder pasar el contacto en la triangulación.
+    Trae phone_encrypted del TARGET.
     """
     try:
-        # CONSULTA ACTUALIZADA: Agregamos phone_encrypted
         response = supabase.table("inventory")\
             .select("user_id, status, users(nick, province, zone, phone_encrypted)")\
             .eq("sticker_num", figu_num)\
@@ -420,7 +420,6 @@ def get_users_with_sticker(figu_num):
         for row in response.data:
             if not row.get('users'): continue
             
-            # Validación robusta de status en memoria
             raw_status = str(row.get('status', '')).lower().strip()
             
             if raw_status in ["repetida", "repe"]:
@@ -430,7 +429,7 @@ def get_users_with_sticker(figu_num):
                     'nick': u_data.get('nick', 'User'),
                     'province': str(u_data.get('province', '')).strip(),
                     'zone': str(u_data.get('zone', '')).strip(),
-                    'phone_encrypted': u_data.get('phone_encrypted', '') # <-- NUEVO
+                    'phone_encrypted': u_data.get('phone_encrypted', '')
                 })
         return users
     except Exception as e:
@@ -459,14 +458,15 @@ def get_wishlists_of_users(user_ids):
 
 def find_potential_bridges(needed_figus, my_repes):
     """
-    Busca puentes (JOIN eficiente + sticker_num).
+    Busca puentes.
+    CORRECCIÓN: Trae también el phone_encrypted del PUENTE.
     """
     try:
         if not needed_figus or not my_repes: return []
         
-        # A. Traer DUEÑOS (Holders)
+        # A. Traer DUEÑOS (Holders) + Teléfono
         holders = supabase.table("inventory")\
-            .select("user_id, sticker_num, status, users(nick, province, zone)")\
+            .select("user_id, sticker_num, status, users(nick, province, zone, phone_encrypted)")\
             .in_("sticker_num", needed_figus)\
             .execute()
             
@@ -484,10 +484,12 @@ def find_potential_bridges(needed_figus, my_repes):
             if uid not in holder_map: 
                 holder_map[uid] = []
                 candidate_ids.append(uid)
+                # Guardamos info del Puente + SU TELÉFONO
                 user_info[uid] = {
                     'nick': u_data.get('nick', 'Puente'),
                     'province': str(u_data.get('province', '')).strip(),
-                    'zone': str(u_data.get('zone', '')).strip()
+                    'zone': str(u_data.get('zone', '')).strip(),
+                    'phone_encrypted': u_data.get('phone_encrypted', '') # <-- DATO CLAVE
                 }
             holder_map[uid].append(row['sticker_num'])
             
@@ -512,6 +514,7 @@ def find_potential_bridges(needed_figus, my_repes):
                         'nick': user_info[uid]['nick'],
                         'province': user_info[uid]['province'],
                         'zone': user_info[uid]['zone'],
+                        'phone_encrypted': user_info[uid]['phone_encrypted'], # <-- SE PASA AQUÍ
                         'has_figu': has,
                         'wants_figu': wants
                     })
