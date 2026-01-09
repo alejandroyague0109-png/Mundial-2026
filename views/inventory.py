@@ -4,6 +4,25 @@ import time
 import database as db
 import utils 
 
+# --- MODAL DE INFORMACIÓN (NUEVO) ---
+@st.dialog("🎯 El Poder de la Wishlist")
+def modal_info_wishlist():
+    st.markdown("""
+    ### ¿Por qué es clave marcar tus faltantes? 🤔
+    
+    **1. Para Usuarios FREE (Match Directo):**
+    El sistema funciona como un radar 📡.
+    * Si vos tenés la **#10** y buscás la **#20**.
+    * Y otro tiene la **#20** y busca la **#10**.
+    * **¡BOOM! 💥 Match.** * *Si no la marcás acá, el sistema no sabe que la querés y no te avisa.*
+
+    **2. Para Usuarios PREMIUM (Triangulación):**
+    Acá ocurre la magia de las 3 bandas 📐.
+    * Si nadie quiere tus repetidas directamente, la Wishlist permite que el sistema encuentre un **Puente**.
+    * Vos -> Puente -> Objetivo -> Vos.
+    * *Sin Wishlist, no hay triangulación posible.*
+    """)
+
 # --- FUNCIÓN AUXILIAR PARA DETECTAR CAMBIOS ---
 def marcar_cambio():
     st.session_state.unsaved_changes = True
@@ -47,9 +66,20 @@ def render_inventory(user, start, end, seleccion_pais):
         on_change=marcar_cambio 
     )
 
-    # --- SECCIÓN WISHLIST ---
-    st.markdown("### ❤️ Wishlist (Prioridad)")
-    st.caption("Marcá las que **TE FALTAN** y querés conseguir urgente.")
+    # --- SECCIÓN WISHLIST (CON BOTÓN INFO) ---
+    st.divider()
+    
+    # Layout para texto + botón info
+    col_w_txt, col_w_btn = st.columns([0.85, 0.15])
+    
+    with col_w_txt:
+        st.markdown("### ❤️ Wishlist (Prioridad)")
+        st.caption("Marcá las que **TE FALTAN** y querés conseguir urgente.")
+    
+    with col_w_btn:
+        # Botón que abre el modal explicativo
+        if st.button("ℹ️", key="btn_info_wishlist", help="¿Para qué sirve la Wishlist?"):
+            modal_info_wishlist()
     
     todas = set(range(start, end + 1))
     tengo_set = set(seleccion_tengo) if seleccion_tengo else set()
@@ -96,7 +126,7 @@ def render_inventory(user, start, end, seleccion_pais):
         st.info("👇 **Data:** Hacé doble clic en 'Modo' para cambiar entre **Canje** y **Venta**.")
         data = []
         
-        # --- CAMBIO: Se agrega sorted() para ordenar la tabla ---
+        # Ordenamos la tabla
         for n in sorted(seleccion_repes):
             info = repetidas_info.get(n, {})
             precio = info.get('price', 0)
