@@ -64,7 +64,7 @@ def mostrar_modal_premium():
 def render_card(item, tipo, user, is_pending_view=False):
     suffix = "pend" if is_pending_view else "mkt"
     
-    # 1. RECUPERAMOS EL DATO PREMIUM (Ahora garantizado por la inyección previa)
+    # El dato is_premium ahora viene garantizado por la inyección en render_market
     is_target_premium = item.get('is_premium', False)
     
     with st.container(border=True):
@@ -92,12 +92,12 @@ def render_card(item, tipo, user, is_pending_view=False):
 
         # --- INFO ---
         with col_info:
-            # Badges (Etiquetas)
             badges = []
             if is_target_premium:
-                badges.append("<span style='background-color:#fff8e1; color:#f9a825; border:1px solid #fbc02d; padding:2px 6px; border-radius:4px; font-size:0.8em; font-weight:bold; margin-right:5px;'>💎 PREMIUM</span>")
+                # Badge Premium: Fondo dorado suave, texto oscuro, borde dorado
+                badges.append("<span style='background-color:#fff9c4; color:#f57f17; border:1px solid #fbc02d; padding:2px 6px; border-radius:4px; font-size:0.75em; font-weight:bold; margin-right:5px;'>💎 PREMIUM</span>")
             if is_wishlist:
-                badges.append("<span style='background-color:#ffebee; color:#c62828; padding:2px 6px; border-radius:4px; font-size:0.8em; font-weight:bold;'>❤️ TU DESEO</span>")
+                badges.append("<span style='background-color:#ffebee; color:#c62828; padding:2px 6px; border-radius:4px; font-size:0.75em; font-weight:bold;'>❤️ TU DESEO</span>")
             
             if badges:
                 st.markdown(" ".join(badges), unsafe_allow_html=True)
@@ -105,8 +105,7 @@ def render_card(item, tipo, user, is_pending_view=False):
             # Estilo del Nombre
             nick_display = item['nick']
             if is_target_premium:
-                # Nombre en dorado/negrita si es premium
-                nick_html = f"<span style='font-size: 1.25em; font-weight: bold; color: #f57f17;'>{nick_display}</span>"
+                nick_html = f"<span style='font-size: 1.25em; font-weight: bold; color: #e65100;'>{nick_display}</span>"
             else:
                 nick_html = f"<span style='font-size: 1.25em; font-weight: bold;'>{nick_display}</span>"
 
@@ -117,7 +116,6 @@ def render_card(item, tipo, user, is_pending_view=False):
                 </div>
             """, unsafe_allow_html=True)
             
-            # Detalle del intercambio
             if tipo == 'canje':
                 fig_entrego = item.get('te_pide', '?')
                 st.markdown(f"""
@@ -239,48 +237,40 @@ def render_market(user):
     with utils.spinner_futbolero():
         market_df = db.fetch_market(user['id'])
     
+    # 1. Obtener Matcheos Crudos
     matches, ventas = db.find_matches(user['id'], market_df)
 
-    # --- FIX CRÍTICO: INYECCIÓN MANUAL DE DATOS PREMIUM ---
-    # 1. Creamos un mapa: {user_id -> es_premium} recorriendo el DataFrame crudo
-    premium_map = {}
-    if not market_df.empty:
-        for _, row in market_df.iterrows():
-            is_prem = False
-            # Intentamos leer de la columna plana o del objeto anidado 'users'
-            if 'is_premium' in row:
-                is_prem = bool(row['is_premium'])
-            elif 'users' in row and isinstance(row['users'], dict):
-                is_prem = row['users'].get('is_premium', False)
-            
-            premium_map[row['user_id']] = is_prem
+    # 2. FIX INFALIBLE: OBTENER IDs PREMIUM DIRECTAMENTE DE LA DB
+    # Esto evita problemas con estructuras de DataFrame o nombres de columnas.
+    try:
+        # Traemos solo los IDs de quienes son premium
+        prem_response = db.supabase.table("users").select("id").eq("is_premium", True).execute()
+        # Creamos un Set para busqueda O(1)
+        premium_ids = {u['id'] for u in prem_response.data}
+    except:
+        premium_ids = set()
 
-    # 2. Inyectamos el dato en cada ítem de las listas procesadas
+    # 3. INYECTAR DATO PREMIUM EN LAS LISTAS
     for m in matches:
-        m['is_premium'] = premium_map.get(m['target_id'], False)
+        m['is_premium'] = m['target_id'] in premium_ids
     for v in ventas:
-        v['is_premium'] = premium_map.get(v['target_id'], False)
-    # -----------------------------------------------------
+        v['is_premium'] = v['target_id'] in premium_ids
 
-    # --- LÓGICA DE ORDENAMIENTO POR PRIORIDAD ---
+    # 4. ORDENAMIENTO POR PRIORIDAD (0=Max, 3=Min)
     # 0: Premium + Wishlist
     # 1: Premium + Normal
     # 2: Free + Wishlist
     # 3: Free + Normal
-    
     def get_sort_score(item):
         is_p = item.get('is_premium', False)
         is_w = item.get('is_wishlist', False)
-        
         if is_p and is_w: return 0
         if is_p and not is_w: return 1
         if not is_p and is_w: return 2
-        return 3 # Free + Normal
+        return 3
 
-    # Ordenamos por (Score, Numero Figurita)
     matches = sorted(matches, key=lambda x: (get_sort_score(x), x['figu']))
     ventas = sorted(ventas, key=lambda x: (get_sort_score(x), x['figu']))
-    # --------------------------------------------
 
     # Pendientes
     unlocked_ids = st.session_state.unlocked_users
