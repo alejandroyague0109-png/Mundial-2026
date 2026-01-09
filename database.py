@@ -270,15 +270,60 @@ def register_purchase(user_id, received_fig, target_id_to_remove=None):
 
 # --- MERCADO (Igual) ---
 @st.cache_data(ttl=60, show_spinner=False)
-def fetch_market(user_id):
+def fetch_market(current_user_id):
+    """
+    Trae todo el mercado excepto lo del propio usuario.
+    Devuelve un DataFrame limpio y seguro para modificar.
+    """
     try:
-        resp = supabase.table("inventory").select("*, users(nick, province, zone, phone_encrypted, reputation)").neq("user_id", user_id).execute()
-        df = pd.DataFrame(resp.data)
-        if not df.empty:
-            df['sticker_num'] = pd.to_numeric(df['sticker_num'], errors='coerce').fillna(0).astype(int)
-            df['price'] = pd.to_numeric(df['price'], errors='coerce').fillna(0).astype(int)
+        # Traemos todo el inventario que NO sea del usuario actual
+        response = supabase.table("inventory")\
+            .select("*, users(id, nick, province, zone, phone_encrypted, is_premium, reputation)")\
+            .neq("user_id", current_user_id)\
+            .execute()
+        
+        if not response.data:
+            return pd.DataFrame() # Devolver DF vacío si no hay datos
+
+        # Crear DataFrame
+        df = pd.DataFrame(response.data)
+        
+        # --- FIX: ELIMINAR SETTINGWITHCOPYWARNING ---
+        # Al hacer .copy(), le decimos a Pandas: "Este es un nuevo objeto independiente".
+        df = df.copy()
+
+        # Procesamiento de columnas anidadas (users)
+        # Usamos una función segura para extraer datos del dict 'users'
+        def extract_user_data(row, key):
+            user_data = row.get('users')
+            if isinstance(user_data, dict):
+                return user_data.get(key, '')
+            return ''
+
+        # Aplanamos los datos del usuario en columnas nuevas
+        df['nick'] = df.apply(lambda x: extract_user_data(x, 'nick'), axis=1)
+        df['province'] = df.apply(lambda x: extract_user_data(x, 'province'), axis=1)
+        df['zone'] = df.apply(lambda x: extract_user_data(x, 'zone'), axis=1)
+        df['phone_encrypted'] = df.apply(lambda x: extract_user_data(x, 'phone_encrypted'), axis=1)
+        df['is_premium'] = df.apply(lambda x: extract_user_data(x, 'is_premium'), axis=1)
+        df['reputation'] = df.apply(lambda x: extract_user_data(x, 'reputation'), axis=1)
+        
+        # La columna que causaba el error (target_id)
+        # Aseguramos que sea el ID del dueño de la figu
+        df['target_id'] = df['user_id'] 
+
+        # Renombramos para estandarizar
+        # Asumimos que la columna de la figurita es 'sticker_num' (según corrección anterior)
+        if 'sticker_num' in df.columns:
+            df['figu'] = df['sticker_num']
+        elif 'num' in df.columns:
+            df['figu'] = df['num']
+            
         return df
-    except: return pd.DataFrame()
+
+    except Exception as e:
+        print(f"Error fetch_market: {e}")
+        return pd.DataFrame()
 
 def find_matches(user_id, market_df):
     if market_df.empty: return [], []
