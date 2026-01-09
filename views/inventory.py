@@ -35,7 +35,7 @@ def save_changes(user_id, country_code, start, end, tengo_selection, wish_select
         )
     if success:
         st.toast("¡Álbum actualizado!", icon="💾")
-        # Actualizamos el snapshot para que no pida guardar de nuevo
+        # Actualizamos el snapshot
         st.session_state[f"snapshot_tengo_{country_code}"] = set(tengo_selection)
         st.session_state[f"snapshot_wish_{country_code}"] = set(wish_selection)
         # Limpiamos flags
@@ -45,10 +45,16 @@ def save_changes(user_id, country_code, start, end, tengo_selection, wish_select
     else:
         st.error(f"Error al guardar: {msg}")
 
-def render_inventory(user):
+# CORRECCIÓN AQUÍ: Aceptamos los 4 argumentos que envía app_figuritas.py
+def render_inventory(user, start_arg, end_arg, country_code_arg):
+    
+    # Sincronizamos el estado inicial si no existe
+    if "current_country" not in st.session_state:
+        st.session_state.current_country = country_code_arg
+
     st.subheader(f"📖 Mi Álbum: {st.session_state.current_country}")
 
-    # 1. Selector de País/Álbum
+    # 1. Selector de País/Álbum (Permite cambiar dinámicamente)
     countries = list(config.ALBUM_PAGES.keys())
     current_idx = countries.index(st.session_state.current_country) if st.session_state.current_country in countries else 0
     
@@ -62,20 +68,18 @@ def render_inventory(user):
     # Detectar cambio de país y gestionar guardado
     if selected_country != st.session_state.current_country:
         if st.session_state.get("unsaved_changes", False):
-            # Si hay cambios, views/modals.py debería manejar esto, 
-            # pero aquí forzamos el cambio de estado para disparar la UI
             from views import modals
             modals.confirmar_cambio_pais(selected_country, user)
-            return # Cortamos ejecución hasta que decida
+            return 
         else:
             st.session_state.current_country = selected_country
             st.rerun()
 
-    # Configuración de rangos
+    # Recalculamos rangos basados en la selección actual (ignora los args antiguos si cambiaste de país)
     start, end = config.ALBUM_PAGES[st.session_state.current_country]
     all_stickers = [str(i) for i in range(start, end + 1)]
 
-    # 2. Cargar Datos (Solo si cambiamos de país o es la primera vez)
+    # 2. Cargar Datos
     cache_key_tengo = f"pills_tengo_{selected_country}"
     cache_key_wish = f"pills_wish_{selected_country}"
     
@@ -83,7 +87,6 @@ def render_inventory(user):
         with utils.spinner_futbolero():
             inventory_data = db.fetch_inventory(user['id'], start, end)
             
-        # Parsear estado inicial
         tengo_db = set()
         wish_db = set()
         repes_rows = []
@@ -97,7 +100,7 @@ def render_inventory(user):
             elif status == 'wishlist':
                 wish_db.add(num)
             elif status in ['repetida', 'repe']:
-                tengo_db.add(num) # Si es repe, también "la tengo"
+                tengo_db.add(num) 
                 repes_rows.append({
                     "Figurita": num,
                     "Estado": "Repetida",
@@ -105,12 +108,10 @@ def render_inventory(user):
                     "Notas": ""
                 })
         
-        # Guardar en Session State
         st.session_state[cache_key_tengo] = list(tengo_db)
         st.session_state[cache_key_wish] = list(wish_db)
         st.session_state[f"repes_df_{selected_country}"] = pd.DataFrame(repes_rows)
         
-        # Snapshots para detectar cambios
         st.session_state[f"snapshot_tengo_{selected_country}"] = tengo_db.copy()
         st.session_state[f"snapshot_wish_{selected_country}"] = wish_db.copy()
 
@@ -139,7 +140,6 @@ def render_inventory(user):
         st.caption("Marcá las que **TE FALTAN** y querés conseguir urgente.")
     
     with col_w_btn:
-        # BOTÓN DE INFORMACIÓN
         if st.button("ℹ️", key="btn_info_wishlist", help="¿Para qué sirve esto?"):
             modal_info_wishlist()
 
@@ -152,18 +152,16 @@ def render_inventory(user):
         label_visibility="collapsed"
     )
     
-    # Validación visual: No se puede tener y desear la misma
     overlap = set(selection_tengo) & set(selection_wish)
     if overlap:
         st.warning(f"⚠️ Cuidado: Marcaste estas figuritas como 'Tengo' y 'Deseo' al mismo tiempo: {', '.join(overlap)}")
 
     st.markdown("---")
 
-    # C. SECCIÓN REPETIDAS (Data Editor)
+    # C. SECCIÓN REPETIDAS
     st.markdown("##### 🔁 Mis Repetidas (Para Canje/Venta)")
     st.caption("Agregá acá las que te sobraron. Son las que verán los demás usuarios.")
     
-    # Preparamos DF inicial (puede venir vacío o cargado)
     if f"repes_df_{selected_country}" not in st.session_state:
         st.session_state[f"repes_df_{selected_country}"] = pd.DataFrame(columns=["Figurita", "Estado", "Precio", "Notas"])
 
@@ -183,14 +181,10 @@ def render_inventory(user):
     # --- BOTÓN DE GUARDADO ---
     st.markdown("###")
     
-    # Detectar cambios para habilitar botón (lógica simple)
-    # Comparamos sets actuales con snapshots
     has_changes = False
     if set(selection_tengo) != st.session_state[f"snapshot_tengo_{selected_country}"]: has_changes = True
     if set(selection_wish) != st.session_state[f"snapshot_wish_{selected_country}"]: has_changes = True
-    # (El data_editor maneja su estado, asumimos cambio si interactúa)
     
-    # Botón Flotante o Fijo
     col_save, _ = st.columns([0.5, 0.5])
     if col_save.button("💾 Guardar Cambios", type="primary", use_container_width=True):
         save_changes(
@@ -202,6 +196,5 @@ def render_inventory(user):
             df_editor
         )
         
-    # Flag global para la navegación
     if has_changes:
         st.session_state.unsaved_changes = True
