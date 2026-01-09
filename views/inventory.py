@@ -4,23 +4,6 @@ import time
 import database as db
 import utils 
 
-# --- MODAL DE INFORMACIÓN ---
-@st.dialog("🎯 El Poder de la Wishlist")
-def modal_info_wishlist():
-    st.markdown("""
-    ### ¿Por qué es clave marcar tus faltantes? 🤔
-    
-    **1. Para TODOS (Prioridad y Compartir):**
-    ¡Organizá tu búsqueda! 📋
-    * **🚀 Prioridad:** En el Mercado, las figuritas que marcás acá aparecen **PRIMERAS**.
-    * **📲 WhatsApp:** Te sirve para tener tu lista de faltantes siempre a mano y compartirla rápido por WhatsApp con tus amigos.
-
-    **2. Para PREMIUM (Alertas y Triangulación):**
-    Desbloqueá la inteligencia artificial del álbum 🤖.
-    * **🔔 Alertas:** El sistema te **notifica automáticamente** cuando alguien publica una figurita de tu Wishlist.
-    * **📐 Triangulación:** Habilita el canje a 3 bandas (Vos -> Puente -> Objetivo) cuando no hay cambio directo.
-    """)
-
 # --- FUNCIÓN AUXILIAR PARA DETECTAR CAMBIOS ---
 def marcar_cambio():
     st.session_state.unsaved_changes = True
@@ -42,7 +25,7 @@ def render_inventory(user, start, end, seleccion_pais):
     col_head_1, col_btn_all, col_btn_none = st.columns([4, 1, 1])
     col_head_1.markdown("### 1️⃣ Tus Figus")
 
-    # Botones masivos (CORREGIDO: width="stretch")
+    # Botones masivos
     if col_btn_all.button("Todas", width="stretch", key=f"all_{seleccion_pais}"):
         st.session_state[key_pills] = list(range(start, end + 1))
         st.session_state[key_wish] = [] 
@@ -64,20 +47,9 @@ def render_inventory(user, start, end, seleccion_pais):
         on_change=marcar_cambio 
     )
 
-    # --- SECCIÓN WISHLIST (CON BOTÓN INFO) ---
-    st.divider()
-    
-    # Layout para texto + botón info
-    col_w_txt, col_w_btn = st.columns([0.85, 0.15])
-    
-    with col_w_txt:
-        st.markdown("### ❤️ Wishlist (Prioridad)")
-        st.caption("Marcá las que **TE FALTAN** y querés conseguir urgente.")
-    
-    with col_w_btn:
-        # Botón info
-        if st.button("ℹ️", key="btn_info_wishlist", help="¿Para qué sirve la Wishlist?"):
-            modal_info_wishlist()
+    # --- SECCIÓN WISHLIST ---
+    st.markdown("### ❤️ Wishlist (Prioridad)")
+    st.caption("Marcá las que **TE FALTAN** y querés conseguir urgente.")
     
     todas = set(range(start, end + 1))
     tengo_set = set(seleccion_tengo) if seleccion_tengo else set()
@@ -124,7 +96,7 @@ def render_inventory(user, start, end, seleccion_pais):
         st.info("👇 **Data:** Hacé doble clic en 'Modo' para cambiar entre **Canje** y **Venta**.")
         data = []
         
-        # Ordenamos la tabla
+        # --- CAMBIO: Se agrega sorted() para ordenar la tabla ---
         for n in sorted(seleccion_repes):
             info = repetidas_info.get(n, {})
             precio = info.get('price', 0)
@@ -141,29 +113,26 @@ def render_inventory(user, start, end, seleccion_pais):
                 "Precio": st.column_config.NumberColumn(min_value=0, step=100)
             }, 
             hide_index=True, 
-            use_container_width=True, # Nota: En data_editor, use_container_width suele seguir siendo válido, si falla cámbialo a width=...
+            use_container_width=True,
             key=f"editor_{seleccion_pais}",
             on_change=marcar_cambio 
         )
     
-    # Snapshot para detectar cambios
+    # --- FIX CRÍTICO: GUARDAR SNAPSHOT PARA EL MODAL DE SALIDA ---
     st.session_state[f"snapshot_df_{seleccion_pais}"] = edited_df
+    # -------------------------------------------------------------
 
     st.divider()
 
-    # --- BOTÓN GUARDAR (CORREGIDO: width="stretch") ---
+    # --- BOTÓN GUARDAR ---
     btn_type = "primary" if st.session_state.get('unsaved_changes', False) else "secondary"
     btn_lbl = "💾 GUARDAR CAMBIOS (*)" if st.session_state.get('unsaved_changes', False) else "💾 GUARDAR CAMBIOS"
 
     if st.button(btn_lbl, type=btn_type, width="stretch"):
         with utils.spinner_futbolero():
-            # Llamamos a la función de database.py
-            success, msg = db.save_inventory_positive(user['id'], start, end, seleccion_tengo, seleccion_wishlist, edited_df)
-            
-            if success:
-                st.session_state.unsaved_changes = False 
-                st.toast("¡Cambios guardados!", icon="✅")
-                time.sleep(0.5)
-                st.rerun()
-            else:
-                st.error(f"Error al guardar: {msg}")
+            db.save_inventory_positive(user['id'], start, end, seleccion_tengo, seleccion_wishlist, edited_df)
+            st.session_state.unsaved_changes = False 
+        
+        st.toast("¡Cambios guardados!", icon="✅")
+        time.sleep(0.5)
+        st.rerun()
