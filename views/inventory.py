@@ -42,14 +42,14 @@ def render_inventory(user, start, end, seleccion_pais):
     col_head_1, col_btn_all, col_btn_none = st.columns([4, 1, 1])
     col_head_1.markdown("### 1️⃣ Tus Figus")
 
-    # Botones masivos (CORREGIDO: use_container_width=True)
-    if col_btn_all.button("Todas", use_container_width=True, key=f"all_{seleccion_pais}"):
+    # Botones masivos (CORREGIDO: width="stretch")
+    if col_btn_all.button("Todas", width="stretch", key=f"all_{seleccion_pais}"):
         st.session_state[key_pills] = list(range(start, end + 1))
         st.session_state[key_wish] = [] 
         st.session_state.unsaved_changes = True 
         st.rerun()
 
-    if col_btn_none.button("Ninguna", use_container_width=True, key=f"none_{seleccion_pais}"):
+    if col_btn_none.button("Ninguna", width="stretch", key=f"none_{seleccion_pais}"):
         st.session_state[key_pills] = []
         st.session_state.unsaved_changes = True 
         st.rerun()
@@ -141,7 +141,7 @@ def render_inventory(user, start, end, seleccion_pais):
                 "Precio": st.column_config.NumberColumn(min_value=0, step=100)
             }, 
             hide_index=True, 
-            use_container_width=True, # Esto es correcto para data_editor
+            use_container_width=True, # Nota: En data_editor, use_container_width suele seguir siendo válido, si falla cámbialo a width=...
             key=f"editor_{seleccion_pais}",
             on_change=marcar_cambio 
         )
@@ -151,11 +151,11 @@ def render_inventory(user, start, end, seleccion_pais):
 
     st.divider()
 
-    # --- BOTÓN GUARDAR (CORREGIDO: use_container_width=True) ---
+    # --- BOTÓN GUARDAR (CORREGIDO: width="stretch") ---
     btn_type = "primary" if st.session_state.get('unsaved_changes', False) else "secondary"
     btn_lbl = "💾 GUARDAR CAMBIOS (*)" if st.session_state.get('unsaved_changes', False) else "💾 GUARDAR CAMBIOS"
 
-    if st.button(btn_lbl, type=btn_type, use_container_width=True):
+    if st.button(btn_lbl, type=btn_type, width="stretch"):
         with utils.spinner_futbolero():
             # Llamamos a la función de database.py
             success, msg = db.save_inventory_positive(user['id'], start, end, seleccion_tengo, seleccion_wishlist, edited_df)
