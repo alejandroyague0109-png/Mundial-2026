@@ -402,3 +402,113 @@ def get_user_by_id(user_id):
         return None
     except:
         return None
+
+# --- FUNCIONES DE SOPORTE PARA TRIANGULACIÓN (ACTUALIZADO CON LOCATION) ---
+
+def get_users_with_sticker(figu_num):
+    """Devuelve usuarios que tienen la figurita, INCLUYENDO SU UBICACIÓN."""
+    try:
+        # Agregamos 'province' y 'zone' al select
+        response = supabase.table("inventory")\
+            .select("user_id, users(nick, province, zone)")\
+            .eq("num", figu_num)\
+            .eq("status", "tengo")\
+            .execute()
+            
+        users = []
+        for row in response.data:
+            u_data = row.get('users', {})
+            users.append({
+                'user_id': row['user_id'],
+                'nick': u_data.get('nick', 'User'),
+                'province': u_data.get('province', ''), # <--- DATO CLAVE
+                'zone': u_data.get('zone', '')          # <--- DATO CLAVE
+            })
+        return users
+    except Exception as e:
+        print(f"Error get_users_with_sticker: {e}")
+        return []
+
+def get_wishlists_of_users(user_ids):
+    """(Esta función no cambia, solo trae IDs de figus)"""
+    try:
+        if not user_ids: return {}
+        response = supabase.table("inventory")\
+            .select("user_id, num")\
+            .in_("user_id", user_ids)\
+            .eq("status", "wishlist")\
+            .execute()
+            
+        res = {}
+        for row in response.data:
+            uid = row['user_id']
+            if uid not in res: res[uid] = []
+            res[uid].append(row['num'])
+        return res
+    except Exception as e:
+        print(f"Error get_wishlists: {e}")
+        return {}
+
+def find_potential_bridges(needed_figus, my_repes):
+    """
+    Busca puentes INCLUYENDO SU UBICACIÓN para filtrar.
+    """
+    try:
+        if not needed_figus or not my_repes: return []
+        
+        # A. Traer usuarios que TIENEN lo que se necesita + SU UBICACIÓN
+        holders = supabase.table("inventory")\
+            .select("user_id, num, users(nick, province, zone)")\
+            .in_("num", needed_figus)\
+            .eq("status", "tengo")\
+            .execute()
+            
+        holder_map = {} 
+        user_info = {} # Guardamos info del usuario (nick, loc)
+        
+        candidate_ids = []
+        for row in holders.data:
+            uid = row['user_id']
+            u_data = row.get('users', {})
+            
+            if uid not in holder_map: 
+                holder_map[uid] = []
+                candidate_ids.append(uid)
+                # Guardamos la ubicación del posible puente
+                user_info[uid] = {
+                    'nick': u_data.get('nick', 'Puente'),
+                    'province': u_data.get('province', ''),
+                    'zone': u_data.get('zone', '')
+                }
+            holder_map[uid].append(row['num'])
+            
+        if not candidate_ids: return []
+        
+        # B. De esos candidatos, ver quiénes QUIEREN lo que yo tengo
+        wanters = supabase.table("inventory")\
+            .select("user_id, num")\
+            .in_("user_id", candidate_ids)\
+            .in_("num", my_repes)\
+            .eq("status", "wishlist")\
+            .execute()
+            
+        bridges = []
+        for row in wanters.data:
+            uid = row['user_id']
+            wants = row['num']
+            for has in holder_map[uid]:
+                # Empaquetamos todo, incluyendo ubicación
+                bridges.append({
+                    'user_id': uid,
+                    'nick': user_info[uid]['nick'],
+                    'province': user_info[uid]['province'], # <--- DATO CLAVE
+                    'zone': user_info[uid]['zone'],         # <--- DATO CLAVE
+                    'has_figu': has,
+                    'wants_figu': wants
+                })
+                
+        return bridges
+
+    except Exception as e:
+        print(f"Error bridge: {e}")
+        return []
