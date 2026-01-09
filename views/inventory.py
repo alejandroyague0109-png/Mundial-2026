@@ -4,17 +4,17 @@ import time
 import database as db
 import utils 
 
-# --- MODAL DE INFORMACIÓN (NUEVO) ---
+# --- MODAL DE INFORMACIÓN (CORREGIDO) ---
 @st.dialog("🎯 El Poder de la Wishlist")
 def modal_info_wishlist():
     st.markdown("""
     ### ¿Por qué es clave marcar tus faltantes? 🤔
     
-    **1. Para Usuarios FREE (Match Directo):**
-    El sistema funciona como un radar 📡.
-    * Si vos tenés la **#10** y buscás la **#20**.
-    * Y otro tiene la **#20** y busca la **#10**.
-    * **¡BOOM! 💥 Match.** * *Si no la marcás acá, el sistema no sabe que la querés y no te avisa.*
+    **1. Para Usuarios FREE (Prioridad en Mercado):**
+    ¡Ahorrá tiempo buscando! ⏳
+    * Si marcás las figuritas que buscás en la Wishlist, el Mercado las detecta.
+    * Cuando entres a buscar, **las publicaciones de las figus que te faltan aparecerán PRIMERAS** y destacadas.
+    * Dejás de scrollear entre miles de figuritas que no te sirven.
 
     **2. Para Usuarios PREMIUM (Triangulación):**
     Acá ocurre la magia de las 3 bandas 📐.
