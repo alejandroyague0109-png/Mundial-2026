@@ -6,7 +6,7 @@ import locations
 import utils
 import config
 import streamlit.components.v1 as components 
-import triangulation # <--- NUEVO IMPORT
+import triangulation 
 
 ITEMS_POR_PAGINA = 10
 
@@ -65,7 +65,7 @@ def mostrar_modal_premium():
 def render_card(item, tipo, user, is_pending_view=False):
     suffix = "pend" if is_pending_view else "mkt"
     
-    # El dato is_premium ahora viene garantizado por la inyección en render_market
+    # 1. RECUPERAMOS EL DATO PREMIUM
     is_target_premium = item.get('is_premium', False)
     
     with st.container(border=True):
@@ -95,7 +95,6 @@ def render_card(item, tipo, user, is_pending_view=False):
         with col_info:
             badges = []
             if is_target_premium:
-                # Badge Premium: Fondo dorado suave, texto oscuro, borde dorado
                 badges.append("<span style='background-color:#fff9c4; color:#f57f17; border:1px solid #fbc02d; padding:2px 6px; border-radius:4px; font-size:0.75em; font-weight:bold; margin-right:5px;'>💎 PREMIUM</span>")
             if is_wishlist:
                 badges.append("<span style='background-color:#ffebee; color:#c62828; padding:2px 6px; border-radius:4px; font-size:0.75em; font-weight:bold;'>❤️ TU DESEO</span>")
@@ -227,9 +226,8 @@ def paginar_y_mostrar(lista_items, tipo_key, tipo_card, user, is_pending_view=Fa
 def render_market(user):
     st.subheader("🔍 Mercado")
     
-    # Estado para resultados de triangulación
     if 'triang_results' not in st.session_state: st.session_state.triang_results = None
-    
+
     with st.expander("🔎 Filtros", expanded=True):
         col_f1, col_f2, col_f3 = st.columns(3)
         filtro_prov = col_f1.multiselect("Provincia:", list(locations.ARGENTINA.keys()), on_change=reset_pagination)
@@ -237,56 +235,57 @@ def render_market(user):
         if filtro_prov:
             for p in filtro_prov: avail_zones.extend(locations.ARGENTINA.get(p, []))
         filtro_zonas = col_f2.multiselect("Zona:", avail_zones, on_change=reset_pagination)
-        
-        # Capturamos el filtro numérico
         filtro_num = col_f3.text_input("Figurita #:", on_change=reset_pagination)
 
-    # --- BOTÓN DE TRIANGULACIÓN ---
-    # Solo aparece si el usuario está buscando una figurita específica
+    # --- SECCIÓN TRIANGULACIÓN (SIEMPRE VISIBLE) ---
+    st.markdown("---")
+    c_triang_1, c_triang_2 = st.columns([0.8, 0.2])
+    
+    # Texto dinámico según si hay filtro o no
     if filtro_num:
-        st.markdown("---")
-        c_triang_1, c_triang_2 = st.columns([0.8, 0.2])
-        
-        c_triang_1.info(f"¿No encontrás cambio directo por la **#{filtro_num}**?")
-        
-        # Icono de Info con explicación
-        with c_triang_2:
-            st.markdown("""
-            <div style="text-align: right;">
-                <span title="La triangulación busca un tercer usuario 'Puente'. Tú le das al Puente, el Puente le da al Dueño, y el Dueño te da a ti. ¡Magia!" style="font-size: 2em; cursor: help;">ℹ️</span>
-            </div>
-            """, unsafe_allow_html=True)
+        msg_info = f"¿No encontrás cambio directo por la **#{filtro_num}**?"
+        lbl_btn = f"📐 Buscar Triangulación para #{filtro_num}"
+    else:
+        msg_info = "🚀 **Modo Experto:** ¿Buscás una figurita difícil? Probá la triangulación."
+        lbl_btn = "📐 Buscar Triangulación"
 
-        if st.button(f"📐 Buscar Triangulación para #{filtro_num}", type="primary", use_container_width=True):
-            if not user.get('is_premium', False):
-                mostrar_modal_premium()
-            else:
-                with utils.spinner_futbolero():
-                    # 1. Obtener mis repetidas para saber qué puedo ofrecer
-                    s, e = config.ALBUM_PAGES[st.session_state.current_country]
-                    # Nota: Buscamos en TODAS mis repes, no solo la pag actual, idealmente.
-                    # Por eficiencia del MVP usamos el helper existente que trae todo el inventario de la sección
-                    _, _, repes_info, _ = db.get_inventory_status(user['id'], 1, 999) # Traemos todo el rango si es posible o usar start/end
-                    mis_repes_ids = list(repes_info.keys())
-                    
-                    if not mis_repes_ids:
-                        st.error("Necesitás cargar figuritas 'Repetidas' para triangular.")
-                    else:
-                        # ... dentro de render_market ...
-                        try:
-                            target_val = int(filtro_num)
-                            # CAMBIO AQUÍ: Pasamos 'user' completo, no 'user['id']'
-                            resultados = triangulation.buscar_triangulacion(user, target_val, mis_repes_ids)
-                            
-                            st.session_state.triang_results = resultados
-                            if not resultados:
-                                # Mensaje actualizado para ser claro sobre el motivo
-                                st.warning("No se encontraron triangulaciones en tu zona para esta figurita.")
-                        except ValueError:
-                            st.error("Ingresá un número válido.")
-# ...
+    c_triang_1.info(msg_info)
+    with c_triang_2:
+        st.markdown("""
+        <div style="text-align: right;">
+            <span title="La triangulación busca un tercer usuario 'Puente' en tu zona. Tú le das al Puente, el Puente le da al Dueño, y el Dueño te da a ti." style="font-size: 2em; cursor: help;">ℹ️</span>
+        </div>
+        """, unsafe_allow_html=True)
 
-    # MOSTRAR RESULTADOS DE TRIANGULACIÓN (Si existen)
+    if st.button(lbl_btn, type="primary", use_container_width=True):
+        # A. Si no puso número, avisar
+        if not filtro_num:
+            st.warning("⚠️ Primero escribí el número de la figurita que buscás en el filtro de arriba ('Figurita #').")
+        
+        # B. Si no es premium, mostrar venta
+        elif not user.get('is_premium', False):
+            mostrar_modal_premium()
+            
+        # C. Ejecutar búsqueda
+        else:
+            with utils.spinner_futbolero():
+                _, _, repes_info, _ = db.get_inventory_status(user['id'], 1, 999)
+                mis_repes_ids = list(repes_info.keys())
+                
+                if not mis_repes_ids:
+                    st.error("Necesitás cargar figuritas 'Repetidas' para triangular.")
+                else:
+                    try:
+                        target_val = int(filtro_num)
+                        # Llamamos al algoritmo con el objeto user completo para validar Zona
+                        resultados = triangulation.buscar_triangulacion(user, target_val, mis_repes_ids)
+                        st.session_state.triang_results = resultados
+                        if not resultados:
+                            st.warning("No se encontraron triangulaciones en tu zona para esta figurita.")
+                    except ValueError:
+                        st.error("Ingresá un número válido.")
+
+    # Mostrar Resultados Triangulación
     if st.session_state.triang_results:
         st.success(f"¡Se encontraron {len(st.session_state.triang_results)} caminos posibles!")
         for t in st.session_state.triang_results:
@@ -298,29 +297,19 @@ def render_market(user):
                 c3.metric("3. Recibís", f"#{t['target_tiene']}", "de Objetivo")
                 
                 if st.button("Contactar al Puente", key=f"btn_triang_{t['bridge_id']}_{t['target_id']}"):
-                     # Lógica de contacto custom para explicar la jugada
-                     # Aquí podrías abrir un modal o link directo
                      link = f"https://wa.me/?text=Hola! Vi una triangulación en Figus26. Yo te doy la {t['bridge_quiere']}, vos le das la {t['bridge_tiene']} a {t['target_nick']}, y yo recibo la {t['target_tiene']}. ¿Te copás?"
                      st.link_button("Abrir WhatsApp", link)
-
         st.divider()
+    # ------------------------------------------
 
-    # --- FLUJO NORMAL DE MERCADO ---
-    # (El resto de render_market sigue igual que en tu backup)
     with utils.spinner_futbolero():
         market_df = db.fetch_market(user['id'])
     
     matches, ventas = db.find_matches(user['id'], market_df)
-    
-    # ... (Resto del código de render_market con los FIXES de Premium y Ordenamiento que hicimos antes) ...
-    # Asegúrate de pegar aquí el resto de la función render_market que tenías en tu backup actualizado.
-    # ...
+
     # 2. FIX INFALIBLE: OBTENER IDs PREMIUM DIRECTAMENTE DE LA DB
-    # Esto evita problemas con estructuras de DataFrame o nombres de columnas.
     try:
-        # Traemos solo los IDs de quienes son premium
         prem_response = db.supabase.table("users").select("id").eq("is_premium", True).execute()
-        # Creamos un Set para busqueda O(1)
         premium_ids = {u['id'] for u in prem_response.data}
     except:
         premium_ids = set()
@@ -331,11 +320,7 @@ def render_market(user):
     for v in ventas:
         v['is_premium'] = v['target_id'] in premium_ids
 
-    # 4. ORDENAMIENTO POR PRIORIDAD (0=Max, 3=Min)
-    # 0: Premium + Wishlist
-    # 1: Premium + Normal
-    # 2: Free + Wishlist
-    # 3: Free + Normal
+    # 4. ORDENAMIENTO POR PRIORIDAD
     def get_sort_score(item):
         is_p = item.get('is_premium', False)
         is_w = item.get('is_wishlist', False)
