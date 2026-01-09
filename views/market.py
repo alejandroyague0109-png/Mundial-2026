@@ -19,6 +19,23 @@ def change_page(key, delta):
     st.session_state[key] += delta
 
 # --- MODALES ---
+
+@st.dialog("📐 ¿Qué es la Triangulación?")
+def modal_explicacion_triangulacion():
+    st.markdown("""
+    ### La jugada maestra 🧠
+    A veces, **A** quiere lo que tiene **C**, pero **C** no quiere nada de **A**. 
+    ¡El mercado se traba! Ahí entra **B** (el Puente) para destrabarlo.
+
+    **La jugada a 3 bandas:**
+    1.  Vos le das una repe al **Puente**.
+    2.  El **Puente** le da una suya al **Dueño** (la que el Dueño quería).
+    3.  El **Dueño** te da a vos la figurita que buscás.
+
+    **Requisito:**
+    El sistema solo busca "Puentes" que vivan en tu misma **Provincia y Zona** para que puedan encontrarse fácilmente.
+    """)
+
 @st.dialog("🛡️ Consejos de Seguridad")
 def modal_seguridad(target_id, user):
     st.markdown("### ⚠️ Antes de contactar:")
@@ -239,9 +256,10 @@ def render_market(user):
 
     # --- SECCIÓN TRIANGULACIÓN (SIEMPRE VISIBLE) ---
     st.markdown("---")
-    c_triang_1, c_triang_2 = st.columns([0.8, 0.2])
     
-    # Texto dinámico según si hay filtro o no
+    # Ajustamos columnas para que el botón de info quede bien alineado
+    c_triang_1, c_triang_2 = st.columns([0.85, 0.15]) 
+    
     if filtro_num:
         msg_info = f"¿No encontrás cambio directo por la **#{filtro_num}**?"
         lbl_btn = f"📐 Buscar Triangulación para #{filtro_num}"
@@ -250,19 +268,18 @@ def render_market(user):
         lbl_btn = "📐 Buscar Triangulación"
 
     c_triang_1.info(msg_info)
+    
+    # BOTÓN DE INFO (POP-UP)
     with c_triang_2:
-        st.markdown("""
-        <div style="text-align: right;">
-            <span title="La triangulación busca un tercer usuario 'Puente' en tu zona. Tú le das al Puente, el Puente le da al Dueño, y el Dueño te da a ti." style="font-size: 2em; cursor: help;">ℹ️</span>
-        </div>
-        """, unsafe_allow_html=True)
+        if st.button("ℹ️", key="btn_info_triang", help="Click para saber qué es esto"):
+            modal_explicacion_triangulacion()
 
     if st.button(lbl_btn, type="primary", use_container_width=True):
         # A. Si no puso número, avisar
         if not filtro_num:
             st.warning("⚠️ Primero escribí el número de la figurita que buscás en el filtro de arriba ('Figurita #').")
         
-        # B. Si no es premium, mostrar venta
+        # B. Si no es premium, mostrar modal premium
         elif not user.get('is_premium', False):
             mostrar_modal_premium()
             
@@ -277,7 +294,6 @@ def render_market(user):
                 else:
                     try:
                         target_val = int(filtro_num)
-                        # Llamamos al algoritmo con el objeto user completo para validar Zona
                         resultados = triangulation.buscar_triangulacion(user, target_val, mis_repes_ids)
                         st.session_state.triang_results = resultados
                         if not resultados:
