@@ -402,16 +402,17 @@ def get_user_by_id(user_id):
         return None
     except:
         return None
-# --- FUNCIONES DE SOPORTE PARA TRIANGULACIÓN (EFICIENTE + STICKER_NUM) ---
+# --- FUNCIONES DE SOPORTE PARA TRIANGULACIÓN (EFICIENTE + STICKER_NUM + TELÉFONO) ---
 
 def get_users_with_sticker(figu_num):
     """
     Busca usuarios con la figurita (JOIN eficiente).
+    Trae phone_encrypted para poder pasar el contacto en la triangulación.
     """
     try:
-        # 1. Consulta única con JOIN (users) y columna correcta (sticker_num)
+        # CONSULTA ACTUALIZADA: Agregamos phone_encrypted
         response = supabase.table("inventory")\
-            .select("user_id, status, users(nick, province, zone)")\
+            .select("user_id, status, users(nick, province, zone, phone_encrypted)")\
             .eq("sticker_num", figu_num)\
             .execute()
             
@@ -428,7 +429,8 @@ def get_users_with_sticker(figu_num):
                     'user_id': row['user_id'],
                     'nick': u_data.get('nick', 'User'),
                     'province': str(u_data.get('province', '')).strip(),
-                    'zone': str(u_data.get('zone', '')).strip()
+                    'zone': str(u_data.get('zone', '')).strip(),
+                    'phone_encrypted': u_data.get('phone_encrypted', '') # <-- NUEVO
                 })
         return users
     except Exception as e:
@@ -439,7 +441,6 @@ def get_wishlists_of_users(user_ids):
     """Devuelve un dict {user_id: [lista_figus_deseadas]}."""
     try:
         if not user_ids: return {}
-        # CORRECCIÓN: sticker_num
         response = supabase.table("inventory")\
             .select("user_id, sticker_num")\
             .in_("user_id", user_ids)\
@@ -463,7 +464,7 @@ def find_potential_bridges(needed_figus, my_repes):
     try:
         if not needed_figus or not my_repes: return []
         
-        # A. Traer DUEÑOS (Holders) - Consulta con JOIN
+        # A. Traer DUEÑOS (Holders)
         holders = supabase.table("inventory")\
             .select("user_id, sticker_num, status, users(nick, province, zone)")\
             .in_("sticker_num", needed_figus)\

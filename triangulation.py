@@ -5,18 +5,14 @@ def buscar_triangulacion(user, figu_objetivo, mis_repes_ids):
     """
     Busca una cadena de 3 bandas:
     YO -> PUENTE -> TARGET -> YO
-    Requisito: Todos en la misma Provincia y Zona.
     Límite: Máximo 3 resultados.
     """
-    # Normalizamos mi ubicación
     mi_provincia = str(user.get('province', '')).strip()
     mi_zona = str(user.get('zone', '')).strip()
 
-    # 1. ENCONTRAR TARGETS (Dueños de la figu que quiero)
-    # database.py ya se encarga de usar 'sticker_num' y status='repetida'
+    # 1. ENCONTRAR TARGETS (Trae phone_encrypted ahora)
     raw_targets = db.get_users_with_sticker(figu_objetivo)
     
-    # Filtro Geográfico Nivel 1
     targets_validos = []
     target_ids = []
     
@@ -32,7 +28,7 @@ def buscar_triangulacion(user, figu_objetivo, mis_repes_ids):
     if not target_ids:
         return [] 
 
-    # 2. OBTENER WISHLIST DE LOS TARGETS
+    # 2. OBTENER WISHLIST
     targets_wishlists = db.get_wishlists_of_users(target_ids)
     
     # 3. BUSCAR EL PUENTE
@@ -43,12 +39,11 @@ def buscar_triangulacion(user, figu_objetivo, mis_repes_ids):
     if not figus_necesarias:
         return []
 
-    # Buscamos puentes (database.py ya filtra status='repetida')
     posibles_puentes = db.find_potential_bridges(list(figus_necesarias), mis_repes_ids)
     
     posibles_triangulaciones = []
 
-    # 4. ARMAR EL ROMPECABEZAS (Filtro Geo Nivel 2)
+    # 4. ARMAR EL ROMPECABEZAS
     for puente in posibles_puentes:
         p_prov = str(puente['province']).strip()
         p_zona = str(puente['zone']).strip()
@@ -60,7 +55,7 @@ def buscar_triangulacion(user, figu_objetivo, mis_repes_ids):
         bridge_tiene = puente['has_figu'] 
         bridge_quiere = puente['wants_figu'] 
         
-        # Verificar a qué target le sirve lo que tiene el puente
+        # Verificar matches
         for t_id, deseos in targets_wishlists.items():
             if bridge_tiene in deseos:
                 target_info = next((t for t in targets_validos if t['user_id'] == t_id), None)
@@ -70,6 +65,7 @@ def buscar_triangulacion(user, figu_objetivo, mis_repes_ids):
                         "tipo": "triangulacion",
                         "target_id": t_id,
                         "target_nick": target_info.get('nick', 'Vecino'),
+                        "target_phone_enc": target_info.get('phone_encrypted', ''), # <-- NUEVO
                         "target_tiene": figu_objetivo,
                         
                         "bridge_id": bridge_uid,
@@ -79,7 +75,6 @@ def buscar_triangulacion(user, figu_objetivo, mis_repes_ids):
                     }
                     posibles_triangulaciones.append(cadena)
                     
-                    # --- CAMBIO: Límite ajustado a 3 ---
                     if len(posibles_triangulaciones) >= 3:
                         return posibles_triangulaciones
 
