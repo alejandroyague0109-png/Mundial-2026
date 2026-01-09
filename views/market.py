@@ -64,14 +64,9 @@ def mostrar_modal_premium():
 def render_card(item, tipo, user, is_pending_view=False):
     suffix = "pend" if is_pending_view else "mkt"
     
-    # 1. RECUPERAMOS EL DATO PREMIUM
+    # 1. RECUPERAMOS EL DATO PREMIUM (Ahora garantizado por la inyección previa)
     is_target_premium = item.get('is_premium', False)
     
-    # Definimos estilos condicionales
-    border_style = "1px solid #ddd"
-    if is_target_premium:
-        border_style = "2px solid #ffd700" # Borde dorado para premium (Simulado visualmente en markdown)
-
     with st.container(border=True):
         col_info, col_actions = st.columns([0.75, 0.25])
         target_id = item['target_id']
@@ -246,32 +241,28 @@ def render_market(user):
     
     matches, ventas = db.find_matches(user['id'], market_df)
 
-    # --- FIX CRÍTICO: MAPEO MANUAL DE PREMIUM ---
-    # Creamos un diccionario {user_id: True/False} recorriendo el DF original
-    # Esto asegura que el dato exista aunque se pierda en find_matches
+    # --- FIX CRÍTICO: INYECCIÓN MANUAL DE DATOS PREMIUM ---
+    # 1. Creamos un mapa: {user_id -> es_premium} recorriendo el DataFrame crudo
     premium_map = {}
     if not market_df.empty:
         for _, row in market_df.iterrows():
-            # Intentamos extraer el dato de varias formas posibles según como venga de Supabase
             is_prem = False
-            # 1. Si está en la columna directa
+            # Intentamos leer de la columna plana o del objeto anidado 'users'
             if 'is_premium' in row:
                 is_prem = bool(row['is_premium'])
-            # 2. Si viene anidado en un objeto 'users' (join típico)
             elif 'users' in row and isinstance(row['users'], dict):
                 is_prem = row['users'].get('is_premium', False)
             
             premium_map[row['user_id']] = is_prem
 
-    # Inyectamos el dato recuperado en las listas de resultados
+    # 2. Inyectamos el dato en cada ítem de las listas procesadas
     for m in matches:
         m['is_premium'] = premium_map.get(m['target_id'], False)
     for v in ventas:
         v['is_premium'] = premium_map.get(v['target_id'], False)
-    # --------------------------------------------
+    # -----------------------------------------------------
 
-    # --- LÓGICA DE ORDENAMIENTO (Ahora sí funciona) ---
-    # Score bajo = Mayor prioridad
+    # --- LÓGICA DE ORDENAMIENTO POR PRIORIDAD ---
     # 0: Premium + Wishlist
     # 1: Premium + Normal
     # 2: Free + Wishlist
@@ -286,10 +277,10 @@ def render_market(user):
         if not is_p and is_w: return 2
         return 3 # Free + Normal
 
-    # Ordenamos por (Prioridad, Número de Figurita)
+    # Ordenamos por (Score, Numero Figurita)
     matches = sorted(matches, key=lambda x: (get_sort_score(x), x['figu']))
     ventas = sorted(ventas, key=lambda x: (get_sort_score(x), x['figu']))
-    # --------------------------------------------------
+    # --------------------------------------------
 
     # Pendientes
     unlocked_ids = st.session_state.unlocked_users
