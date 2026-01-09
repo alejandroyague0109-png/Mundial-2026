@@ -402,39 +402,31 @@ def get_user_by_id(user_id):
         return None
     except:
         return None
-
-# --- FUNCIONES DE SOPORTE PARA TRIANGULACIÓN (ROBUSTAS) ---
+# --- FUNCIONES DE SOPORTE PARA TRIANGULACIÓN (EFICIENTE + STICKER_NUM) ---
 
 def get_users_with_sticker(figu_num):
     """
-    Busca usuarios con la figurita.
-    ESTRATEGIA: Trae todo lo que coincida con el número y filtra en Python
-    para evitar errores de mayúsculas/espacios en el status.
+    Busca usuarios con la figurita (JOIN eficiente).
     """
     try:
-        # 1. Traemos TODOS los registros de ese número, sin filtrar status aun
+        # 1. Consulta única con JOIN (users) y columna correcta (sticker_num)
         response = supabase.table("inventory")\
             .select("user_id, status, users(nick, province, zone)")\
-            .eq("num", figu_num)\
+            .eq("sticker_num", figu_num)\
             .execute()
             
         users = []
-        # Definimos qué estados aceptamos (normalizados)
-        accepted_statuses = ["repetida", "tengo", "cambio", "repe"]
-        
         for row in response.data:
             if not row.get('users'): continue
             
-            # 2. Limpieza y validación en Python (más seguro)
+            # Validación robusta de status en memoria
             raw_status = str(row.get('status', '')).lower().strip()
             
-            # Aceptamos si dice 'repetida' O si dice 'tengo' (por si el usuario se equivocó al cargar)
-            if raw_status in accepted_statuses:
+            if raw_status in ["repetida", "repe"]:
                 u_data = row.get('users', {})
                 users.append({
                     'user_id': row['user_id'],
                     'nick': u_data.get('nick', 'User'),
-                    # Normalizamos ubicación para evitar error por espacios
                     'province': str(u_data.get('province', '')).strip(),
                     'zone': str(u_data.get('zone', '')).strip()
                 })
@@ -443,31 +435,47 @@ def get_users_with_sticker(figu_num):
         print(f"Error get_users_with_sticker: {e}")
         return []
 
+def get_wishlists_of_users(user_ids):
+    """Devuelve un dict {user_id: [lista_figus_deseadas]}."""
+    try:
+        if not user_ids: return {}
+        # CORRECCIÓN: sticker_num
+        response = supabase.table("inventory")\
+            .select("user_id, sticker_num")\
+            .in_("user_id", user_ids)\
+            .eq("status", "wishlist")\
+            .execute()
+            
+        res = {}
+        for row in response.data:
+            uid = row['user_id']
+            if uid not in res: res[uid] = []
+            res[uid].append(row['sticker_num'])
+        return res
+    except Exception as e:
+        print(f"Error get_wishlists: {e}")
+        return []
+
 def find_potential_bridges(needed_figus, my_repes):
     """
-    Busca puentes.
-    ESTRATEGIA: Búsqueda amplia y filtrado robusto en memoria.
+    Busca puentes (JOIN eficiente + sticker_num).
     """
     try:
         if not needed_figus or not my_repes: return []
         
-        # A. Traer DUEÑOS de las figus necesarias (Búsqueda amplia)
+        # A. Traer DUEÑOS (Holders) - Consulta con JOIN
         holders = supabase.table("inventory")\
-            .select("user_id, num, status, users(nick, province, zone)")\
-            .in_("num", needed_figus)\
-            .execute() # Traemos todo sin filtrar status en SQL
+            .select("user_id, sticker_num, status, users(nick, province, zone)")\
+            .in_("sticker_num", needed_figus)\
+            .execute()
             
         holder_map = {} 
         user_info = {}
-        accepted_statuses = ["repetida", "tengo", "cambio", "repe"]
-        
         candidate_ids = []
         
         for row in holders.data:
-            # Filtro de status en Python
             raw_status = str(row.get('status', '')).lower().strip()
-            if raw_status not in accepted_statuses:
-                continue
+            if raw_status not in ["repetida", "repe"]: continue
 
             uid = row['user_id']
             u_data = row.get('users', {})
@@ -480,23 +488,22 @@ def find_potential_bridges(needed_figus, my_repes):
                     'province': str(u_data.get('province', '')).strip(),
                     'zone': str(u_data.get('zone', '')).strip()
                 }
-            holder_map[uid].append(row['num'])
+            holder_map[uid].append(row['sticker_num'])
             
         if not candidate_ids: return []
         
-        # B. Buscar QUIÉNES quieren mis repetidas
+        # B. Buscar DESEOS (Wishlist)
         wanters = supabase.table("inventory")\
-            .select("user_id, num")\
+            .select("user_id, sticker_num")\
             .in_("user_id", candidate_ids)\
-            .in_("num", my_repes)\
+            .in_("sticker_num", my_repes)\
             .eq("status", "wishlist")\
             .execute()
             
         bridges = []
         for row in wanters.data:
             uid = row['user_id']
-            wants = row['num']
-            # Cruzamos datos
+            wants = row['sticker_num']
             if uid in holder_map:
                 for has in holder_map[uid]:
                     bridges.append({
@@ -507,9 +514,7 @@ def find_potential_bridges(needed_figus, my_repes):
                         'has_figu': has,
                         'wants_figu': wants
                     })
-                
         return bridges
-
     except Exception as e:
         print(f"Error bridge: {e}")
         return []
