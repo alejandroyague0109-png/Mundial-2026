@@ -310,22 +310,26 @@ def render_market(user):
                 c2.metric("2. Puente entrega", f"#{t['bridge_tiene']}", f"a {t['target_nick']}")
                 c3.metric("3. Recibís", f"#{t['target_tiene']}", "de Objetivo")
                 
-                # --- AQUÍ GENERAMOS EL LINK CON EL NÚMERO ---
+                # --- GENERAR LINK DIRECTO WHATSAPP ---
                 
-                # 1. Desencriptar el número del Target
-                target_phone = utils.decrypt_phone(t.get('target_phone_enc'))
+                # 1. Datos del Puente (Con quien voy a chatear)
+                bridge_phone = utils.decrypt_phone(t.get('bridge_phone_enc'))
                 
-                # 2. Si hay número, lo incluimos en el mensaje
-                info_contacto_target = f"{t['target_nick']} (WhatsApp: +549{target_phone})" if target_phone else t['target_nick']
-                
-                # 3. Mensaje para el Puente
-                msg_wa = f"Hola! Vi una triangulación en Figus26. Yo te doy la #{t['bridge_quiere']}, vos le das la #{t['bridge_tiene']} a *{info_contacto_target}*, y yo recibo la #{t['target_tiene']}. ¿Te copás?"
-                
-                msg_encoded = quote(msg_wa)
-                link = f"https://wa.me/?text={msg_encoded}" # Link genérico para que el usuario elija el contacto del Puente o lo copie
-                
-                if st.button("Contactar al Puente", key=f"btn_triang_{t['bridge_id']}_{t['target_id']}_{i}"):
-                     st.link_button("Abrir WhatsApp", link)
+                if not bridge_phone:
+                    st.error("El usuario Puente no tiene teléfono registrado.")
+                else:
+                    # 2. Datos del Target (El que va incluido en el mensaje)
+                    target_phone = utils.decrypt_phone(t.get('target_phone_enc'))
+                    info_contacto_target = f"{t['target_nick']} (WhatsApp: +549{target_phone})" if target_phone else t['target_nick']
+                    
+                    # 3. Armado del mensaje
+                    msg_wa = f"Hola! Vi una triangulación en Figus26. Yo te doy la #{t['bridge_quiere']}, vos le das la #{t['bridge_tiene']} a *{info_contacto_target}*, y yo recibo la #{t['target_tiene']}. ¿Te copás?"
+                    
+                    msg_encoded = quote(msg_wa)
+                    link = f"https://wa.me/549{bridge_phone}?text={msg_encoded}"
+                    
+                    # 4. BOTÓN DE ENLACE DIRECTO
+                    st.link_button("Contactar al Puente", link, type="primary")
         st.divider()
 
     # --- FLUJO NORMAL DE MERCADO ---
