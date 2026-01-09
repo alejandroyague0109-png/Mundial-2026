@@ -27,7 +27,7 @@ def modal_explicacion_triangulacion():
     A veces, **A** quiere lo que tiene **C**, pero **C** no quiere nada de **A**. 
     ¡El mercado se traba! Ahí entra **B** (el Puente) para destrabarlo.
 
-    **La jugada a 3 bandas:**
+    **La jugada a 3 toques:**
     1.  Vos le das una repe al **Puente**.
     2.  El **Puente** le da una suya al **Dueño** (la que el Dueño quería).
     3.  El **Dueño** te da a vos la figurita que buscás.
@@ -254,10 +254,8 @@ def render_market(user):
         filtro_zonas = col_f2.multiselect("Zona:", avail_zones, on_change=reset_pagination)
         filtro_num = col_f3.text_input("Figurita #:", on_change=reset_pagination)
 
-    # --- SECCIÓN TRIANGULACIÓN (SIEMPRE VISIBLE) ---
+    # --- SECCIÓN TRIANGULACIÓN ---
     st.markdown("---")
-    
-    # Ajustamos columnas para que el botón de info quede bien alineado
     c_triang_1, c_triang_2 = st.columns([0.85, 0.15]) 
     
     if filtro_num:
@@ -269,17 +267,16 @@ def render_market(user):
 
     c_triang_1.info(msg_info)
     
-    # BOTÓN DE INFO (POP-UP)
     with c_triang_2:
         if st.button("ℹ️", key="btn_info_triang", help="Click para saber qué es esto"):
             modal_explicacion_triangulacion()
 
     if st.button(lbl_btn, type="primary", use_container_width=True):
-        # A. Si no puso número, avisar
+        # A. Si no puso número
         if not filtro_num:
             st.warning("⚠️ Primero escribí el número de la figurita que buscás en el filtro de arriba ('Figurita #').")
         
-        # B. Si no es premium, mostrar modal premium
+        # B. Si no es premium
         elif not user.get('is_premium', False):
             mostrar_modal_premium()
             
@@ -304,7 +301,8 @@ def render_market(user):
     # Mostrar Resultados Triangulación
     if st.session_state.triang_results:
         st.success(f"¡Se encontraron {len(st.session_state.triang_results)} caminos posibles!")
-        for t in st.session_state.triang_results:
+        
+        for i, t in enumerate(st.session_state.triang_results):
             with st.container(border=True):
                 st.markdown(f"### 📐 Triángulo Dorado")
                 c1, c2, c3 = st.columns(3)
@@ -312,31 +310,44 @@ def render_market(user):
                 c2.metric("2. Puente entrega", f"#{t['bridge_tiene']}", f"a {t['target_nick']}")
                 c3.metric("3. Recibís", f"#{t['target_tiene']}", "de Objetivo")
                 
-                if st.button("Contactar al Puente", key=f"btn_triang_{t['bridge_id']}_{t['target_id']}"):
-                     link = f"https://wa.me/?text=Hola! Vi una triangulación en Figus26. Yo te doy la {t['bridge_quiere']}, vos le das la {t['bridge_tiene']} a {t['target_nick']}, y yo recibo la {t['target_tiene']}. ¿Te copás?"
+                # --- AQUÍ GENERAMOS EL LINK CON EL NÚMERO ---
+                
+                # 1. Desencriptar el número del Target
+                target_phone = utils.decrypt_phone(t.get('target_phone_enc'))
+                
+                # 2. Si hay número, lo incluimos en el mensaje
+                info_contacto_target = f"{t['target_nick']} (WhatsApp: +549{target_phone})" if target_phone else t['target_nick']
+                
+                # 3. Mensaje para el Puente
+                msg_wa = f"Hola! Vi una triangulación en Figus26. Yo te doy la #{t['bridge_quiere']}, vos le das la #{t['bridge_tiene']} a *{info_contacto_target}*, y yo recibo la #{t['target_tiene']}. ¿Te copás?"
+                
+                msg_encoded = quote(msg_wa)
+                link = f"https://wa.me/?text={msg_encoded}" # Link genérico para que el usuario elija el contacto del Puente o lo copie
+                
+                if st.button("Contactar al Puente", key=f"btn_triang_{t['bridge_id']}_{t['target_id']}_{i}"):
                      st.link_button("Abrir WhatsApp", link)
         st.divider()
-    # ------------------------------------------
 
+    # --- FLUJO NORMAL DE MERCADO ---
     with utils.spinner_futbolero():
         market_df = db.fetch_market(user['id'])
     
     matches, ventas = db.find_matches(user['id'], market_df)
 
-    # 2. FIX INFALIBLE: OBTENER IDs PREMIUM DIRECTAMENTE DE LA DB
+    # 2. FIX PREMIUM DIRECTO
     try:
         prem_response = db.supabase.table("users").select("id").eq("is_premium", True).execute()
         premium_ids = {u['id'] for u in prem_response.data}
     except:
         premium_ids = set()
 
-    # 3. INYECTAR DATO PREMIUM EN LAS LISTAS
+    # 3. INYECTAR PREMIUM
     for m in matches:
         m['is_premium'] = m['target_id'] in premium_ids
     for v in ventas:
         v['is_premium'] = v['target_id'] in premium_ids
 
-    # 4. ORDENAMIENTO POR PRIORIDAD
+    # 4. ORDENAR
     def get_sort_score(item):
         is_p = item.get('is_premium', False)
         is_w = item.get('is_wishlist', False)
