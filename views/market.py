@@ -64,6 +64,12 @@ def mostrar_modal_premium():
 def render_card(item, tipo, user, is_pending_view=False):
     suffix = "pend" if is_pending_view else "mkt"
     
+    # Determinamos si el dueño de la tarjeta es Premium
+    is_target_premium = item.get('is_premium', False)
+    
+    # Estilo de borde: Dorado si es premium, gris normal si no
+    # (Nota: Streamlit no permite cambiar borde nativo fácil, pero podemos indicarlo adentro)
+    
     with st.container(border=True):
         col_info, col_actions = st.columns([0.75, 0.25])
         target_id = item['target_id']
@@ -89,12 +95,22 @@ def render_card(item, tipo, user, is_pending_view=False):
 
         # --- INFO ---
         with col_info:
+            # Badges
+            badges_html = ""
+            if is_target_premium:
+                badges_html += "<span style='background-color:#fff8e1; color:#fbc02d; border: 1px solid #fbc02d; padding:2px 6px; border-radius:4px; font-size:0.8em; font-weight:bold; margin-right:5px;'>💎 PREMIUM</span>"
             if is_wishlist:
-                st.markdown("<span style='background-color:#ffebee; color:#c62828; padding:2px 6px; border-radius:4px; font-size:0.8em; font-weight:bold;'>❤️ TU DESEO</span>", unsafe_allow_html=True)
+                badges_html += "<span style='background-color:#ffebee; color:#c62828; padding:2px 6px; border-radius:4px; font-size:0.8em; font-weight:bold;'>❤️ TU DESEO</span>"
+            
+            if badges_html:
+                st.markdown(badges_html, unsafe_allow_html=True)
 
+            # Nombre y Zona (Destacado si es Premium)
+            nick_style = "font-size: 1.25em; font-weight: bold; color: #f57f17;" if is_target_premium else "font-size: 1.25em; font-weight: bold;"
+            
             st.markdown(f"""
-                <div style="line-height: 1.2;">
-                    <span style="font-size: 1.25em; font-weight: bold;">{item['nick']}</span>
+                <div style="line-height: 1.2; margin-top: 4px;">
+                    <span style="{nick_style}">{item['nick']}</span>
                     <span style="color: grey; font-size: 0.9em; margin-left: 8px;">📍 {item['zone']}</span>
                 </div>
             """, unsafe_allow_html=True)
@@ -126,7 +142,6 @@ def render_card(item, tipo, user, is_pending_view=False):
                 if is_pending_view:
                     if st.button("✅ Fichaje cerrado", key=f"pd_ok_{fig_recibo}_{target_id}_{suffix}", help="Concretar y quitar de pendientes", width="stretch"):
                         
-                        # LOGICA PREMIUM: Si es premium, id_para_borrar es None (no borra)
                         es_premium = user.get('is_premium', False)
                         id_para_borrar = None if es_premium else target_id
                         
@@ -165,7 +180,6 @@ def render_card(item, tipo, user, is_pending_view=False):
                 st.toast(m)
 
 def paginar_y_mostrar(lista_items, tipo_key, tipo_card, user, is_pending_view=False):
-    # SCROLL: Solo si NO es pendiente (para no saltar al confirmar multiples)
     if not is_pending_view:
         unique_id = time.time()
         js = f"""
@@ -214,7 +228,6 @@ def render_market(user):
     st.subheader("🔍 Mercado")
     with st.expander("🔎 Filtros", expanded=True):
         col_f1, col_f2, col_f3 = st.columns(3)
-        # 1. FIX: Eliminado default=[...] para que empiece mostrando todo
         filtro_prov = col_f1.multiselect("Provincia:", list(locations.ARGENTINA.keys()), on_change=reset_pagination)
         avail_zones = []
         if filtro_prov:
@@ -227,10 +240,28 @@ def render_market(user):
     
     matches, ventas = db.find_matches(user['id'], market_df)
 
-    # --- CAMBIO: ORDENAR POR NÚMERO DE FIGURITA BUSCADA (Menor a Mayor) ---
-    matches = sorted(matches, key=lambda x: x['figu'])
-    ventas = sorted(ventas, key=lambda x: x['figu'])
-    # ----------------------------------------------------------------------
+    # --- LÓGICA DE ORDENAMIENTO AVANZADO ---
+    # Prioridad (Score más bajo aparece primero):
+    # 0: Premium + Wishlist
+    # 1: Premium + Normal
+    # 2: Free + Wishlist
+    # 3: Free + Normal
+    
+    def get_sort_score(item):
+        is_p = item.get('is_premium', False)
+        is_w = item.get('is_wishlist', False)
+        
+        if is_p and is_w: return 0
+        if is_p and not is_w: return 1
+        if not is_p and is_w: return 2
+        return 3 # Free + Normal
+
+    # Ordenamos primero por Score (Prioridad) y luego por número de figurita
+    matches = sorted(matches, key=lambda x: (get_sort_score(x), x['figu']))
+    
+    # Para ventas aplicamos la misma lógica de destacar premium primero
+    ventas = sorted(ventas, key=lambda x: (get_sort_score(x), x['figu']))
+    # ---------------------------------------
 
     # Pendientes
     unlocked_ids = st.session_state.unlocked_users
