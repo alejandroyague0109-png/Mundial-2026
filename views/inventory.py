@@ -10,17 +10,15 @@ def modal_info_wishlist():
     st.markdown("""
     ### ¿Por qué es clave marcar tus faltantes? 🤔
     
-    **1. Para Usuarios FREE (Prioridad en Mercado):**
-    ¡Ahorrá tiempo buscando! ⏳
-    * Si marcás las figuritas que buscás en la Wishlist, el Mercado las detecta.
-    * Cuando entres a buscar, **las publicaciones de las figus que te faltan aparecerán PRIMERAS** y destacadas.
-    * Dejás de scrollear entre miles de figuritas que no te sirven.
+    **1. Para TODOS (Prioridad y Compartir):**
+    ¡Organizá tu búsqueda! 📋
+    * **🚀 Prioridad:** En el Mercado, las figuritas que marcás acá aparecen **PRIMERAS**.
+    * **📲 WhatsApp:** Te sirve para tener tu lista de faltantes siempre a mano y compartirla rápido por WhatsApp con tus amigos.
 
-    **2. Para Usuarios PREMIUM (Triangulación):**
-    Acá ocurre la magia de las 3 bandas 📐.
-    * Si nadie quiere tus repetidas directamente, la Wishlist permite que el sistema encuentre un **Puente**.
-    * Vos -> Puente -> Objetivo -> Vos.
-    * *Sin Wishlist, no hay triangulación posible.*
+    **2. Para PREMIUM (Alertas y Triangulación):**
+    Desbloqueá la inteligencia artificial del álbum 🤖.
+    * **🔔 Alertas:** El sistema te **notifica automáticamente** cuando alguien publica una figurita de tu Wishlist.
+    * **📐 Triangulación:** Habilita el canje a 3 bandas (Vos -> Puente -> Objetivo) cuando no hay cambio directo.
     """)
 
 # --- FUNCIÓN AUXILIAR PARA DETECTAR CAMBIOS ---
