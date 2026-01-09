@@ -6,6 +6,7 @@ def buscar_triangulacion(user, figu_objetivo, mis_repes_ids):
     Busca una cadena de 3 bandas:
     YO -> PUENTE -> TARGET -> YO
     Requisito: Todos en la misma Provincia y Zona.
+    Límite: Máximo 3 resultados.
     """
     # Normalizamos mi ubicación
     mi_provincia = str(user.get('province', '')).strip()
@@ -78,7 +79,8 @@ def buscar_triangulacion(user, figu_objetivo, mis_repes_ids):
                     }
                     posibles_triangulaciones.append(cadena)
                     
-                    if len(posibles_triangulaciones) >= 5:
+                    # --- CAMBIO: Límite ajustado a 3 ---
+                    if len(posibles_triangulaciones) >= 3:
                         return posibles_triangulaciones
 
     return posibles_triangulaciones
