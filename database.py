@@ -448,6 +448,89 @@ def get_user_by_id(user_id):
     except:
         return None
 
+# --- FUNCIONES DE INVENTARIO (USANDO sticker_num) ---
+
+def fetch_inventory(user_id, start, end):
+    """
+    Recupera el inventario del usuario para el rango de páginas actual.
+    Usa 'sticker_num' que es el nombre real en la DB.
+    """
+    try:
+        response = supabase.table("inventory")\
+            .select("sticker_num, status, price")\
+            .eq("user_id", user_id)\
+            .gte("sticker_num", start)\
+            .lte("sticker_num", end)\
+            .execute()
+        return response.data
+    except Exception as e:
+        print(f"Error fetch_inventory: {e}")
+        return []
+
+def save_inventory_positive(user_id, start, end, tengo_list, wish_list, df_repes):
+    """
+    Guarda los cambios usando 'sticker_num'.
+    Estrategia: Borrar todo en el rango y volver a insertar (más seguro y limpio).
+    """
+    try:
+        # 1. Borrar todo el rango actual para este usuario
+        supabase.table("inventory")\
+            .delete()\
+            .eq("user_id", user_id)\
+            .gte("sticker_num", start)\
+            .lte("sticker_num", end)\
+            .execute()
+
+        new_rows = []
+
+        # 2. Preparar insert de TENGO
+        for num in tengo_list:
+            # Solo si NO está en repetidas (prioridad a repetidas que tienen más data)
+            is_repe = str(num) in df_repes['Figurita'].astype(str).values
+            if not is_repe:
+                new_rows.append({
+                    "user_id": user_id,
+                    "sticker_num": int(num),
+                    "status": "tengo",
+                    "quantity": 1,
+                    "price": 0
+                })
+
+        # 3. Preparar insert de WISHLIST
+        for num in wish_list:
+            new_rows.append({
+                "user_id": user_id,
+                "sticker_num": int(num),
+                "status": "wishlist",
+                "quantity": 0,
+                "price": 0
+            })
+
+        # 4. Preparar insert de REPETIDAS (Desde el DataFrame)
+        for _, row in df_repes.iterrows():
+            if str(row['Figurita']).strip():
+                new_rows.append({
+                    "user_id": user_id,
+                    "sticker_num": int(row['Figurita']),
+                    "status": "repetida", # Guardamos siempre como 'repetida'
+                    "quantity": 2, # Asumimos >1
+                    "price": float(row.get('Precio', 0))
+                })
+
+        # 5. Insertar en lotes (Batch)
+        if new_rows:
+            # Insertar de a 100 para no saturar
+            batch_size = 100
+            for i in range(0, len(new_rows), batch_size):
+                batch = new_rows[i:i + batch_size]
+                supabase.table("inventory").insert(batch).execute()
+        
+        return True, "Guardado exitoso"
+
+    except Exception as e:
+        print(f"Error save_inventory: {e}")
+        return False, str(e)
+
 # --- FUNCIONES DE SOPORTE PARA TRIANGULACIÓN (CON TELÉFONO DE PUENTE) ---
 
 def get_users_with_sticker(figu_num):
