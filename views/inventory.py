@@ -4,7 +4,7 @@ import time
 import database as db
 import utils 
 
-# --- MODAL DE INFORMACIÓN (CORREGIDO) ---
+# --- MODAL DE INFORMACIÓN ---
 @st.dialog("🎯 El Poder de la Wishlist")
 def modal_info_wishlist():
     st.markdown("""
@@ -42,14 +42,14 @@ def render_inventory(user, start, end, seleccion_pais):
     col_head_1, col_btn_all, col_btn_none = st.columns([4, 1, 1])
     col_head_1.markdown("### 1️⃣ Tus Figus")
 
-    # Botones masivos
-    if col_btn_all.button("Todas", width="stretch", key=f"all_{seleccion_pais}"):
+    # Botones masivos (CORREGIDO: use_container_width=True)
+    if col_btn_all.button("Todas", use_container_width=True, key=f"all_{seleccion_pais}"):
         st.session_state[key_pills] = list(range(start, end + 1))
         st.session_state[key_wish] = [] 
         st.session_state.unsaved_changes = True 
         st.rerun()
 
-    if col_btn_none.button("Ninguna", width="stretch", key=f"none_{seleccion_pais}"):
+    if col_btn_none.button("Ninguna", use_container_width=True, key=f"none_{seleccion_pais}"):
         st.session_state[key_pills] = []
         st.session_state.unsaved_changes = True 
         st.rerun()
@@ -75,7 +75,7 @@ def render_inventory(user, start, end, seleccion_pais):
         st.caption("Marcá las que **TE FALTAN** y querés conseguir urgente.")
     
     with col_w_btn:
-        # Botón que abre el modal explicativo
+        # Botón info
         if st.button("ℹ️", key="btn_info_wishlist", help="¿Para qué sirve la Wishlist?"):
             modal_info_wishlist()
     
@@ -141,26 +141,29 @@ def render_inventory(user, start, end, seleccion_pais):
                 "Precio": st.column_config.NumberColumn(min_value=0, step=100)
             }, 
             hide_index=True, 
-            use_container_width=True,
+            use_container_width=True, # Esto es correcto para data_editor
             key=f"editor_{seleccion_pais}",
             on_change=marcar_cambio 
         )
     
-    # --- FIX CRÍTICO: GUARDAR SNAPSHOT PARA EL MODAL DE SALIDA ---
+    # Snapshot para detectar cambios
     st.session_state[f"snapshot_df_{seleccion_pais}"] = edited_df
-    # -------------------------------------------------------------
 
     st.divider()
 
-    # --- BOTÓN GUARDAR ---
+    # --- BOTÓN GUARDAR (CORREGIDO: use_container_width=True) ---
     btn_type = "primary" if st.session_state.get('unsaved_changes', False) else "secondary"
     btn_lbl = "💾 GUARDAR CAMBIOS (*)" if st.session_state.get('unsaved_changes', False) else "💾 GUARDAR CAMBIOS"
 
-    if st.button(btn_lbl, type=btn_type, width="stretch"):
+    if st.button(btn_lbl, type=btn_type, use_container_width=True):
         with utils.spinner_futbolero():
-            db.save_inventory_positive(user['id'], start, end, seleccion_tengo, seleccion_wishlist, edited_df)
-            st.session_state.unsaved_changes = False 
-        
-        st.toast("¡Cambios guardados!", icon="✅")
-        time.sleep(0.5)
-        st.rerun()
+            # Llamamos a la función de database.py
+            success, msg = db.save_inventory_positive(user['id'], start, end, seleccion_tengo, seleccion_wishlist, edited_df)
+            
+            if success:
+                st.session_state.unsaved_changes = False 
+                st.toast("¡Cambios guardados!", icon="✅")
+                time.sleep(0.5)
+                st.rerun()
+            else:
+                st.error(f"Error al guardar: {msg}")
