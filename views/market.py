@@ -64,9 +64,14 @@ def mostrar_modal_premium():
 def render_card(item, tipo, user, is_pending_view=False):
     suffix = "pend" if is_pending_view else "mkt"
     
-    # Determinamos si el dueño de la tarjeta es Premium
+    # 1. RECUPERAMOS EL DATO PREMIUM
     is_target_premium = item.get('is_premium', False)
     
+    # Definimos estilos condicionales
+    border_style = "1px solid #ddd"
+    if is_target_premium:
+        border_style = "2px solid #ffd700" # Borde dorado para premium (Simulado visualmente en markdown)
+
     with st.container(border=True):
         col_info, col_actions = st.columns([0.75, 0.25])
         target_id = item['target_id']
@@ -92,26 +97,32 @@ def render_card(item, tipo, user, is_pending_view=False):
 
         # --- INFO ---
         with col_info:
-            # Badges
-            badges_html = ""
+            # Badges (Etiquetas)
+            badges = []
             if is_target_premium:
-                badges_html += "<span style='background-color:#fff8e1; color:#fbc02d; border: 1px solid #fbc02d; padding:2px 6px; border-radius:4px; font-size:0.8em; font-weight:bold; margin-right:5px;'>💎 PREMIUM</span>"
+                badges.append("<span style='background-color:#fff8e1; color:#f9a825; border:1px solid #fbc02d; padding:2px 6px; border-radius:4px; font-size:0.8em; font-weight:bold; margin-right:5px;'>💎 PREMIUM</span>")
             if is_wishlist:
-                badges_html += "<span style='background-color:#ffebee; color:#c62828; padding:2px 6px; border-radius:4px; font-size:0.8em; font-weight:bold;'>❤️ TU DESEO</span>"
+                badges.append("<span style='background-color:#ffebee; color:#c62828; padding:2px 6px; border-radius:4px; font-size:0.8em; font-weight:bold;'>❤️ TU DESEO</span>")
             
-            if badges_html:
-                st.markdown(badges_html, unsafe_allow_html=True)
+            if badges:
+                st.markdown(" ".join(badges), unsafe_allow_html=True)
 
-            # Nombre y Zona (Destacado si es Premium)
-            nick_style = "font-size: 1.25em; font-weight: bold; color: #f57f17;" if is_target_premium else "font-size: 1.25em; font-weight: bold;"
-            
+            # Estilo del Nombre
+            nick_display = item['nick']
+            if is_target_premium:
+                # Nombre en dorado/negrita si es premium
+                nick_html = f"<span style='font-size: 1.25em; font-weight: bold; color: #f57f17;'>{nick_display}</span>"
+            else:
+                nick_html = f"<span style='font-size: 1.25em; font-weight: bold;'>{nick_display}</span>"
+
             st.markdown(f"""
                 <div style="line-height: 1.2; margin-top: 4px;">
-                    <span style="{nick_style}">{item['nick']}</span>
+                    {nick_html}
                     <span style="color: grey; font-size: 0.9em; margin-left: 8px;">📍 {item['zone']}</span>
                 </div>
             """, unsafe_allow_html=True)
             
+            # Detalle del intercambio
             if tipo == 'canje':
                 fig_entrego = item.get('te_pide', '?')
                 st.markdown(f"""
@@ -135,10 +146,8 @@ def render_card(item, tipo, user, is_pending_view=False):
                 if phone_target: 
                     st.link_button("🟢 WhatsApp", link_wa, type="secondary", use_container_width=True)
                 
-                # BOTONES PENDIENTES
                 if is_pending_view:
-                    if st.button("✅ Fichaje cerrado", key=f"pd_ok_{fig_recibo}_{target_id}_{suffix}", help="Concretar y quitar de pendientes", width="stretch"):
-                        
+                    if st.button("✅ Cerrar", key=f"pd_ok_{fig_recibo}_{target_id}_{suffix}", help="Concretar transacción", width="stretch"):
                         es_premium = user.get('is_premium', False)
                         id_para_borrar = None if es_premium else target_id
                         
@@ -149,18 +158,18 @@ def render_card(item, tipo, user, is_pending_view=False):
                                 ok, msg = db.register_purchase(user['id'], fig_recibo, target_id_to_remove=id_para_borrar)
                         
                         if ok: 
-                            if not es_premium:
-                                st.session_state.unlocked_users.discard(target_id)
+                            if not es_premium: st.session_state.unlocked_users.discard(target_id)
                             st.toast("¡Golazo!", icon="⚽"); st.success(msg); time.sleep(1.0); st.rerun()
                         else: st.error(msg)
                     
-                    if st.button("❌ Fichaje caído", key=f"pd_no_{fig_recibo}_{target_id}_{suffix}", help="No se concretó, quitar de la lista", width="stretch"):
+                    if st.button("❌ Caído", key=f"pd_no_{fig_recibo}_{target_id}_{suffix}", help="Cancelar transacción", width="stretch"):
                          db.remove_unlock(user['id'], target_id)
                          st.session_state.unlocked_users.discard(target_id)
                          st.rerun()
 
             else:
-                if st.button("🔓 Desbloquear", key=f"ul_{tipo}_{fig_recibo}_{target_id}_{suffix}", type="secondary", width="stretch"):
+                btn_lbl = "🔓 Desbloquear"
+                if st.button(btn_lbl, key=f"ul_{tipo}_{fig_recibo}_{target_id}_{suffix}", type="secondary", width="stretch"):
                     if db.check_contact_limit(user):
                         if st.session_state.skip_security_modal:
                             with utils.spinner_futbolero():
@@ -172,7 +181,7 @@ def render_card(item, tipo, user, is_pending_view=False):
                         else: modal_seguridad(target_id, user)
                     else: mostrar_modal_premium()
             
-            if st.button("⭐ Recomendar", key=f"vt_{tipo}_{fig_recibo}_{target_id}_{suffix}", help="Dar voto positivo", width="stretch"):
+            if st.button("⭐ Votar", key=f"vt_{tipo}_{fig_recibo}_{target_id}_{suffix}", help="Recomendar usuario", width="stretch"):
                 ok, m = db.votar_usuario(user['id'], target_id)
                 st.toast(m)
 
@@ -237,30 +246,32 @@ def render_market(user):
     
     matches, ventas = db.find_matches(user['id'], market_df)
 
-    # --- INYECCIÓN DE DATOS PREMIUM (FIX) ---
-    # Creamos un mapa ID -> Premium desde el DF original para asegurar que el dato exista
+    # --- FIX CRÍTICO: MAPEO MANUAL DE PREMIUM ---
+    # Creamos un diccionario {user_id: True/False} recorriendo el DF original
+    # Esto asegura que el dato exista aunque se pierda en find_matches
     premium_map = {}
     if not market_df.empty:
-        # Intentamos obtener la columna, manejando posibles nombres o anidamientos
-        if 'is_premium' in market_df.columns:
-            # Caso ideal: Columna plana
-            premium_map = market_df.drop_duplicates(subset=['user_id']).set_index('user_id')['is_premium'].to_dict()
-        elif 'users' in market_df.columns:
-            # Caso anidado (Supabase a veces devuelve dict en join)
-            for _, row in market_df.iterrows():
-                u_data = row.get('users')
-                if isinstance(u_data, dict):
-                    premium_map[row['user_id']] = u_data.get('is_premium', False)
+        for _, row in market_df.iterrows():
+            # Intentamos extraer el dato de varias formas posibles según como venga de Supabase
+            is_prem = False
+            # 1. Si está en la columna directa
+            if 'is_premium' in row:
+                is_prem = bool(row['is_premium'])
+            # 2. Si viene anidado en un objeto 'users' (join típico)
+            elif 'users' in row and isinstance(row['users'], dict):
+                is_prem = row['users'].get('is_premium', False)
+            
+            premium_map[row['user_id']] = is_prem
 
-    # Inyectamos el dato en las listas
-    if premium_map:
-        for m in matches:
-            m['is_premium'] = premium_map.get(m['target_id'], False)
-        for v in ventas:
-            v['is_premium'] = premium_map.get(v['target_id'], False)
-    # ---------------------------------------
+    # Inyectamos el dato recuperado en las listas de resultados
+    for m in matches:
+        m['is_premium'] = premium_map.get(m['target_id'], False)
+    for v in ventas:
+        v['is_premium'] = premium_map.get(v['target_id'], False)
+    # --------------------------------------------
 
-    # --- LÓGICA DE ORDENAMIENTO (Corregida) ---
+    # --- LÓGICA DE ORDENAMIENTO (Ahora sí funciona) ---
+    # Score bajo = Mayor prioridad
     # 0: Premium + Wishlist
     # 1: Premium + Normal
     # 2: Free + Wishlist
@@ -275,9 +286,10 @@ def render_market(user):
         if not is_p and is_w: return 2
         return 3 # Free + Normal
 
+    # Ordenamos por (Prioridad, Número de Figurita)
     matches = sorted(matches, key=lambda x: (get_sort_score(x), x['figu']))
     ventas = sorted(ventas, key=lambda x: (get_sort_score(x), x['figu']))
-    # ------------------------------------------
+    # --------------------------------------------------
 
     # Pendientes
     unlocked_ids = st.session_state.unlocked_users
