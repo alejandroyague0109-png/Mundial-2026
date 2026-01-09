@@ -67,9 +67,6 @@ def render_card(item, tipo, user, is_pending_view=False):
     # Determinamos si el dueño de la tarjeta es Premium
     is_target_premium = item.get('is_premium', False)
     
-    # Estilo de borde: Dorado si es premium, gris normal si no
-    # (Nota: Streamlit no permite cambiar borde nativo fácil, pero podemos indicarlo adentro)
-    
     with st.container(border=True):
         col_info, col_actions = st.columns([0.75, 0.25])
         target_id = item['target_id']
@@ -240,8 +237,30 @@ def render_market(user):
     
     matches, ventas = db.find_matches(user['id'], market_df)
 
-    # --- LÓGICA DE ORDENAMIENTO AVANZADO ---
-    # Prioridad (Score más bajo aparece primero):
+    # --- INYECCIÓN DE DATOS PREMIUM (FIX) ---
+    # Creamos un mapa ID -> Premium desde el DF original para asegurar que el dato exista
+    premium_map = {}
+    if not market_df.empty:
+        # Intentamos obtener la columna, manejando posibles nombres o anidamientos
+        if 'is_premium' in market_df.columns:
+            # Caso ideal: Columna plana
+            premium_map = market_df.drop_duplicates(subset=['user_id']).set_index('user_id')['is_premium'].to_dict()
+        elif 'users' in market_df.columns:
+            # Caso anidado (Supabase a veces devuelve dict en join)
+            for _, row in market_df.iterrows():
+                u_data = row.get('users')
+                if isinstance(u_data, dict):
+                    premium_map[row['user_id']] = u_data.get('is_premium', False)
+
+    # Inyectamos el dato en las listas
+    if premium_map:
+        for m in matches:
+            m['is_premium'] = premium_map.get(m['target_id'], False)
+        for v in ventas:
+            v['is_premium'] = premium_map.get(v['target_id'], False)
+    # ---------------------------------------
+
+    # --- LÓGICA DE ORDENAMIENTO (Corregida) ---
     # 0: Premium + Wishlist
     # 1: Premium + Normal
     # 2: Free + Wishlist
@@ -256,12 +275,9 @@ def render_market(user):
         if not is_p and is_w: return 2
         return 3 # Free + Normal
 
-    # Ordenamos primero por Score (Prioridad) y luego por número de figurita
     matches = sorted(matches, key=lambda x: (get_sort_score(x), x['figu']))
-    
-    # Para ventas aplicamos la misma lógica de destacar premium primero
     ventas = sorted(ventas, key=lambda x: (get_sort_score(x), x['figu']))
-    # ---------------------------------------
+    # ------------------------------------------
 
     # Pendientes
     unlocked_ids = st.session_state.unlocked_users
