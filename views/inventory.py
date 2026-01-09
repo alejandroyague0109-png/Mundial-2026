@@ -45,7 +45,6 @@ def save_changes(user_id, country_code, start, end, tengo_selection, wish_select
     else:
         st.error(f"Error al guardar: {msg}")
 
-# CORRECCIÓN AQUÍ: Aceptamos los 4 argumentos que envía app_figuritas.py
 def render_inventory(user, start_arg, end_arg, country_code_arg):
     
     # Sincronizamos el estado inicial si no existe
@@ -54,7 +53,7 @@ def render_inventory(user, start_arg, end_arg, country_code_arg):
 
     st.subheader(f"📖 Mi Álbum: {st.session_state.current_country}")
 
-    # 1. Selector de País/Álbum (Permite cambiar dinámicamente)
+    # 1. Selector de País/Álbum
     countries = list(config.ALBUM_PAGES.keys())
     current_idx = countries.index(st.session_state.current_country) if st.session_state.current_country in countries else 0
     
@@ -75,7 +74,7 @@ def render_inventory(user, start_arg, end_arg, country_code_arg):
             st.session_state.current_country = selected_country
             st.rerun()
 
-    # Recalculamos rangos basados en la selección actual (ignora los args antiguos si cambiaste de país)
+    # Recalculamos rangos basados en la selección actual
     start, end = config.ALBUM_PAGES[st.session_state.current_country]
     all_stickers = [str(i) for i in range(start, end + 1)]
 
@@ -92,7 +91,8 @@ def render_inventory(user, start_arg, end_arg, country_code_arg):
         repes_rows = []
 
         for item in inventory_data:
-            num = str(item['num'])
+            # CORRECCIÓN: Usamos 'sticker_num' en lugar de 'num'
+            num = str(item.get('sticker_num')) 
             status = item['status']
             
             if status == 'tengo':
@@ -132,7 +132,7 @@ def render_inventory(user, start_arg, end_arg, country_code_arg):
 
     st.markdown("---")
 
-    # B. SECCIÓN WISHLIST (Con el botón de Info solicitado)
+    # B. SECCIÓN WISHLIST
     col_w_txt, col_w_btn = st.columns([0.85, 0.15])
     
     with col_w_txt:
