@@ -272,15 +272,10 @@ def render_market(user):
             modal_explicacion_triangulacion()
 
     if st.button(lbl_btn, type="primary", use_container_width=True):
-        # A. Si no puso número
         if not filtro_num:
             st.warning("⚠️ Primero escribí el número de la figurita que buscás en el filtro de arriba ('Figurita #').")
-        
-        # B. Si no es premium
         elif not user.get('is_premium', False):
             mostrar_modal_premium()
-            
-        # C. Ejecutar búsqueda
         else:
             with utils.spinner_futbolero():
                 _, _, repes_info, _ = db.get_inventory_status(user['id'], 1, 999)
@@ -310,26 +305,34 @@ def render_market(user):
                 c2.metric("2. Puente entrega", f"#{t['bridge_tiene']}", f"a {t['target_nick']}")
                 c3.metric("3. Recibís", f"#{t['target_tiene']}", "de Objetivo")
                 
-                # --- GENERAR LINK DIRECTO WHATSAPP ---
+                # --- LÓGICA DE CONTACTO + RESET ---
                 
-                # 1. Datos del Puente (Con quien voy a chatear)
                 bridge_phone = utils.decrypt_phone(t.get('bridge_phone_enc'))
                 
                 if not bridge_phone:
                     st.error("El usuario Puente no tiene teléfono registrado.")
                 else:
-                    # 2. Datos del Target (El que va incluido en el mensaje)
                     target_phone = utils.decrypt_phone(t.get('target_phone_enc'))
                     info_contacto_target = f"{t['target_nick']} (WhatsApp: +549{target_phone})" if target_phone else t['target_nick']
                     
-                    # 3. Armado del mensaje
                     msg_wa = f"Hola! Vi una triangulación en Figus26. Yo te doy la #{t['bridge_quiere']}, vos le das la #{t['bridge_tiene']} a *{info_contacto_target}*, y yo recibo la #{t['target_tiene']}. ¿Te copás?"
                     
                     msg_encoded = quote(msg_wa)
                     link = f"https://wa.me/549{bridge_phone}?text={msg_encoded}"
                     
-                    # 4. BOTÓN DE ENLACE DIRECTO
-                    st.link_button("Contactar al Puente", link, type="primary")
+                    # Usamos st.button para poder ejecutar lógica (Reset)
+                    if st.button("Contactar al Puente", key=f"btn_triang_{t['bridge_id']}_{t['target_id']}_{i}", type="primary", use_container_width=True):
+                         # 1. Abrimos WhatsApp con JS
+                         js = f"<script>window.open('{link}', '_blank').focus();</script>"
+                         components.html(js, height=0)
+                         
+                         # 2. Avisamos al usuario
+                         st.toast("Abriendo WhatsApp...", icon="🚀")
+                         
+                         # 3. Esperamos un instante y reseteamos
+                         time.sleep(1.5)
+                         st.session_state.triang_results = None # Borrar resultados
+                         st.rerun() # Volver al estado inicial
         st.divider()
 
     # --- FLUJO NORMAL DE MERCADO ---
@@ -338,20 +341,17 @@ def render_market(user):
     
     matches, ventas = db.find_matches(user['id'], market_df)
 
-    # 2. FIX PREMIUM DIRECTO
     try:
         prem_response = db.supabase.table("users").select("id").eq("is_premium", True).execute()
         premium_ids = {u['id'] for u in prem_response.data}
     except:
         premium_ids = set()
 
-    # 3. INYECTAR PREMIUM
     for m in matches:
         m['is_premium'] = m['target_id'] in premium_ids
     for v in ventas:
         v['is_premium'] = v['target_id'] in premium_ids
 
-    # 4. ORDENAR
     def get_sort_score(item):
         is_p = item.get('is_premium', False)
         is_w = item.get('is_wishlist', False)
@@ -363,7 +363,6 @@ def render_market(user):
     matches = sorted(matches, key=lambda x: (get_sort_score(x), x['figu']))
     ventas = sorted(ventas, key=lambda x: (get_sort_score(x), x['figu']))
 
-    # Pendientes
     unlocked_ids = st.session_state.unlocked_users
     pendientes_total = []
     if unlocked_ids:
@@ -390,7 +389,6 @@ def render_market(user):
     if (total_raw_c > len(matches_filtrados)) or (total_raw_v > len(ventas_filtradas)):
         st.caption(f"📊 **Resumen:** Se encontraron **{total_raw_c} canjes** y **{total_raw_v} ventas** en total.")
 
-    # --- TABS ---
     t1, t2, t3 = st.tabs(["🔄 Canjes", "💰 Ventas", "🤝 Pendientes"])
     
     with t1: 
