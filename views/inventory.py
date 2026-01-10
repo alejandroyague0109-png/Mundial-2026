@@ -4,6 +4,23 @@ import time
 import database as db
 import utils 
 
+# --- MODAL DE INFORMACIÓN (NUEVO) ---
+@st.dialog("🎯 El Poder de la Wishlist")
+def modal_info_wishlist():
+    st.markdown("""
+    ### ¿Por qué es clave marcar tus faltantes? 🤔
+    
+    **1. Para TODOS (Prioridad y Compartir):**
+    ¡Organizá tu búsqueda! 📋
+    * **🚀 Prioridad:** En el Mercado, las figuritas que marcás acá aparecen **PRIMERAS**.
+    * **📲 WhatsApp:** Te sirve para tener tu lista de faltantes siempre a mano y compartirla rápido por WhatsApp con tus amigos.
+
+    **2. Para PREMIUM (Alertas y Triangulación):**
+    Desbloqueá la inteligencia artificial del álbum 🤖.
+    * **🔔 Alertas:** El sistema te **notifica automáticamente** cuando alguien publica una figurita de tu Wishlist.
+    * **📐 Triangulación:** Habilita el canje a 3 bandas (Vos -> Puente -> Objetivo) cuando no hay cambio directo.
+    """)
+
 # --- FUNCIÓN AUXILIAR PARA DETECTAR CAMBIOS ---
 def marcar_cambio():
     st.session_state.unsaved_changes = True
@@ -47,9 +64,20 @@ def render_inventory(user, start, end, seleccion_pais):
         on_change=marcar_cambio 
     )
 
-    # --- SECCIÓN WISHLIST ---
-    st.markdown("### ❤️ Wishlist (Prioridad)")
-    st.caption("Marcá las que **TE FALTAN** y querés conseguir urgente.")
+    # --- SECCIÓN WISHLIST (CON BOTÓN INFO INTEGRADO) ---
+    st.divider()
+    
+    # Layout para texto + botón info
+    col_w_txt, col_w_btn = st.columns([0.85, 0.15])
+    
+    with col_w_txt:
+        st.markdown("### ❤️ Wishlist (Prioridad)")
+        st.caption("Marcá las que **TE FALTAN** y querés conseguir urgente.")
+    
+    with col_w_btn:
+        # Botón que abre el modal explicativo
+        if st.button("ℹ️", key="btn_info_wishlist", help="¿Para qué sirve la Wishlist?"):
+            modal_info_wishlist()
     
     todas = set(range(start, end + 1))
     tengo_set = set(seleccion_tengo) if seleccion_tengo else set()
