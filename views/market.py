@@ -6,7 +6,7 @@ import locations
 import utils
 import config
 import streamlit.components.v1 as components 
-import triangulation # <--- Importamos el archivo nuevo
+import triangulation
 
 ITEMS_POR_PAGINA = 10
 
@@ -106,7 +106,7 @@ def render_card(item, tipo, user, is_pending_view=False):
                 link_wa = f"https://wa.me/549{phone_target}?text={mensaje_encoded}"
             else: st.error("Error al desencriptar.")
 
-        # --- INFO ---
+        # --- INFO DE LA TARJETA ---
         with col_info:
             badges = []
             if is_target_premium:
@@ -153,8 +153,10 @@ def render_card(item, tipo, user, is_pending_view=False):
                 if phone_target: 
                     st.link_button("🟢 WhatsApp", link_wa, type="secondary", use_container_width=True)
                 
+                # --- AQUÍ ESTÁ EL CAMBIO PARA "PENDIENTES" ---
                 if is_pending_view:
-                    if st.button("✅ Fichaje cerrado", key=f"pd_ok_{fig_recibo}_{target_id}_{suffix}", help="Concretar transacción", use_container_width=True):
+                    # Botón Verde Primary (Sin tooltips)
+                    if st.button("✅ Fichaje cerrado", key=f"pd_ok_{fig_recibo}_{target_id}_{suffix}", type="primary", use_container_width=True):
                         es_premium = user.get('is_premium', False)
                         id_para_borrar = None if es_premium else target_id
                         
@@ -169,7 +171,8 @@ def render_card(item, tipo, user, is_pending_view=False):
                             st.toast("¡Golazo!", icon="⚽"); st.success(msg); time.sleep(1.0); st.rerun()
                         else: st.error(msg)
                     
-                    if st.button("❌ Fichaje caído", key=f"pd_no_{fig_recibo}_{target_id}_{suffix}", help="Cancelar transacción", use_container_width=True):
+                    # Botón Secundario (Sin tooltips)
+                    if st.button("❌ Fichaje caído", key=f"pd_no_{fig_recibo}_{target_id}_{suffix}", use_container_width=True):
                          db.remove_unlock(user['id'], target_id)
                          st.session_state.unlocked_users.discard(target_id)
                          st.rerun()
@@ -188,9 +191,12 @@ def render_card(item, tipo, user, is_pending_view=False):
                         else: modal_seguridad(target_id, user)
                     else: mostrar_modal_premium()
             
-            if st.button("⭐ Votar", key=f"vt_{tipo}_{fig_recibo}_{target_id}_{suffix}", help="Recomendar usuario", use_container_width=True):
-                ok, m = db.votar_usuario(user['id'], target_id)
-                st.toast(m)
+            # Botón Recomendar (Solo visible si no es vista de pendientes, o podrías dejarlo en ambas)
+            # En pendientes priorizamos cerrar el trato, pero si querés dejarlo, usá este estilo:
+            if not is_pending_view:
+                if st.button("⭐ Recomendar", key=f"vt_{tipo}_{fig_recibo}_{target_id}_{suffix}", use_container_width=True):
+                    ok, m = db.votar_usuario(user['id'], target_id)
+                    st.toast(m)
 
 def paginar_y_mostrar(lista_items, tipo_key, tipo_card, user, is_pending_view=False):
     if not is_pending_view:
@@ -315,7 +321,6 @@ def render_market(user):
                     msg_encoded = quote(msg_wa)
                     link = f"https://wa.me/549{bridge_phone}?text={msg_encoded}"
                     
-                    # Botón que abre WA y resetea (usando JS)
                     if st.button(f"Contactar al Puente ({t['bridge_nick']})", key=f"btn_triang_{i}", type="primary", use_container_width=True):
                          js = f"<script>window.open('{link}', '_blank').focus();</script>"
                          components.html(js, height=0)

@@ -130,8 +130,22 @@ def render_user_sidebar(user):
         else:
             st.info("👤 GRATIS")
             contacts = user.get('daily_contacts_count', 0)
-            if contacts >= 1: st.progress(1.0, text="Límite: 1/1 (Agotado)")
-            else: st.progress(0.0, text="Límite: 0/1 (Disponible)")
+            
+            # BARRA DE PROGRESO PERSONALIZADA
+            if contacts >= 1:
+                # Estado CRÍTICO (Rojo Fuerte)
+                st.markdown("""
+                <div style="margin-bottom: 10px;">
+                    <div style="background-color: #e0e0e0; border-radius: 10px; height: 20px; width: 100%;">
+                        <div style="background-color: #FF4B4B; width: 100%; height: 100%; border-radius: 10px; text-align: center; color: white; font-size: 12px; line-height: 20px; font-weight: bold; box-shadow: 0 2px 4px rgba(255, 75, 75, 0.4);">
+                            Límite: 1/1 (Agotado)
+                        </div>
+                    </div>
+                </div>
+                """, unsafe_allow_html=True)
+            else:
+                # Estado NORMAL (Usamos el estándar que es dorado/verde o gris)
+                st.progress(0.0, text="Límite: 0/1 (Disponible)")
             
             if st.button("💎 Hacete Premium", use_container_width=True): 
                 market.mostrar_modal_premium()
