@@ -472,3 +472,23 @@ def find_potential_bridges(needed_figus, my_repes):
                     })
         return bridges
     except: return []
+
+def get_completion_stats(user_id):
+    """
+    Calcula el progreso real del álbum (únicas pegadas) para la barra lateral.
+    """
+    try:
+        # Traemos todas las figuritas que el usuario TIENE (tengo, repetida o repe)
+        data = supabase.table("inventory")\
+            .select("sticker_num")\
+            .eq("user_id", user_id)\
+            .in_("status", ["tengo", "repetida", "repe"])\
+            .execute()
+            
+        # Usamos un set para contar figuritas únicas (evita duplicados)
+        unique_stickers = {row['sticker_num'] for row in data.data}
+        return len(unique_stickers)
+        
+    except Exception as e:
+        print(f"Error stats: {e}")
+        return 0
