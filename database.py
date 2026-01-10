@@ -65,7 +65,7 @@ def register_user(nick, phone, province, zone, password, secret_q, secret_a):
         return response.data[0], "OK"
     except Exception as e: return None, f"Error DB: {str(e)}"
 
-# --- RECUPERACIÓN (Igual) ---
+# --- RECUPERACIÓN ---
 def get_security_info(phone):
     clean_phone = utils.limpiar_telefono(phone)
     if not clean_phone: return None, "Teléfono inválido."
@@ -90,11 +90,9 @@ def reset_password(phone, answer_input, new_password):
         else: return False, "Respuesta incorrecta."
     except Exception as e: return False, str(e)
 
-# --- EDICIÓN DE PERFIL (NUEVO) ---
+# --- EDICIÓN DE PERFIL ---
 def update_profile(user_id, province, zone):
-    """Actualiza la ubicación del usuario."""
     try:
-        # Solo permitimos actualizar zona y provincia para no romper el hash del teléfono
         supabase.table("users").update({
             "province": province, 
             "zone": zone
@@ -103,7 +101,7 @@ def update_profile(user_id, province, zone):
     except Exception as e:
         return False, f"Error al actualizar: {str(e)}"
 
-# --- CONTACTOS (Igual) ---
+# --- CONTACTOS ---
 def log_unlock(user_id, target_id):
     try:
         supabase.table("contact_logs").insert({"user_id": user_id, "target_id": target_id}).execute()
@@ -122,7 +120,7 @@ def remove_unlock(user_id, target_id):
         return True
     except: return False
 
-# --- INVENTARIO (Igual) ---
+# --- INVENTARIO (Tu versión original estable) ---
 def get_inventory_status(user_id, start, end):
     try:
         response = supabase.table("inventory").select("*").eq("user_id", user_id).execute()
@@ -179,21 +177,17 @@ def save_inventory_positive(user_id, start, end, ui_owned_list, ui_wishlist_list
             except Exception as e:
                 if attempt < max_retries - 1: time.sleep(1)
                 else: raise e
+    
+    # Limpiamos caché del mercado
     fetch_market.clear()
 
-# ... (dentro de database.py, al final de la sección INVENTARIO)
-
 def get_full_wishlist(user_id):
-    """Trae TODA la wishlist completa del usuario para compartir."""
     try:
         resp = supabase.table("inventory").select("sticker_num").eq("user_id", user_id).eq("status", "wishlist").execute()
-        # Retornamos lista ordenada de números
         return sorted([int(x['sticker_num']) for x in resp.data])
-    except:
-        return []
+    except: return []
 
-
-# --- GESTIÓN DE SOLICITUDES (Igual) ---
+# --- GESTIÓN DE SOLICITUDES ---
 def get_pending_transactions(user_id):
     try:
         resp = supabase.table("transaction_requests").select("*, users!sender_id(nick)").eq("receiver_id", user_id).eq("status", "pending").execute()
@@ -234,7 +228,7 @@ def reject_transaction_request(request_id):
         return True
     except: return False
 
-# --- INTERCAMBIO (Igual) ---
+# --- INTERCAMBIO ---
 def register_exchange(user_id, given_fig, received_fig, target_id_to_remove=None):
     try:
         given_fig = int(given_fig)
@@ -268,7 +262,7 @@ def register_purchase(user_id, received_fig, target_id_to_remove=None):
         return True, "¡Compra registrada! Le avisé al vendedor para que actualice su stock."
     except Exception as e: return False, f"Error: {str(e)}"
 
-# --- MERCADO (Igual) ---
+# --- MERCADO ---
 @st.cache_data(ttl=60, show_spinner=False)
 def fetch_market(user_id):
     try:
@@ -282,6 +276,10 @@ def fetch_market(user_id):
 
 def find_matches(user_id, market_df):
     if market_df.empty: return [], []
+    
+    # FIX PANDAS: Agregamos copy() aquí para arreglar el error del dataframe
+    market_df = market_df.copy()
+
     try:
         resp = supabase.table("inventory").select("sticker_num").eq("user_id", user_id).eq("status", "tengo").execute()
         mis_tengo_set = set(int(item['sticker_num']) for item in resp.data)
@@ -298,6 +296,7 @@ def find_matches(user_id, market_df):
     market_df['phone_encrypted'] = market_df['users'].apply(lambda x: x.get('phone_encrypted', ''))
     market_df['reputation'] = market_df['users'].apply(lambda x: x.get('reputation', 0))
     market_df['other_id'] = market_df['users'].apply(lambda x: x.get('id', 0))
+    
     ofertas = market_df[market_df['status'] == 'repetida']
     
     for _, row in ofertas.iterrows():
@@ -318,7 +317,7 @@ def find_matches(user_id, market_df):
     ventas.sort(key=lambda x: (not x['is_wishlist'], x['price'], -x['reputation']))
     return directos, ventas
 
-# --- UTILS (Igual) ---
+# --- UTILS ---
 def verificar_pago_mp(payment_id, user_id):
     try:
         if supabase.table("payments_log").select("*").eq("payment_id", payment_id).execute().data: return False, "Usado."
@@ -390,15 +389,86 @@ def process_csv_upload(df, user_id):
         return False, "CSV vacío."
     except Exception as e: return False, str(e)
 
-# ... (Mantené todo lo anterior igual)
-
-# --- AUTO-LOGIN (RECUPERAR POR ID) ---
 def get_user_by_id(user_id):
     try:
-        # Busca el usuario solo por su ID
         response = supabase.table("users").select("*").eq("id", user_id).execute()
-        if response.data:
-            return response.data[0]
+        if response.data: return response.data[0]
         return None
-    except:
-        return None
+    except: return None
+
+# --- FUNCIONES DE SOPORTE PARA TRIANGULACIÓN (NUEVAS: AGREGADAS AL FINAL) ---
+def get_users_with_sticker(figu_num):
+    """Busca usuarios con la figurita y devuelve phone_encrypted."""
+    try:
+        # Usamos sticker_num como en el resto de tu backup
+        response = supabase.table("inventory")\
+            .select("user_id, status, users(nick, province, zone, phone_encrypted)")\
+            .eq("sticker_num", figu_num)\
+            .execute()
+        users = []
+        for row in response.data:
+            if not row.get('users'): continue
+            raw_status = str(row.get('status', '')).lower().strip()
+            if raw_status in ["repetida", "repe"]:
+                u_data = row.get('users', {})
+                users.append({
+                    'user_id': row['user_id'],
+                    'nick': u_data.get('nick', 'User'),
+                    'province': str(u_data.get('province', '')).strip(),
+                    'zone': str(u_data.get('zone', '')).strip(),
+                    'phone_encrypted': u_data.get('phone_encrypted', '')
+                })
+        return users
+    except Exception as e: return []
+
+def get_wishlists_of_users(user_ids):
+    try:
+        if not user_ids: return {}
+        response = supabase.table("inventory").select("user_id, sticker_num").in_("user_id", user_ids).eq("status", "wishlist").execute()
+        res = {}
+        for row in response.data:
+            uid = row['user_id']
+            if uid not in res: res[uid] = []
+            res[uid].append(row['sticker_num'])
+        return res
+    except: return {}
+
+def find_potential_bridges(needed_figus, my_repes):
+    try:
+        if not needed_figus or not my_repes: return []
+        holders = supabase.table("inventory").select("user_id, sticker_num, status, users(nick, province, zone, phone_encrypted)").in_("sticker_num", needed_figus).execute()
+        holder_map = {} 
+        user_info = {}
+        candidate_ids = []
+        
+        for row in holders.data:
+            if str(row.get('status', '')).lower().strip() not in ["repetida", "repe"]: continue
+            uid = row['user_id']
+            u_data = row.get('users', {})
+            if uid not in holder_map: 
+                holder_map[uid] = []
+                candidate_ids.append(uid)
+                user_info[uid] = {
+                    'nick': u_data.get('nick', 'Puente'),
+                    'province': str(u_data.get('province', '')).strip(),
+                    'zone': str(u_data.get('zone', '')).strip(),
+                    'phone_encrypted': u_data.get('phone_encrypted', '')
+                }
+            holder_map[uid].append(row['sticker_num'])
+            
+        if not candidate_ids: return []
+        
+        wanters = supabase.table("inventory").select("user_id, sticker_num").in_("user_id", candidate_ids).in_("sticker_num", my_repes).eq("status", "wishlist").execute()
+        bridges = []
+        for row in wanters.data:
+            uid = row['user_id']
+            if uid in holder_map:
+                for has in holder_map[uid]:
+                    bridges.append({
+                        'user_id': uid, 'nick': user_info[uid]['nick'],
+                        'province': user_info[uid]['province'], 'zone': user_info[uid]['zone'],
+                        'phone_encrypted': user_info[uid]['phone_encrypted'],
+                        'has_figu': has, 'wants_figu': row['sticker_num']
+                    })
+        return bridges
+    except: return []

@@ -7,7 +7,7 @@ import utils
 import locations 
 import styles 
 
-# IMPORTAMOS LOS MÓDULOS DE VISTA (AHORA INCLUYE MODALS)
+# IMPORTAMOS LOS MÓDULOS DE VISTA
 from views import auth, inventory, market, admin, sidebar, modals
 
 # --- CONFIGURACIÓN UI ---
@@ -28,9 +28,8 @@ if 'barrera_superada' not in st.session_state: st.session_state.barrera_superada
 if 'current_country' not in st.session_state: st.session_state.current_country = list(config.ALBUM_PAGES.keys())[0]
 if 'unsaved_changes' not in st.session_state: st.session_state.unsaved_changes = False
 
-
 # ==========================================
-#      FLUJO LÓGICO PRINCIPAL
+#     FLUJO LÓGICO PRINCIPAL
 # ==========================================
 
 # 1. VERIFICAR URL +18
@@ -49,7 +48,7 @@ if 'user' not in st.session_state or st.session_state.user is None:
 
 # 3. BARRERA DE EDAD (BLOQUEANTE)
 if not st.session_state.barrera_superada:
-    modals.mostrar_barrera_entrada() # <--- LLAMADA MODULARIZADA
+    modals.mostrar_barrera_entrada() 
     st.stop()
 
 # 4. VERIFICACIÓN DE LOGIN
@@ -64,7 +63,7 @@ else:
     if user.get('is_admin', False):
         with st.sidebar:
             st.title("Admin Panel")
-            if st.button("Salir / Logout"):
+            if st.button("Salir / Logout", use_container_width=True): # <--- CORREGIDO
                 st.session_state.user = None
                 st.query_params.clear()
                 st.rerun()
@@ -86,13 +85,13 @@ else:
             if wish_hits: st.toast(f"🔔 {len(wish_hits)} de tu Wishlist disponibles.", icon="🎉")
             st.session_state.wishlist_notified = True
 
-        # --- SIDEBAR (MODULARIZADO) ---
+        # --- SIDEBAR ---
         sidebar.render_user_sidebar(user)
 
         # --- CONTENIDO PRINCIPAL ---
         st.header("📖 Mi Álbum")
         
-        # Selector de País con Lógica de Intercepción
+        # Selector de País
         paises = list(config.ALBUM_PAGES.keys())
         try: idx = paises.index(st.session_state.current_country)
         except: idx = 0
@@ -101,7 +100,7 @@ else:
         
         if nuevo_pais != st.session_state.current_country:
             if st.session_state.unsaved_changes:
-                modals.confirmar_cambio_pais(nuevo_pais, user) # <--- LLAMADA MODULARIZADA
+                modals.confirmar_cambio_pais(nuevo_pais, user)
             else:
                 st.session_state.current_country = nuevo_pais
                 st.rerun()
@@ -112,11 +111,12 @@ else:
         st.divider()
         market.render_market(user)
 
-        # --- FOOTER (MODULARIZADO) ---
+        # --- FOOTER ---
         st.divider()
         fc1, fc2, fc3 = st.columns(3)
-        if fc1.button("📧 Contacto", width="stretch", type="secondary"): modals.mostrar_contacto()
-        if fc2.button("❓ FAQ", width="stretch", type="secondary"): modals.mostrar_faq()
-        if fc3.button("⚖️ Legales", width="stretch", type="secondary"): modals.mostrar_legales()
+        # CORREGIDOS: use_container_width=True
+        if fc1.button("📧 Contacto", use_container_width=True, type="secondary"): modals.mostrar_contacto()
+        if fc2.button("❓ FAQ", use_container_width=True, type="secondary"): modals.mostrar_faq()
+        if fc3.button("⚖️ Legales", use_container_width=True, type="secondary"): modals.mostrar_legales()
         
         st.markdown("<div class='footer-text'>© 2026 Figus 26. Hecho en Mendoza 🍷</div>", unsafe_allow_html=True)
