@@ -1,6 +1,12 @@
 [server]
-headless = true
 fileWatcherType = "none"
 
-[browser]
-gatherUsageStats = false
+[theme]
+primaryColor = "#00A650"  # Verde "Césped" vibrante (Acciones principales)
+backgroundColor = "#F0F2F6" # Gris muy suave (Fondo general, descansa la vista)
+secondaryBackgroundColor = "#FFFFFF" # Blanco puro (Para el sidebar y tarjetas)
+textColor = "#171717" # Negro suave (Texto)
+font = "sans serif"
+
+[server]
+runOnSave = true
