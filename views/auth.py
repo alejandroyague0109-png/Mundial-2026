@@ -24,7 +24,7 @@ def mostrar_login():
             if 'recup_phone' not in st.session_state:
                 phone_input = st.text_input("Ingresá tu celular:", placeholder="Ej: 2604123456")
                 
-                if st.button("Buscar Cuenta", width="stretch"):
+                if st.button("Buscar Cuenta", use_container_width=True):
                     user_data, msg = db.get_security_info(phone_input)
                     if user_data:
                         st.session_state.recup_phone = phone_input
@@ -52,7 +52,7 @@ def mostrar_login():
                     ans = st.text_input("Tu Respuesta Secreta:", type="password")
                     new_pass = st.text_input("Nueva Contraseña:", type="password")
                     
-                    if st.button("🔄 Cambiar Contraseña", type="primary", width="stretch"):
+                    if st.button("🔄 Cambiar Contraseña", type="primary", use_container_width=True):
                         ok, msg = db.reset_password(st.session_state.recup_phone, ans, new_pass)
                         if ok:
                             st.success(msg)
@@ -98,7 +98,7 @@ def mostrar_login():
                     else:
                         st.error(msg)
                 
-                if st.button("¿Te olvidaste la contraseña?", type="secondary", width="stretch"):
+                if st.button("¿Te olvidaste la contraseña?", type="secondary", use_container_width=True):
                     st.session_state.modo_recuperacion = True
                     st.rerun()
 

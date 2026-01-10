@@ -5,7 +5,7 @@ import config
 import database as db
 import utils 
 import locations 
-from views import market # Importamos market para el modal de premium
+from views import market 
 
 # --- MODALES ESPECÍFICOS DEL SIDEBAR ---
 
@@ -37,7 +37,8 @@ def mostrar_editar_perfil(user):
     
     new_zone = st.selectbox("Zona", zones, index=idx_zone)
 
-    if st.button("💾 Guardar Cambios", type="primary", width="stretch"):
+    # CORREGIDO: use_container_width=True
+    if st.button("💾 Guardar Cambios", type="primary", use_container_width=True):
         with utils.spinner_futbolero():
             ok, msg = db.update_profile(user['id'], new_prov, new_zone)
         
@@ -52,17 +53,6 @@ def mostrar_editar_perfil(user):
 
 # --- FUNCIÓN PRINCIPAL DE RENDERIZADO ---
 def render_user_sidebar(user):
-    # Preparación de datos (Cálculos para la barra de progreso)
-    # Nota: Usamos el país actual seleccionado para el cálculo visual rápido
-    current_country = st.session_state.get('current_country', list(config.ALBUM_PAGES.keys())[0])
-    start_curr, end_curr = config.ALBUM_PAGES[current_country]
-    total_album = sum([(v[1] - v[0] + 1) for v in config.ALBUM_PAGES.values()])
-    
-    # Obtenemos inventario local para la barra (aprox)
-    _, _, _, df_full = db.get_inventory_status(user['id'], start_curr, end_curr)
-    try: tengo_total = df_full[df_full['status'] == 'tengo'].shape[0]
-    except: tengo_total = 0
-
     with st.sidebar:
         st.title(f"Hola {user['nick']}")
         st.caption(f"📍 {user.get('province', '')} - {user.get('zone', '')}")
@@ -73,7 +63,7 @@ def render_user_sidebar(user):
              
         st.caption(f"⭐ Reputación: {user.get('reputation', 0)}")
         
-        # TRANSACCIONES PENDIENTES
+        # --- TRANSACCIONES PENDIENTES ---
         pending_requests = db.get_pending_transactions(user['id'])
         if pending_requests:
             st.divider()
@@ -95,10 +85,20 @@ def render_user_sidebar(user):
                         st.rerun()
         
         st.divider()
-        # Barra de progreso (Visualización de la sección actual)
-        st.progress(min(tengo_total / 200, 1.0), text=f"🏆 Progreso {current_country}")
         
-        # COMPARTIR DESEADOS
+        # --- BARRA DE PROGRESO GLOBAL (Lógica Nueva) ---
+        # 1. Calculamos el total de figuritas de todo el álbum
+        total_album = sum([(v[1] - v[0] + 1) for v in config.ALBUM_PAGES.values()])
+        # 2. Usamos la función optimizada de DB
+        pegadas_reales = db.get_completion_stats(user['id'])
+        
+        progreso = 0.0
+        if total_album > 0:
+            progreso = min(pegadas_reales / total_album, 1.0)
+            
+        st.progress(progreso, text=f"🏆 Progreso Total: {pegadas_reales}/{total_album}")
+        
+        # --- COMPARTIR DESEADOS ---
         full_wishlist = db.get_full_wishlist(user['id'])
         if full_wishlist:
             link_share = utils.generar_link_whatsapp_wishlist(full_wishlist)
@@ -106,21 +106,25 @@ def render_user_sidebar(user):
         
         st.divider()
         
-        # CARGA MASIVA
+        # --- CARGA MASIVA (Corrección de Botones) ---
         with st.expander("📤 Carga Masiva (CSV)"):
             col_a, col_b = st.columns(2)
-            if col_a.button("❓ Ayuda", width="stretch"): mostrar_instrucciones_csv()
+            # CORREGIDOS use_container_width
+            if col_a.button("❓ Ayuda", use_container_width=True): mostrar_instrucciones_csv()
+            
             df_plantilla = pd.DataFrame([{"num": 10, "status": "tengo", "price": 0}, {"num": 25, "status": "repetida", "price": 500}])
-            col_b.download_button("⬇️ Plantilla", df_plantilla.to_csv(index=False).encode('utf-8'), "plantilla.csv", "text/csv", width="stretch")
+            col_b.download_button("⬇️ Plantilla", df_plantilla.to_csv(index=False).encode('utf-8'), "plantilla.csv", "text/csv", use_container_width=True)
+            
             up = st.file_uploader("Subí tu CSV", type="csv")
-            if up and st.button("🚀 Procesar", type="primary", width="stretch"):
+            if up and st.button("🚀 Procesar", type="primary", use_container_width=True):
                 with utils.spinner_futbolero():
                     ok, msg = db.process_csv_upload(pd.read_csv(up), user['id'])
                 if ok: st.toast("¡Cargado!", icon="📦"); st.success(msg); time.sleep(1); st.rerun()
                 else: st.error(msg)
+        
         st.divider()
         
-        # ESTADO PREMIUM
+        # --- ESTADO PREMIUM ---
         if user.get('is_premium', False): 
             st.success("💎 PREMIUM")
         else:
@@ -129,19 +133,19 @@ def render_user_sidebar(user):
             if contacts >= 1: st.progress(1.0, text="Límite: 1/1 (Agotado)")
             else: st.progress(0.0, text="Límite: 0/1 (Disponible)")
             
-            if st.button("💎 Hacete Premium", width="stretch"): 
+            if st.button("💎 Hacete Premium", use_container_width=True): 
                 market.mostrar_modal_premium()
             
             with st.expander("Validar Pago"):
                 op = st.text_input("ID Op")
-                if op and st.button("Validar"):
+                if op and st.button("Validar", use_container_width=True):
                     with utils.spinner_futbolero():
                         ok, msg = db.verificar_pago_mp(op, user['id'])
                     if ok: st.toast("¡Premium!", icon="💎"); st.rerun()
                     else: st.error(msg)
         
-        # LOGOUT
-        if st.button("Chau / Salir"):
+        # --- LOGOUT ---
+        if st.button("Chau / Salir", use_container_width=True):
             st.session_state.user = None
-            st.query_params.clear() # FIX: Borrar token al salir
+            st.query_params.clear() 
             st.rerun()

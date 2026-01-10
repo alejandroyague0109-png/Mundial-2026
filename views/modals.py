@@ -1,8 +1,8 @@
 import streamlit as st
 import pandas as pd
-import config
 import database as db
 import utils
+import config
 
 # --- 1. BARRERA DE EDAD ---
 @st.dialog("⚠️ Bienvenido a Figus 26")
@@ -11,7 +11,8 @@ def mostrar_barrera_entrada():
     st.info("🤝 Facilitamos el contacto entre coleccionistas, pero no intervenimos en los canjes. No nos hacemos responsables de las reuniones pactadas por los usuarios ni de las transacciones realizadas.")
     st.markdown("**Al continuar, declarás bajo juramento que sos mayor de edad.**")
     
-    if st.button("✅ Entendido, soy +18", type="primary", width="stretch"):
+    # CORREGIDO: use_container_width=True
+    if st.button("✅ Entendido, soy +18", type="primary", use_container_width=True):
         st.session_state.barrera_superada = True
         st.query_params["over18"] = "true"
         st.rerun()
@@ -25,7 +26,8 @@ def confirmar_cambio_pais(target_pais, user):
     col1, col2 = st.columns(2)
     
     # Opción 1: Guardar y Continuar
-    if col1.button("💾 Guardar y Continuar", type="primary", width="stretch"):
+    # CORREGIDO: use_container_width=True
+    if col1.button("💾 Guardar y Continuar", type="primary", use_container_width=True):
         curr = st.session_state.current_country
         tengo_data = st.session_state.get(f"pills_tengo_{curr}", [])
         wish_data = st.session_state.get(f"pills_wish_{curr}", [])
@@ -42,19 +44,23 @@ def confirmar_cambio_pais(target_pais, user):
             repes_ids = st.session_state.get(f"repes_{curr}", [])
             df_repes = pd.DataFrame([{"Figurita": r, "Modo": "Canje", "Precio": 0, "Cantidad": 1} for r in repes_ids])
 
-        # B. Aplicar Cambios Pendientes del Editor
+        # B. Aplicar Cambios Pendientes del Editor (Streamlit no actualiza el session_state inmediatamente)
         if editor_key in st.session_state:
             cambios = st.session_state[editor_key]
-            if "edited_rows" in cambios:
+            # Si el editor devolvió un dict con cambios (versiones nuevas de st)
+            if isinstance(cambios, dict) and "edited_rows" in cambios:
                 for idx_str, updated_cols in cambios["edited_rows"].items():
                     idx = int(idx_str)
                     if idx in df_repes.index:
                         for col, val in updated_cols.items():
                             df_repes.at[idx, col] = val
-        # --------------------------------------------------
+            # Si el editor devolvió el DF directo (configuraciones antiguas/ciertos modos)
+            elif isinstance(cambios, pd.DataFrame):
+                 df_repes = cambios
 
         with utils.spinner_futbolero():
              s, e = config.ALBUM_PAGES[curr]
+             # Llamamos a la función segura
              db.save_inventory_positive(user['id'], s, e, tengo_data, wish_data, df_repes)
         
         st.session_state.unsaved_changes = False
@@ -62,7 +68,8 @@ def confirmar_cambio_pais(target_pais, user):
         st.rerun()
         
     # Opción 2: Descartar
-    if col2.button("🗑️ Descartar Cambios", width="stretch"):
+    # CORREGIDO: use_container_width=True
+    if col2.button("🗑️ Descartar Cambios", use_container_width=True):
         st.session_state.unsaved_changes = False
         st.session_state.current_country = target_pais
         st.rerun()
@@ -117,4 +124,5 @@ def mostrar_faq():
 
 @st.dialog("⚖️ Legales")
 def mostrar_legales():
-    st.markdown("### Términos y Condiciones"); st.markdown(config.TEXTO_LEGAL_COMPLETO)
+    st.markdown("### Términos y Condiciones")
+    st.markdown(getattr(config, 'TEXTO_LEGAL_COMPLETO', 'Texto legal no disponible.'))
