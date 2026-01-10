@@ -3,11 +3,9 @@ import streamlit as st
 def load_css():
     st.markdown("""
     <style>
-        /* --- FUENTES E IMPORTACIONES --- */
         @import url('https://fonts.googleapis.com/css2?family=Roboto:wght@400;700&display=swap');
 
-        /* --- CONTENEDORES Y TARJETAS --- */
-        /* Darle sombra y bordes suaves a los containers (las cartas de jugadores) */
+        /* --- CONTENEDORES --- */
         [data-testid="stVerticalBlockBorderWrapper"] {
             border-radius: 12px;
             border: 1px solid #e0e0e0;
@@ -15,90 +13,79 @@ def load_css():
             box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
             transition: transform 0.2s ease, box-shadow 0.2s ease;
         }
-        
         [data-testid="stVerticalBlockBorderWrapper"]:hover {
             box-shadow: 0 8px 15px rgba(0, 0, 0, 0.1);
-            border-color: #00A650; /* Borde verde al pasar el mouse */
+            border-color: #00A650;
         }
 
-        /* --- BOTONES --- */
-        /* Botón Primario (Verde - Acciones Positivas) */
+        /* --- BOTONES: HOMOGENEIZACIÓN (Ghost Style) --- */
+        
+        /* 1. Botón PRIMARIO (Positivo - Guardar, Confirmar) */
+        /* Estado Normal: Blanco con borde Verde */
         div.stButton > button[kind="primary"] {
-            background: linear-gradient(180deg, #00C853 0%, #00A650 100%);
-            color: white;
-            border: none;
+            background-color: white !important;
+            color: #00A650 !important;
+            border: 2px solid #00A650 !important;
             border-radius: 8px;
             font-weight: bold;
             text-transform: uppercase;
-            letter-spacing: 0.5px;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+            transition: all 0.3s ease;
+            box-shadow: none;
         }
+        /* Hover: Se llena de Verde */
         div.stButton > button[kind="primary"]:hover {
-            background: linear-gradient(180deg, #00E676 0%, #00C853 100%);
-            transform: scale(1.02);
+            background-color: #00A650 !important;
+            color: white !important;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 10px rgba(0, 166, 80, 0.2);
         }
 
-        /* Botón Secundario (Gris/Blanco - Acciones Neutras) */
+        /* 2. Botón SECUNDARIO (Neutro - Cancelar, Filtros) */
+        /* Estado Normal: Blanco con borde Gris */
         div.stButton > button[kind="secondary"] {
-            border: 2px solid #e0e0e0;
-            color: #333;
+            background-color: white !important;
+            color: #555 !important;
+            border: 2px solid #e0e0e0 !important;
             border-radius: 8px;
             font-weight: 600;
+            transition: all 0.3s ease;
         }
+        /* Hover: Se pone Verde (Por defecto acciones neutras/positivas) */
         div.stButton > button[kind="secondary"]:hover {
-            border-color: #00A650;
-            color: #00A650;
+            border-color: #00A650 !important;
+            color: #00A650 !important;
+            background-color: #f0fdf4 !important;
         }
 
-        /* --- TÍTULOS Y ENCABEZADOS --- */
-        h1, h2, h3 {
-            font-family: 'Roboto', sans-serif;
-            color: #1a1a1a;
-            font-weight: 800 !important;
-        }
+        /* --- EXCEPCIONES PARA BOTONES ROJOS (Negativos) --- */
+        /* Usaremos una clase CSS inyectada localmente o selectores específicos en las vistas */
+
+        /* --- TIPOGRAFÍA --- */
+        h1, h2, h3 { font-family: 'Roboto', sans-serif; color: #1a1a1a; font-weight: 800 !important; }
         
-        /* Título Principal con toque dorado/azul */
         h1 {
             background: -webkit-linear-gradient(45deg, #1a237e, #0d47a1);
             -webkit-background-clip: text;
             -webkit-text-fill-color: transparent;
         }
 
-        /* --- BARRA DE PROGRESO --- */
+        /* --- PROGRESO --- */
         .stProgress > div > div > div > div {
-            background-color: #FFD700; /* Dorado Copa del Mundo */
-            background-image: linear-gradient(45deg,rgba(255,255,255,.15) 25%,transparent 25%,transparent 50%,rgba(255,255,255,.15) 50%,rgba(255,255,255,.15) 75%,transparent 75%,transparent);
-            background-size: 1rem 1rem;
-        }
-
-        /* --- SIDEBAR --- */
-        section[data-testid="stSidebar"] {
-            background-color: #ffffff;
-            border-right: 1px solid #eee;
-        }
-
-        /* --- METRICS (Números grandes) --- */
-        [data-testid="stMetricValue"] {
-            font-size: 2rem !important;
-            color: #00A650 !important; /* Verde */
-            font-weight: bold !important;
-        }
-
-        /* --- FOOTER --- */
-        .footer-text {
-            text-align: center;
-            color: #888;
-            font-size: 0.85rem;
-            margin-top: 40px;
-            padding-top: 20px;
-            border-top: 1px solid #eee;
+            background-color: #FFD700;
         }
         
-        /* --- PILLS (Selectores) --- */
-        /* Ajuste para que se vean como botones de táctica */
-        [data-testid="stPills"] button {
-            border-radius: 20px !important;
+        [data-testid="stMetricValue"] {
+            font-size: 2rem !important;
+            color: #00A650 !important;
+            font-weight: bold !important;
         }
+        
+        .footer-text {
+            text-align: center; color: #888; font-size: 0.85rem;
+            margin-top: 40px; padding-top: 20px; border-top: 1px solid #eee;
+        }
+        
+        [data-testid="stPills"] button { border-radius: 20px !important; }
 
     </style>
     """, unsafe_allow_html=True)
