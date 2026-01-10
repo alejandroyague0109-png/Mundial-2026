@@ -18,11 +18,12 @@ def load_css():
             border-color: #00A650;
         }
 
-        /* --- BOTONES: HOMOGENEIZACIÓN (Ghost Style) --- */
+        /* --- BOTONES: GHOST STYLE --- */
         
-        /* 1. Botón PRIMARIO (Positivo - Guardar, Confirmar) */
-        /* Estado Normal: Blanco con borde Verde */
-        div.stButton > button[kind="primary"] {
+        /* 1. PRIMARIO (Verde) */
+        div.stButton > button[kind="primary"],
+        div.stDownloadButton > button[kind="primary"],
+        div.stLinkButton > a[kind="primary"] {
             background-color: white !important;
             color: #00A650 !important;
             border: 2px solid #00A650 !important;
@@ -31,36 +32,51 @@ def load_css():
             text-transform: uppercase;
             transition: all 0.3s ease;
             box-shadow: none;
+            text-decoration: none !important; /* Para links */
         }
-        /* Hover: Se llena de Verde */
-        div.stButton > button[kind="primary"]:hover {
+        div.stButton > button[kind="primary"]:hover,
+        div.stDownloadButton > button[kind="primary"]:hover,
+        div.stLinkButton > a[kind="primary"]:hover {
             background-color: #00A650 !important;
             color: white !important;
             transform: translateY(-2px);
             box-shadow: 0 4px 10px rgba(0, 166, 80, 0.2);
         }
 
-        /* 2. Botón SECUNDARIO (Neutro - Cancelar, Filtros) */
-        /* Estado Normal: Blanco con borde Gris */
-        div.stButton > button[kind="secondary"] {
+        /* 2. SECUNDARIO (Neutro/Gris) */
+        div.stButton > button[kind="secondary"], 
+        div.stDownloadButton > button[kind="secondary"],
+        div.stLinkButton > a[kind="secondary"] {
             background-color: white !important;
             color: #555 !important;
             border: 2px solid #e0e0e0 !important;
             border-radius: 8px;
             font-weight: 600;
             transition: all 0.3s ease;
+            text-decoration: none !important;
         }
-        /* Hover: Se pone Verde (Por defecto acciones neutras/positivas) */
-        div.stButton > button[kind="secondary"]:hover {
+        div.stButton > button[kind="secondary"]:hover,
+        div.stDownloadButton > button[kind="secondary"]:hover,
+        div.stLinkButton > a[kind="secondary"]:hover {
             border-color: #00A650 !important;
             color: #00A650 !important;
             background-color: #f0fdf4 !important;
         }
 
-        /* --- EXCEPCIONES PARA BOTONES ROJOS (Negativos) --- */
-        /* Usaremos una clase CSS inyectada localmente o selectores específicos en las vistas */
+        /* --- ESTILO ESPECIAL: FILE UPLOADER (Browse files) --- */
+        /* Forzamos al botón interno del uploader a parecerse al Primary */
+        [data-testid="stFileUploader"] button {
+            background-color: white !important;
+            color: #00A650 !important;
+            border: 2px solid #00A650 !important;
+            font-weight: bold;
+        }
+        [data-testid="stFileUploader"] button:hover {
+            background-color: #00A650 !important;
+            color: white !important;
+        }
 
-        /* --- TIPOGRAFÍA --- */
+        /* --- TIPOGRAFÍA Y OTROS --- */
         h1, h2, h3 { font-family: 'Roboto', sans-serif; color: #1a1a1a; font-weight: 800 !important; }
         
         h1 {
@@ -69,15 +85,10 @@ def load_css():
             -webkit-text-fill-color: transparent;
         }
 
-        /* --- PROGRESO --- */
-        .stProgress > div > div > div > div {
-            background-color: #FFD700;
-        }
+        .stProgress > div > div > div > div { background-color: #FFD700; }
         
         [data-testid="stMetricValue"] {
-            font-size: 2rem !important;
-            color: #00A650 !important;
-            font-weight: bold !important;
+            font-size: 2rem !important; color: #00A650 !important; font-weight: bold !important;
         }
         
         .footer-text {
