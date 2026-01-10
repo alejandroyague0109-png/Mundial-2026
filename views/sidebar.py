@@ -37,6 +37,7 @@ def mostrar_editar_perfil(user):
     
     new_zone = st.selectbox("Zona", zones, index=idx_zone)
 
+    # CORREGIDO: use_container_width=True
     if st.button("💾 Guardar Cambios", type="primary", use_container_width=True):
         with utils.spinner_futbolero():
             ok, msg = db.update_profile(user['id'], new_prov, new_zone)
@@ -53,6 +54,7 @@ def mostrar_editar_perfil(user):
 # --- FUNCIÓN PRINCIPAL DE RENDERIZADO ---
 def render_user_sidebar(user):
     with st.sidebar:
+        # Intentamos mostrar logo, si no, texto
         try: st.image("logo.png", width=150)
         except: st.title(f"Hola {user['nick']}")
         
@@ -77,12 +79,13 @@ def render_user_sidebar(user):
                         st.caption(f"Te compró la **#{req['fig_received']}**")
                     
                     c1, c2 = st.columns(2)
+                    # Botón SÍ (Verde/Primary)
                     if c1.button("✅ Sí", key=f"y_{req['id']}", type="primary", use_container_width=True):
                         ok, msg = db.confirm_transaction_request(req['id'], user['id'])
                         if ok: st.toast("¡Confirmado!"); time.sleep(1); st.rerun()
                         else: st.error(msg)
                     
-                    # Botón NO en rojo (inyección local)
+                    # Botón NO (Rojo por inyección CSS)
                     st.markdown(f"""<style>div[data-testid="stHorizontalBlock"] button[key="n_{req['id']}"]:hover {{ border-color: #FF4B4B !important; color: #FF4B4B !important; }}</style>""", unsafe_allow_html=True)
                     if c2.button("❌ No", key=f"n_{req['id']}", use_container_width=True):
                         db.reject_transaction_request(req['id'])
@@ -90,9 +93,12 @@ def render_user_sidebar(user):
         
         st.divider()
         
-        # --- BARRA DE PROGRESO GLOBAL ---
+        # --- BARRA DE PROGRESO GLOBAL (Lógica Nueva) ---
+        # 1. Calculamos el total de figuritas de todo el álbum
         total_album = sum([(v[1] - v[0] + 1) for v in config.ALBUM_PAGES.values()])
+        # 2. Usamos la función optimizada de DB
         pegadas_reales = db.get_completion_stats(user['id'])
+        
         progreso = 0.0
         if total_album > 0:
             progreso = min(pegadas_reales / total_album, 1.0)
@@ -103,22 +109,20 @@ def render_user_sidebar(user):
         full_wishlist = db.get_full_wishlist(user['id'])
         if full_wishlist:
             link_share = utils.generar_link_whatsapp_wishlist(full_wishlist)
-            # WhatsApp es positivo -> Primary (Verde)
             st.link_button("📢 Compartir Deseados", link_share, type="primary", use_container_width=True)
         
         st.divider()
         
-        # --- CARGA MASIVA ---
+        # --- CARGA MASIVA (Corrección de Botones) ---
         with st.expander("📤 Carga Masiva (CSV)"):
             col_a, col_b = st.columns(2)
+            # CORREGIDOS use_container_width
             if col_a.button("❓ Ayuda", use_container_width=True): mostrar_instrucciones_csv()
             
             df_plantilla = pd.DataFrame([{"num": 10, "status": "tengo", "price": 0}, {"num": 25, "status": "repetida", "price": 500}])
-            
-            # CAMBIO: Plantilla -> PRIMARY (Verde)
+            # Plantilla verde para acción positiva
             col_b.download_button("⬇️ Plantilla", df_plantilla.to_csv(index=False).encode('utf-8'), "plantilla.csv", "text/csv", type="primary", use_container_width=True)
             
-            # El estilo del Browse files ya está inyectado en styles.py (se verá verde)
             up = st.file_uploader("Subí tu CSV", type="csv")
             if up and st.button("🚀 Procesar", type="primary", use_container_width=True):
                 with utils.spinner_futbolero():
@@ -134,32 +138,21 @@ def render_user_sidebar(user):
         else:
             st.info("👤 GRATIS")
             contacts = user.get('daily_contacts_count', 0)
+            if contacts >= 1: st.progress(1.0, text="Límite: 1/1 (Agotado)")
+            else: st.progress(0.0, text="Límite: 0/1 (Disponible)")
             
-            if contacts >= 1:
-                st.markdown("""
-                <div style="margin-bottom: 10px;">
-                    <div style="background-color: #e0e0e0; border-radius: 10px; height: 20px; width: 100%;">
-                        <div style="background-color: #FF4B4B; width: 100%; height: 100%; border-radius: 10px; text-align: center; color: white; font-size: 12px; line-height: 20px; font-weight: bold; box-shadow: 0 2px 4px rgba(255, 75, 75, 0.4);">
-                            Límite: 1/1 (Agotado)
-                        </div>
-                    </div>
-                </div>
-                """, unsafe_allow_html=True)
-            else:
-                st.progress(0.0, text="Límite: 0/1 (Disponible)")
-            
-            if st.button("💎 Hacete Premium", use_container_width=True, type="primary"): 
+            if st.button("💎 Hacete Premium", type="primary", use_container_width=True): 
                 market.mostrar_modal_premium()
             
             with st.expander("Validar Pago"):
                 op = st.text_input("ID Op")
-                if op and st.button("Validar", use_container_width=True):
+                if op and st.button("Validar", type="primary", use_container_width=True):
                     with utils.spinner_futbolero():
                         ok, msg = db.verificar_pago_mp(op, user['id'])
                     if ok: st.toast("¡Premium!", icon="💎"); st.rerun()
                     else: st.error(msg)
         
-        # --- LOGOUT (ROJO) ---
+        # --- LOGOUT (Estilo Rojo) ---
         st.divider()
         st.markdown("""
             <style>
@@ -172,7 +165,7 @@ def render_user_sidebar(user):
             </style>
         """, unsafe_allow_html=True)
 
-        if st.button("🚪 Cerrar Sesión", use_container_width=True):
+        if st.button("Chau / Salir", use_container_width=True):
             st.session_state.user = None
             st.query_params.clear() 
             st.rerun()

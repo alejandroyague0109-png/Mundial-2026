@@ -152,12 +152,12 @@ def render_card(item, tipo, user, is_pending_view=False):
         with col_actions:
             if is_unlocked:
                 if phone_target: 
-                    # WHATSAPP: Tipo Primary (VERDE)
-                    st.link_button("🟢 WhatsApp", link_wa, type="primary", use_container_width=True)
+                    # WHATSAPP: Tipo Secondary (Borde Verde)
+                    st.link_button("🟢 WhatsApp", link_wa, type="secondary", use_container_width=True)
                 
                 if is_pending_view:
-                    # FICHAJE CERRADO: Primary (Verde)
-                    if st.button("✅ Fichaje cerrado", key=f"pd_ok_{fig_recibo}_{target_id}_{suffix}", type="primary", use_container_width=True):
+                    # FICHAJE CERRADO: Primary (Verde Sólido)
+                    if st.button("✅ Fichaje cerrado", key=f"pd_ok_{fig_recibo}_{target_id}_{suffix}", help="Concretar transacción", use_container_width=True):
                         es_premium = user.get('is_premium', False)
                         id_para_borrar = None if es_premium else target_id
                         
@@ -188,7 +188,7 @@ def render_card(item, tipo, user, is_pending_view=False):
                         </style>
                     """, unsafe_allow_html=True)
                     
-                    if st.button("❌ Fichaje caído", key=key_caido, use_container_width=True):
+                    if st.button("❌ Fichaje caído", key=key_caido, help="Cancelar transacción", use_container_width=True):
                          db.remove_unlock(user['id'], target_id)
                          st.session_state.unlocked_users.discard(target_id)
                          st.rerun()
@@ -210,7 +210,7 @@ def render_card(item, tipo, user, is_pending_view=False):
             
             # RECOMENDAR: Secondary (Verde al Hover)
             if not is_pending_view:
-                if st.button("⭐ Recomendar", key=f"vt_{tipo}_{fig_recibo}_{target_id}_{suffix}", type="secondary", use_container_width=True):
+                if st.button("⭐ Votar", key=f"vt_{tipo}_{fig_recibo}_{target_id}_{suffix}", help="Recomendar usuario", use_container_width=True):
                     ok, m = db.votar_usuario(user['id'], target_id)
                     st.toast(m)
 
