@@ -37,7 +37,6 @@ def mostrar_editar_perfil(user):
     
     new_zone = st.selectbox("Zona", zones, index=idx_zone)
 
-    # CORREGIDO: use_container_width=True
     if st.button("💾 Guardar Cambios", type="primary", use_container_width=True):
         with utils.spinner_futbolero():
             ok, msg = db.update_profile(user['id'], new_prov, new_zone)
@@ -54,11 +53,13 @@ def mostrar_editar_perfil(user):
 # --- FUNCIÓN PRINCIPAL DE RENDERIZADO ---
 def render_user_sidebar(user):
     with st.sidebar:
-        st.title(f"Hola {user['nick']}")
+        try: st.image("logo.png", width=150)
+        except: st.title(f"Hola {user['nick']}")
+        
         st.caption(f"📍 {user.get('province', '')} - {user.get('zone', '')}")
         
         # EDITAR PERFIL
-        if st.button("✏️ Editar Perfil", key="btn_edit_profile"):
+        if st.button("✏️ Editar Perfil", key="btn_edit_profile", use_container_width=True):
              mostrar_editar_perfil(user)
              
         st.caption(f"⭐ Reputación: {user.get('reputation', 0)}")
@@ -76,22 +77,22 @@ def render_user_sidebar(user):
                         st.caption(f"Te compró la **#{req['fig_received']}**")
                     
                     c1, c2 = st.columns(2)
-                    if c1.button("✅ Sí", key=f"y_{req['id']}", use_container_width=True):
+                    if c1.button("✅ Sí", key=f"y_{req['id']}", type="primary", use_container_width=True):
                         ok, msg = db.confirm_transaction_request(req['id'], user['id'])
                         if ok: st.toast("¡Confirmado!"); time.sleep(1); st.rerun()
                         else: st.error(msg)
+                    
+                    # Botón NO en rojo (inyección local)
+                    st.markdown(f"""<style>div[data-testid="stHorizontalBlock"] button[key="n_{req['id']}"]:hover {{ border-color: #FF4B4B !important; color: #FF4B4B !important; }}</style>""", unsafe_allow_html=True)
                     if c2.button("❌ No", key=f"n_{req['id']}", use_container_width=True):
                         db.reject_transaction_request(req['id'])
                         st.rerun()
         
         st.divider()
         
-        # --- BARRA DE PROGRESO GLOBAL (Lógica Nueva) ---
-        # 1. Calculamos el total de figuritas de todo el álbum
+        # --- BARRA DE PROGRESO GLOBAL ---
         total_album = sum([(v[1] - v[0] + 1) for v in config.ALBUM_PAGES.values()])
-        # 2. Usamos la función optimizada de DB
         pegadas_reales = db.get_completion_stats(user['id'])
-        
         progreso = 0.0
         if total_album > 0:
             progreso = min(pegadas_reales / total_album, 1.0)
@@ -102,19 +103,22 @@ def render_user_sidebar(user):
         full_wishlist = db.get_full_wishlist(user['id'])
         if full_wishlist:
             link_share = utils.generar_link_whatsapp_wishlist(full_wishlist)
+            # WhatsApp es positivo -> Primary (Verde)
             st.link_button("📢 Compartir Deseados", link_share, type="primary", use_container_width=True)
         
         st.divider()
         
-        # --- CARGA MASIVA (Corrección de Botones) ---
+        # --- CARGA MASIVA ---
         with st.expander("📤 Carga Masiva (CSV)"):
             col_a, col_b = st.columns(2)
-            # CORREGIDOS use_container_width
             if col_a.button("❓ Ayuda", use_container_width=True): mostrar_instrucciones_csv()
             
             df_plantilla = pd.DataFrame([{"num": 10, "status": "tengo", "price": 0}, {"num": 25, "status": "repetida", "price": 500}])
-            col_b.download_button("⬇️ Plantilla", df_plantilla.to_csv(index=False).encode('utf-8'), "plantilla.csv", "text/csv", use_container_width=True)
             
+            # CAMBIO: Plantilla -> PRIMARY (Verde)
+            col_b.download_button("⬇️ Plantilla", df_plantilla.to_csv(index=False).encode('utf-8'), "plantilla.csv", "text/csv", type="primary", use_container_width=True)
+            
+            # El estilo del Browse files ya está inyectado en styles.py (se verá verde)
             up = st.file_uploader("Subí tu CSV", type="csv")
             if up and st.button("🚀 Procesar", type="primary", use_container_width=True):
                 with utils.spinner_futbolero():
@@ -131,9 +135,7 @@ def render_user_sidebar(user):
             st.info("👤 GRATIS")
             contacts = user.get('daily_contacts_count', 0)
             
-            # BARRA DE PROGRESO PERSONALIZADA
             if contacts >= 1:
-                # Estado CRÍTICO (Rojo Fuerte)
                 st.markdown("""
                 <div style="margin-bottom: 10px;">
                     <div style="background-color: #e0e0e0; border-radius: 10px; height: 20px; width: 100%;">
@@ -144,10 +146,9 @@ def render_user_sidebar(user):
                 </div>
                 """, unsafe_allow_html=True)
             else:
-                # Estado NORMAL (Usamos el estándar que es dorado/verde o gris)
                 st.progress(0.0, text="Límite: 0/1 (Disponible)")
             
-            if st.button("💎 Hacete Premium", use_container_width=True): 
+            if st.button("💎 Hacete Premium", use_container_width=True, type="primary"): 
                 market.mostrar_modal_premium()
             
             with st.expander("Validar Pago"):
@@ -158,21 +159,15 @@ def render_user_sidebar(user):
                     if ok: st.toast("¡Premium!", icon="💎"); st.rerun()
                     else: st.error(msg)
         
-        # --- LOGOUT ---
+        # --- LOGOUT (ROJO) ---
         st.divider()
-        
-        # Inyectamos CSS específico solo para el botón de Logout (que es el último)
         st.markdown("""
             <style>
-            /* Apunta al último botón del sidebar */
             section[data-testid="stSidebar"] button:last-of-type:hover {
-                background-color: #FF4B4B !important;
-                color: white !important;
-                border-color: #FF4B4B !important;
+                background-color: #FF4B4B !important; color: white !important; border-color: #FF4B4B !important;
             }
             section[data-testid="stSidebar"] button:last-of-type {
-                color: #FF4B4B !important;
-                border-color: #ffcccc !important;
+                color: #FF4B4B !important; border-color: #ffcccc !important;
             }
             </style>
         """, unsafe_allow_html=True)

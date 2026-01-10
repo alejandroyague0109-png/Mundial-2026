@@ -49,6 +49,7 @@ def modal_seguridad(target_id, user):
     
     no_volver_a_mostrar = st.checkbox("No me mostrés esto de nuevo", key="chk_skip_sec")
     
+    # Botón Ver Contacto -> Verde (Primary)
     if st.button("✅ Dale, Ver Contacto", type="primary", use_container_width=True):
         if no_volver_a_mostrar: st.session_state.skip_security_modal = True
         
@@ -151,11 +152,11 @@ def render_card(item, tipo, user, is_pending_view=False):
         with col_actions:
             if is_unlocked:
                 if phone_target: 
-                    st.link_button("🟢 WhatsApp", link_wa, type="secondary", use_container_width=True)
+                    # WHATSAPP: Tipo Primary (VERDE)
+                    st.link_button("🟢 WhatsApp", link_wa, type="primary", use_container_width=True)
                 
-                # --- AQUÍ ESTÁ EL CAMBIO PARA "PENDIENTES" ---
                 if is_pending_view:
-                    # Botón Verde Primary (Sin tooltips)
+                    # FICHAJE CERRADO: Primary (Verde)
                     if st.button("✅ Fichaje cerrado", key=f"pd_ok_{fig_recibo}_{target_id}_{suffix}", type="primary", use_container_width=True):
                         es_premium = user.get('is_premium', False)
                         id_para_borrar = None if es_premium else target_id
@@ -171,13 +172,29 @@ def render_card(item, tipo, user, is_pending_view=False):
                             st.toast("¡Golazo!", icon="⚽"); st.success(msg); time.sleep(1.0); st.rerun()
                         else: st.error(msg)
                     
-                    # Botón Secundario (Sin tooltips)
-                    if st.button("❌ Fichaje caído", key=f"pd_no_{fig_recibo}_{target_id}_{suffix}", use_container_width=True):
+                    # FICHAJE CAÍDO: ROJO (Inyección CSS local)
+                    key_caido = f"pd_no_{fig_recibo}_{target_id}_{suffix}"
+                    st.markdown(f"""
+                        <style>
+                        div[data-testid="stVerticalBlock"] button[key="{key_caido}"]:hover {{
+                            border-color: #FF4B4B !important;
+                            color: #FF4B4B !important;
+                            background-color: #fff5f5 !important;
+                        }}
+                        div[data-testid="stVerticalBlock"] button[key="{key_caido}"] {{
+                            border-color: #e0e0e0 !important;
+                            color: #555 !important;
+                        }}
+                        </style>
+                    """, unsafe_allow_html=True)
+                    
+                    if st.button("❌ Fichaje caído", key=key_caido, use_container_width=True):
                          db.remove_unlock(user['id'], target_id)
                          st.session_state.unlocked_users.discard(target_id)
                          st.rerun()
 
             else:
+                # DESBLOQUEAR: Secondary (Verde al Hover)
                 btn_lbl = "🔓 Desbloquear"
                 if st.button(btn_lbl, key=f"ul_{tipo}_{fig_recibo}_{target_id}_{suffix}", type="secondary", use_container_width=True):
                     if db.check_contact_limit(user):
@@ -191,10 +208,9 @@ def render_card(item, tipo, user, is_pending_view=False):
                         else: modal_seguridad(target_id, user)
                     else: mostrar_modal_premium()
             
-            # Botón Recomendar (Solo visible si no es vista de pendientes, o podrías dejarlo en ambas)
-            # En pendientes priorizamos cerrar el trato, pero si querés dejarlo, usá este estilo:
+            # RECOMENDAR: Secondary (Verde al Hover)
             if not is_pending_view:
-                if st.button("⭐ Recomendar", key=f"vt_{tipo}_{fig_recibo}_{target_id}_{suffix}", use_container_width=True):
+                if st.button("⭐ Recomendar", key=f"vt_{tipo}_{fig_recibo}_{target_id}_{suffix}", type="secondary", use_container_width=True):
                     ok, m = db.votar_usuario(user['id'], target_id)
                     st.toast(m)
 
@@ -321,6 +337,7 @@ def render_market(user):
                     msg_encoded = quote(msg_wa)
                     link = f"https://wa.me/549{bridge_phone}?text={msg_encoded}"
                     
+                    # Botón Contactar Puente -> Verde (Primary)
                     if st.button(f"Contactar al Puente ({t['bridge_nick']})", key=f"btn_triang_{i}", type="primary", use_container_width=True):
                          js = f"<script>window.open('{link}', '_blank').focus();</script>"
                          components.html(js, height=0)
