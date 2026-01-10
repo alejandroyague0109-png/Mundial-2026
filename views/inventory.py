@@ -25,14 +25,14 @@ def render_inventory(user, start, end, seleccion_pais):
     col_head_1, col_btn_all, col_btn_none = st.columns([4, 1, 1])
     col_head_1.markdown("### 1️⃣ Tus Figus")
 
-    # Botones masivos
-    if col_btn_all.button("Todas", width="stretch", key=f"all_{seleccion_pais}"):
+    # Botones masivos (CORREGIDO: use_container_width=True)
+    if col_btn_all.button("Todas", use_container_width=True, key=f"all_{seleccion_pais}"):
         st.session_state[key_pills] = list(range(start, end + 1))
         st.session_state[key_wish] = [] 
         st.session_state.unsaved_changes = True 
         st.rerun()
 
-    if col_btn_none.button("Ninguna", width="stretch", key=f"none_{seleccion_pais}"):
+    if col_btn_none.button("Ninguna", use_container_width=True, key=f"none_{seleccion_pais}"):
         st.session_state[key_pills] = []
         st.session_state.unsaved_changes = True 
         st.rerun()
@@ -96,7 +96,7 @@ def render_inventory(user, start, end, seleccion_pais):
         st.info("👇 **Data:** Hacé doble clic en 'Modo' para cambiar entre **Canje** y **Venta**.")
         data = []
         
-        # --- CAMBIO: Se agrega sorted() para ordenar la tabla ---
+        # Ordenamos la tabla
         for n in sorted(seleccion_repes):
             info = repetidas_info.get(n, {})
             precio = info.get('price', 0)
@@ -118,17 +118,16 @@ def render_inventory(user, start, end, seleccion_pais):
             on_change=marcar_cambio 
         )
     
-    # --- FIX CRÍTICO: GUARDAR SNAPSHOT PARA EL MODAL DE SALIDA ---
+    # --- SNAPSHOT PARA DETECTAR CAMBIOS ---
     st.session_state[f"snapshot_df_{seleccion_pais}"] = edited_df
-    # -------------------------------------------------------------
 
     st.divider()
 
-    # --- BOTÓN GUARDAR ---
+    # --- BOTÓN GUARDAR (CORREGIDO: use_container_width=True) ---
     btn_type = "primary" if st.session_state.get('unsaved_changes', False) else "secondary"
     btn_lbl = "💾 GUARDAR CAMBIOS (*)" if st.session_state.get('unsaved_changes', False) else "💾 GUARDAR CAMBIOS"
 
-    if st.button(btn_lbl, type=btn_type, width="stretch"):
+    if st.button(btn_lbl, type=btn_type, use_container_width=True):
         with utils.spinner_futbolero():
             db.save_inventory_positive(user['id'], start, end, seleccion_tengo, seleccion_wishlist, edited_df)
             st.session_state.unsaved_changes = False 

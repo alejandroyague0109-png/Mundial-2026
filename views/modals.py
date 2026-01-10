@@ -16,7 +16,7 @@ def mostrar_barrera_entrada():
         st.query_params["over18"] = "true"
         st.rerun()
 
-# --- 2. NAVEGACIÓN SEGURA (LÓGICA CRÍTICA DE GUARDADO) ---
+# --- 2. NAVEGACIÓN SEGURA ---
 @st.dialog("⚠️ Cambios sin guardar")
 def confirmar_cambio_pais(target_pais, user):
     st.write(f"Tenés cambios pendientes en **{st.session_state.current_country}**.")
@@ -72,10 +72,48 @@ def confirmar_cambio_pais(target_pais, user):
 def mostrar_contacto():
     st.markdown("### Soporte\n* 📧 soporte@figus26.com\n* 📷 @figus26_oficial")
 
-@st.dialog("❓ FAQ")
+@st.dialog("❓ Preguntas Frecuentes")
 def mostrar_faq():
-    with st.expander("¿Es gratis?"): st.write("Sí, con límite diario.")
-    with st.expander("¿Premium?"): st.write("Ilimitado y alertas.")
+    st.markdown("### ⚽ Guía rápida")
+    
+    with st.expander("🤔 ¿Cómo funciona?"):
+        st.markdown("""
+        1. **Mi Álbum:** Entrá a la sección de tu país/equipo.
+        2. **Cargá:** Marcá las que **TENÉS** y las que **DESEÁS** (Wishlist).
+        3. **Repes:** Si tenés repetidas, marcalas abajo para canje o venta.
+        4. **Mercado:** El sistema cruza datos y te muestra quién tiene lo que buscás y quiere lo que vos tenés (Match).
+        """)
+
+    with st.expander("💸 ¿Es gratis?"):
+        st.markdown("""
+        **Sí.** Podés usar la app totalmente gratis. 
+        Tenés **1 crédito diario** para contactar (ver el WhatsApp) de otro coleccionista.
+        Los créditos se renuevan cada 24hs automáticamente.
+        """)
+
+    with st.expander("💎 ¿Qué beneficios tiene ser Premium?"):
+        st.markdown("""
+        Por un único pago (acceso todo el mundial), obtenés:
+        * 🔓 **Contactos Ilimitados:** Sin restricciones diarias.
+        * 📐 **Triangulación:** Acceso a la herramienta de canjes a 3 bandas.
+        * 🥇 **Prioridad:** Tus cartas aparecen primeras y con borde dorado.
+        * 🔔 **Alertas:** Te avisamos si alguien carga una figu de tu Wishlist.
+        """)
+
+    with st.expander("📐 ¿Qué es la Triangulación?"):
+        st.markdown("""
+        Es una función avanzada para **Usuarios Premium**.
+        Si nadie quiere hacer un cambio directo con vos (A <-> B), el sistema busca un **Puente** (C) en tu misma zona para hacer un canje circular:
+        **Vos -> Puente -> Objetivo -> Vos**.
+        """)
+
+    with st.expander("🛡️ Seguridad"):
+        st.markdown("""
+        * Reunite siempre en **lugares públicos** y concurridos.
+        * Revisá bien las figuritas antes de cerrar el trato.
+        * **Nunca envíes dinero** por adelantado.
+        * Figus 26 conecta partes pero no participa de la transacción.
+        """)
 
 @st.dialog("⚖️ Legales")
 def mostrar_legales():
