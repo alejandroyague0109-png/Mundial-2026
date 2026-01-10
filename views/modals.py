@@ -8,10 +8,10 @@ import config
 @st.dialog("⚠️ Bienvenido a Figus 26")
 def mostrar_barrera_entrada():
     st.warning("🔞 Esta aplicación es para mayores de 18 años.")
+    # TEXTO RECUPERADO COMPLETO:
     st.info("🤝 Facilitamos el contacto entre coleccionistas, pero no intervenimos en los canjes. No nos hacemos responsables de las reuniones pactadas por los usuarios ni de las transacciones realizadas.")
     st.markdown("**Al continuar, declarás bajo juramento que sos mayor de edad.**")
     
-    # CORREGIDO: use_container_width=True
     if st.button("✅ Entendido, soy +18", type="primary", use_container_width=True):
         st.session_state.barrera_superada = True
         st.query_params["over18"] = "true"
@@ -23,28 +23,25 @@ def confirmar_cambio_pais(target_pais, user):
     st.write(f"Tenés cambios pendientes en **{st.session_state.current_country}**.")
     st.warning("¿Querés guardar antes de salir?")
     
-    # INYECCIÓN DE CSS PARA EL BOTÓN "DESCARTAR" (ROJO AL HOVER)
+    # CSS: Hace que el botón de la segunda columna (Descartar) sea ROJO al Hover
     st.markdown("""
         <style>
-        /* Apunta al botón dentro de la segunda columna del modal */
         div[data-testid="stHorizontalBlock"] > div:nth-child(2) button:hover {
             border-color: #FF4B4B !important;
-            color: #FF4B4B !important;
-            background-color: #fff5f5 !important;
+            color: white !important;
+            background-color: #FF4B4B !important;
         }
         div[data-testid="stHorizontalBlock"] > div:nth-child(2) button {
-            /* Asegura que tenga el mismo tamaño base */
-            height: auto;
+            color: #FF4B4B !important; /* Texto rojo por defecto */
+            border-color: #ffcccc !important;
         }
         </style>
     """, unsafe_allow_html=True)
     
     col1, col2 = st.columns(2)
     
-    # Opción 1: Guardar (Se mantiene VERDE por ser primary)
+    # Opción 1: Guardar (Verde - Primary)
     if col1.button("💾 Guardar y Continuar", type="primary", use_container_width=True):
-        # ... (TODA LA LÓGICA DE GUARDADO QUE YA TENÍAS) ...
-        # (Copiar la lógica de recuperación snapshot/deltas del paso anterior)
         curr = st.session_state.current_country
         tengo_data = st.session_state.get(f"pills_tengo_{curr}", [])
         wish_data = st.session_state.get(f"pills_wish_{curr}", [])
@@ -52,6 +49,7 @@ def confirmar_cambio_pais(target_pais, user):
         snapshot_key = f"snapshot_df_{curr}"
         editor_key = f"editor_{curr}"
         
+        # Recuperación inteligente de datos
         if snapshot_key in st.session_state:
             df_repes = st.session_state[snapshot_key].copy()
         else:
@@ -77,13 +75,13 @@ def confirmar_cambio_pais(target_pais, user):
         st.session_state.current_country = target_pais
         st.rerun()
         
-    # Opción 2: Descartar (Se pondrá ROJA al hover gracias al CSS de arriba)
+    # Opción 2: Descartar (Rojo al hover)
     if col2.button("🗑️ Descartar Cambios", use_container_width=True):
         st.session_state.unsaved_changes = False
         st.session_state.current_country = target_pais
         st.rerun()
 
-# --- 3. MODALES INFORMATIVOS (FOOTER) ---
+# --- 3. MODALES INFORMATIVOS ---
 @st.dialog("📧 Contacto")
 def mostrar_contacto():
     st.markdown("### Soporte\n* 📧 soporte@figus26.com\n* 📷 @figus26_oficial")

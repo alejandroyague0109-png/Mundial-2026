@@ -159,7 +159,25 @@ def render_user_sidebar(user):
                     else: st.error(msg)
         
         # --- LOGOUT ---
-        if st.button("Chau / Salir", use_container_width=True):
+        st.divider()
+        
+        # Inyectamos CSS específico solo para el botón de Logout (que es el último)
+        st.markdown("""
+            <style>
+            /* Apunta al último botón del sidebar */
+            section[data-testid="stSidebar"] button:last-of-type:hover {
+                background-color: #FF4B4B !important;
+                color: white !important;
+                border-color: #FF4B4B !important;
+            }
+            section[data-testid="stSidebar"] button:last-of-type {
+                color: #FF4B4B !important;
+                border-color: #ffcccc !important;
+            }
+            </style>
+        """, unsafe_allow_html=True)
+
+        if st.button("🚪 Cerrar Sesión", use_container_width=True):
             st.session_state.user = None
             st.query_params.clear() 
             st.rerun()
