@@ -113,18 +113,34 @@ def spinner_futbolero():
     ]
     return st.spinner(random.choice(msgs))
 
-# --- WHATSAPP ---
-def generar_link_whatsapp_wishlist(wishlist_ids):
-    if not wishlist_ids:
+# --- WHATSAPP (COMPARTIR COMPLETO) ---
+def generar_link_compartir_completo(wishlist_ids, repes_ids):
+    """Genera un link de WhatsApp con Faltantes y Repetidas."""
+    if not wishlist_ids and not repes_ids:
         return None
     
-    # Agrupamos los números
-    lista_str = ", ".join(map(str, wishlist_ids))
-    
-    # LINK DE LA APP (Ajustalo cuando tengas el deploy final)
+    # LINK DE LA APP
     app_url = "https://figus26.streamlit.app" 
     
-    texto = f"¡Hola! 👋 Me faltan estas figus del Mundial 2026:\n\n{lista_str}\n\nSi tenés alguna, avisame! 🙏\n\n_Gestionado por Figus26_\n¡Sumate y cambiá las tuyas! ⚽ 👉 {app_url}"
+    # Encabezado
+    texto = "🏆 *Figus 26 - Mi Álbum*\n\n"
+    
+    # Sección Faltantes
+    if wishlist_ids:
+        lista_wish = ", ".join(map(str, wishlist_ids))
+        texto += f"❌ *Me Faltan:*\n{lista_wish}\n\n"
+    else:
+        texto += "❌ *Me Faltan:* ¡Llené todo! (o no cargué nada 😅)\n\n"
+        
+    # Sección Repetidas
+    if repes_ids:
+        lista_repes = ", ".join(map(str, repes_ids))
+        texto += f"✅ *Tengo Repes:*\n{lista_repes}\n\n"
+    else:
+        texto += "✅ *Tengo Repes:* Ninguna por ahora.\n\n"
+    
+    # Footer
+    texto += f"📲 *Cambiemos acá:* {app_url}"
     
     return f"https://wa.me/?text={quote(texto)}"
 

@@ -201,6 +201,27 @@ def get_full_wishlist(user_id):
         return sorted([int(x['sticker_num']) for x in resp.data])
     except: return []
 
+# --- NUEVO: OBTENER LISTAS PARA COMPARTIR (WISHLIST + REPES) ---
+def get_shareable_lists(user_id):
+    try:
+        # Traemos Wishlist y Repetidas en una sola consulta
+        resp = supabase.table("inventory").select("sticker_num, status").eq("user_id", user_id).in_("status", ["wishlist", "repetida", "repe"]).execute()
+        
+        wish = []
+        repes = []
+        
+        for row in resp.data:
+            num = int(row['sticker_num'])
+            st_val = str(row['status']).lower().strip()
+            
+            if st_val == 'wishlist': 
+                wish.append(num)
+            elif st_val in ['repetida', 'repe']:
+                repes.append(num)
+                
+        return sorted(wish), sorted(repes)
+    except: return [], []
+
 # --- GESTIÓN DE SOLICITUDES ---
 def get_pending_transactions(user_id):
     try:
