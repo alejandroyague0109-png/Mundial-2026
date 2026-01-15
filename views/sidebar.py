@@ -23,7 +23,6 @@ def mostrar_instrucciones_instalacion():
         2. Buscá la opción **'Instalar aplicación'** o **'Agregar a la pantalla principal'**.
         3. Confirmá y ¡listo!
         """)
-        # Ejemplo visual simulado con texto
         st.caption("Tip: Si no ves la opción, actualizá Chrome.")
 
     with tab_ios:
@@ -94,7 +93,6 @@ def render_user_sidebar(user):
              mostrar_editar_perfil(user)
         
         # --- NUEVO BOTÓN: INSTALAR APP ---
-        # Lo ponemos visible y destacado arriba
         if st.button("📲 Instalar App", type="secondary", use_container_width=True, help="Agregá Figus 26 a tu inicio"):
             mostrar_instrucciones_instalacion()
              
@@ -133,11 +131,14 @@ def render_user_sidebar(user):
             
         st.progress(progreso, text=f"🏆 Progreso Total: {pegadas_reales}/{total_album}")
         
-        # --- COMPARTIR DESEADOS ---
-        full_wishlist = db.get_full_wishlist(user['id'])
-        if full_wishlist:
-            link_share = utils.generar_link_whatsapp_wishlist(full_wishlist)
-            st.link_button("📢 Compartir Deseados", link_share, type="primary", use_container_width=True)
+        # --- COMPARTIR (WISHLIST + REPES) ---
+        # Modificación: Usamos las nuevas funciones para traer ambas listas
+        wish_list, repe_list = db.get_shareable_lists(user['id'])
+        
+        # Solo mostramos el botón si tiene algo para compartir (deseos o repetidas)
+        if wish_list or repe_list:
+            link_share = utils.generar_link_compartir_completo(wish_list, repe_list)
+            st.link_button("📢 Compartir Wishlist y Repetidas", link_share, type="primary", use_container_width=True)
         
         st.divider()
         
