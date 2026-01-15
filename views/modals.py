@@ -23,21 +23,6 @@ def confirmar_cambio_pais(target_pais, user):
     st.write(f"Tenés cambios pendientes en **{st.session_state.current_country}**.")
     st.warning("¿Querés guardar antes de salir?")
     
-    # CSS: Hace que el botón de la segunda columna (Descartar) sea ROJO al Hover
-    st.markdown("""
-        <style>
-        div[data-testid="stHorizontalBlock"] > div:nth-child(2) button:hover {
-            border-color: #FF4B4B !important;
-            color: white !important;
-            background-color: #FF4B4B !important;
-        }
-        div[data-testid="stHorizontalBlock"] > div:nth-child(2) button {
-            color: #FF4B4B !important; /* Texto rojo por defecto */
-            border-color: #ffcccc !important;
-        }
-        </style>
-    """, unsafe_allow_html=True)
-    
     col1, col2 = st.columns(2)
     
     # Opción 1: Guardar y Continuar

@@ -6,7 +6,7 @@ import locations
 import utils
 import config
 import streamlit.components.v1 as components 
-import triangulation
+import triangulation # <--- Importamos el archivo nuevo
 
 ITEMS_POR_PAGINA = 10
 
@@ -49,7 +49,6 @@ def modal_seguridad(target_id, user):
     
     no_volver_a_mostrar = st.checkbox("No me mostrés esto de nuevo", key="chk_skip_sec")
     
-    # Botón Ver Contacto -> Verde (Primary)
     if st.button("✅ Dale, Ver Contacto", type="primary", use_container_width=True):
         if no_volver_a_mostrar: st.session_state.skip_security_modal = True
         
@@ -107,7 +106,7 @@ def render_card(item, tipo, user, is_pending_view=False):
                 link_wa = f"https://wa.me/549{phone_target}?text={mensaje_encoded}"
             else: st.error("Error al desencriptar.")
 
-        # --- INFO DE LA TARJETA ---
+        # --- INFO ---
         with col_info:
             badges = []
             if is_target_premium:
@@ -152,11 +151,9 @@ def render_card(item, tipo, user, is_pending_view=False):
         with col_actions:
             if is_unlocked:
                 if phone_target: 
-                    # WHATSAPP: Tipo Secondary (Borde Verde)
                     st.link_button("🟢 WhatsApp", link_wa, type="secondary", use_container_width=True)
                 
                 if is_pending_view:
-                    # FICHAJE CERRADO: Primary (Verde Sólido)
                     if st.button("✅ Fichaje cerrado", key=f"pd_ok_{fig_recibo}_{target_id}_{suffix}", help="Concretar transacción", use_container_width=True):
                         es_premium = user.get('is_premium', False)
                         id_para_borrar = None if es_premium else target_id
@@ -172,29 +169,12 @@ def render_card(item, tipo, user, is_pending_view=False):
                             st.toast("¡Golazo!", icon="⚽"); st.success(msg); time.sleep(1.0); st.rerun()
                         else: st.error(msg)
                     
-                    # FICHAJE CAÍDO: ROJO (Inyección CSS local)
-                    key_caido = f"pd_no_{fig_recibo}_{target_id}_{suffix}"
-                    st.markdown(f"""
-                        <style>
-                        div[data-testid="stVerticalBlock"] button[key="{key_caido}"]:hover {{
-                            border-color: #FF4B4B !important;
-                            color: #FF4B4B !important;
-                            background-color: #fff5f5 !important;
-                        }}
-                        div[data-testid="stVerticalBlock"] button[key="{key_caido}"] {{
-                            border-color: #e0e0e0 !important;
-                            color: #555 !important;
-                        }}
-                        </style>
-                    """, unsafe_allow_html=True)
-                    
-                    if st.button("❌ Fichaje caído", key=key_caido, help="Cancelar transacción", use_container_width=True):
+                    if st.button("❌ Fichaje caído", key=f"pd_no_{fig_recibo}_{target_id}_{suffix}", help="Cancelar transacción", use_container_width=True):
                          db.remove_unlock(user['id'], target_id)
                          st.session_state.unlocked_users.discard(target_id)
                          st.rerun()
 
             else:
-                # DESBLOQUEAR: Secondary (Verde al Hover)
                 btn_lbl = "🔓 Desbloquear"
                 if st.button(btn_lbl, key=f"ul_{tipo}_{fig_recibo}_{target_id}_{suffix}", type="secondary", use_container_width=True):
                     if db.check_contact_limit(user):
@@ -208,11 +188,9 @@ def render_card(item, tipo, user, is_pending_view=False):
                         else: modal_seguridad(target_id, user)
                     else: mostrar_modal_premium()
             
-            # RECOMENDAR: Secondary (Verde al Hover)
-            if not is_pending_view:
-                if st.button("⭐ Votar", key=f"vt_{tipo}_{fig_recibo}_{target_id}_{suffix}", help="Recomendar usuario", use_container_width=True):
-                    ok, m = db.votar_usuario(user['id'], target_id)
-                    st.toast(m)
+            if st.button("⭐ Votar", key=f"vt_{tipo}_{fig_recibo}_{target_id}_{suffix}", help="Recomendar usuario", use_container_width=True):
+                ok, m = db.votar_usuario(user['id'], target_id)
+                st.toast(m)
 
 def paginar_y_mostrar(lista_items, tipo_key, tipo_card, user, is_pending_view=False):
     if not is_pending_view:
@@ -266,13 +244,15 @@ def render_market(user):
     if 'triang_results' not in st.session_state: st.session_state.triang_results = None
 
     with st.expander("🔎 Filtros", expanded=True):
-        col_f1, col_f2, col_f3 = st.columns(3)
+        # --- MODIFICACIÓN: Agregamos 4ta columna para filtro Usuario ---
+        col_f1, col_f2, col_f3, col_f4 = st.columns(4)
         filtro_prov = col_f1.multiselect("Provincia:", list(locations.ARGENTINA.keys()), on_change=reset_pagination)
         avail_zones = []
         if filtro_prov:
             for p in filtro_prov: avail_zones.extend(locations.ARGENTINA.get(p, []))
         filtro_zonas = col_f2.multiselect("Zona:", avail_zones, on_change=reset_pagination)
         filtro_num = col_f3.text_input("Figurita #:", on_change=reset_pagination)
+        filtro_alias = col_f4.text_input("Usuario:", placeholder="Ej: Messi", on_change=reset_pagination)
 
     # --- SECCIÓN TRIANGULACIÓN (INTEGRADA) ---
     st.markdown("---")
@@ -337,7 +317,7 @@ def render_market(user):
                     msg_encoded = quote(msg_wa)
                     link = f"https://wa.me/549{bridge_phone}?text={msg_encoded}"
                     
-                    # Botón Contactar Puente -> Verde (Primary)
+                    # Botón que abre WA y resetea (usando JS)
                     if st.button(f"Contactar al Puente ({t['bridge_nick']})", key=f"btn_triang_{i}", type="primary", use_container_width=True):
                          js = f"<script>window.open('{link}', '_blank').focus();</script>"
                          components.html(js, height=0)
@@ -388,6 +368,8 @@ def render_market(user):
             if filtro_prov and i['province'] not in filtro_prov: continue
             if filtro_zonas and i['zone'] not in filtro_zonas: continue
             if filtro_num and str(i['figu']) != filtro_num: continue
+            # --- MODIFICACIÓN: Filtro por Alias ---
+            if filtro_alias and filtro_alias.lower() not in i['nick'].lower(): continue
             res.append(i)
         return res
 

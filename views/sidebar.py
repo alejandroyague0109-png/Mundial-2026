@@ -9,14 +9,20 @@ from views import market
 
 # --- MODALES ESPECÍFICOS DEL SIDEBAR ---
 
-@st.dialog("📤 Ayuda CSV")
-def mostrar_instrucciones_csv():
+@st.dialog("⚡ Guía de Carga Rápida")
+def mostrar_ayuda_carga_rapida():
     st.markdown("""
-    ### Formato del Archivo
-    Debe tener 3 columnas obligatorias:
-    1. **num**: Número de la figurita.
-    2. **status**: `tengo` o `repetida`.
-    3. **price**: Precio (0 si es canje).
+    ### 🚀 Cómo cargar tus figus volando
+    Olvidate de buscar número por número. Hacelo por país.
+
+    **1. Elegí el Equipo:** (Ej: Argentina).
+    **2. Escribí los números:** Usá comas, espacios, enters o guiones para rangos.
+    * Ejemplo: `1, 2, 5-10, 15` (Carga la 1, 2, 5, 6, 7, 8, 9, 10 y 15).
+
+    ### 🧠 Inteligencia Artificial
+    * **🟦 Tengo:** Las que pegaste en el álbum.
+    * **🟩 Repetidas:** Las que tenés para cambiar. **Si ponés una acá, el sistema asume que la TENÉS.** No hace falta ponerla en la caja azul.
+    * **🟥 Wishlist:** Las que te faltan. Si el sistema detecta que ya la tenés (o es repe), la ignora para evitar errores.
     """)
 
 @st.dialog("✏️ Editar Perfil")
@@ -37,7 +43,6 @@ def mostrar_editar_perfil(user):
     
     new_zone = st.selectbox("Zona", zones, index=idx_zone)
 
-    # CORREGIDO: use_container_width=True
     if st.button("💾 Guardar Cambios", type="primary", use_container_width=True):
         with utils.spinner_futbolero():
             ok, msg = db.update_profile(user['id'], new_prov, new_zone)
@@ -54,14 +59,11 @@ def mostrar_editar_perfil(user):
 # --- FUNCIÓN PRINCIPAL DE RENDERIZADO ---
 def render_user_sidebar(user):
     with st.sidebar:
-        # Intentamos mostrar logo, si no, texto
-        try: st.image("logo.png", width=150)
-        except: st.title(f"Hola {user['nick']}")
-        
+        st.title(f"Hola {user['nick']}")
         st.caption(f"📍 {user.get('province', '')} - {user.get('zone', '')}")
         
         # EDITAR PERFIL
-        if st.button("✏️ Editar Perfil", key="btn_edit_profile", use_container_width=True):
+        if st.button("✏️ Editar Perfil", key="btn_edit_profile"):
              mostrar_editar_perfil(user)
              
         st.caption(f"⭐ Reputación: {user.get('reputation', 0)}")
@@ -79,21 +81,17 @@ def render_user_sidebar(user):
                         st.caption(f"Te compró la **#{req['fig_received']}**")
                     
                     c1, c2 = st.columns(2)
-                    # Botón SÍ (Verde/Primary)
-                    if c1.button("✅ Sí", key=f"y_{req['id']}", type="primary", use_container_width=True):
+                    if c1.button("✅ Sí", key=f"y_{req['id']}", use_container_width=True):
                         ok, msg = db.confirm_transaction_request(req['id'], user['id'])
                         if ok: st.toast("¡Confirmado!"); time.sleep(1); st.rerun()
                         else: st.error(msg)
-                    
-                    # Botón NO (Rojo por inyección CSS)
-                    st.markdown(f"""<style>div[data-testid="stHorizontalBlock"] button[key="n_{req['id']}"]:hover {{ border-color: #FF4B4B !important; color: #FF4B4B !important; }}</style>""", unsafe_allow_html=True)
                     if c2.button("❌ No", key=f"n_{req['id']}", use_container_width=True):
                         db.reject_transaction_request(req['id'])
                         st.rerun()
         
         st.divider()
         
-        # --- BARRA DE PROGRESO GLOBAL (Lógica Nueva) ---
+        # --- BARRA DE PROGRESO GLOBAL ---
         # 1. Calculamos el total de figuritas de todo el álbum
         total_album = sum([(v[1] - v[0] + 1) for v in config.ALBUM_PAGES.values()])
         # 2. Usamos la función optimizada de DB
@@ -113,22 +111,53 @@ def render_user_sidebar(user):
         
         st.divider()
         
-        # --- CARGA MASIVA (Corrección de Botones) ---
-        with st.expander("📤 Carga Masiva (CSV)"):
-            col_a, col_b = st.columns(2)
-            # CORREGIDOS use_container_width
-            if col_a.button("❓ Ayuda", use_container_width=True): mostrar_instrucciones_csv()
+        # --- NUEVA SECCIÓN: CARGA RÁPIDA INTELIGENTE ---
+        with st.expander("⚡ Carga Rápida (Por Página)", expanded=False):
+            st.caption("Elegí el país y cargá los números de esa página (ej: 1 al 19).")
             
-            df_plantilla = pd.DataFrame([{"num": 10, "status": "tengo", "price": 0}, {"num": 25, "status": "repetida", "price": 500}])
-            # Plantilla verde para acción positiva
-            col_b.download_button("⬇️ Plantilla", df_plantilla.to_csv(index=False).encode('utf-8'), "plantilla.csv", "text/csv", type="primary", use_container_width=True)
+            # 1. Selector de Página
+            opciones_paginas = list(config.ALBUM_PAGES.keys())
+            page_key = st.selectbox("Seleccioná Equipo:", opciones_paginas)
             
-            up = st.file_uploader("Subí tu CSV", type="csv")
-            if up and st.button("🚀 Procesar", type="primary", use_container_width=True):
+            # Obtener Rango Real (Backend)
+            start_id, end_id = config.ALBUM_PAGES[page_key]
+            
+            # 2. Ayuda
+            if st.button("❓ ¿Cómo funciona?", key="btn_help_smart", use_container_width=True):
+                mostrar_ayuda_carga_rapida()
+            
+            # 3. Inputs de Texto
+            # Nota: Usamos height pequeño para que no ocupe todo el sidebar, pero suficiente para ver.
+            st.markdown("**🟦 TENGO (Pegadas)**")
+            txt_tengo = st.text_area("Lista Tengo", placeholder="Ej: 1-5, 8, 11", height=70, label_visibility="collapsed")
+            
+            st.markdown("**🟩 REPETIDAS (Para cambiar)**")
+            txt_repes = st.text_area("Lista Repes", placeholder="Ej: 5, 9 (Se agregan a 'Tengo' solas)", height=70, label_visibility="collapsed")
+            
+            st.markdown("**🟥 WISHLIST (Buscadas)**")
+            txt_wish = st.text_area("Lista Deseados", placeholder="Ej: 15-19", height=70, label_visibility="collapsed")
+            
+            # 4. Procesar
+            # Extraemos el nombre corto del país para el botón (ej: "ARG - Argentina" -> "ARG")
+            short_name = page_key.split('-')[0].strip()
+            
+            if st.button(f"🚀 Procesar {short_name}", type="primary", use_container_width=True):
                 with utils.spinner_futbolero():
-                    ok, msg = db.process_csv_upload(pd.read_csv(up), user['id'])
-                if ok: st.toast("¡Cargado!", icon="📦"); st.success(msg); time.sleep(1); st.rerun()
-                else: st.error(msg)
+                    # Parsing Inteligente
+                    ids_tengo = utils.parse_smart_input(txt_tengo, start_id, end_id)
+                    ids_repes = utils.parse_smart_input(txt_repes, start_id, end_id)
+                    ids_wish = utils.parse_smart_input(txt_wish, start_id, end_id)
+                    
+                    # Actualización Masiva en DB
+                    ok, msg = db.bulk_smart_update(user['id'], start_id, end_id, ids_tengo, ids_repes, ids_wish)
+                
+                if ok:
+                    st.toast(f"¡{short_name} Actualizado!", icon="✅")
+                    st.success(msg)
+                    time.sleep(1.5)
+                    st.rerun() # Recargamos para actualizar barra de progreso y mercado
+                else:
+                    st.error(msg)
         
         st.divider()
         
@@ -141,30 +170,18 @@ def render_user_sidebar(user):
             if contacts >= 1: st.progress(1.0, text="Límite: 1/1 (Agotado)")
             else: st.progress(0.0, text="Límite: 0/1 (Disponible)")
             
-            if st.button("💎 Hacete Premium", type="primary", use_container_width=True): 
+            if st.button("💎 Hacete Premium", use_container_width=True): 
                 market.mostrar_modal_premium()
             
             with st.expander("Validar Pago"):
                 op = st.text_input("ID Op")
-                if op and st.button("Validar", type="primary", use_container_width=True):
+                if op and st.button("Validar", use_container_width=True):
                     with utils.spinner_futbolero():
                         ok, msg = db.verificar_pago_mp(op, user['id'])
                     if ok: st.toast("¡Premium!", icon="💎"); st.rerun()
                     else: st.error(msg)
         
-        # --- LOGOUT (Estilo Rojo) ---
-        st.divider()
-        st.markdown("""
-            <style>
-            section[data-testid="stSidebar"] button:last-of-type:hover {
-                background-color: #FF4B4B !important; color: white !important; border-color: #FF4B4B !important;
-            }
-            section[data-testid="stSidebar"] button:last-of-type {
-                color: #FF4B4B !important; border-color: #ffcccc !important;
-            }
-            </style>
-        """, unsafe_allow_html=True)
-
+        # --- LOGOUT ---
         if st.button("Chau / Salir", use_container_width=True):
             st.session_state.user = None
             st.query_params.clear() 

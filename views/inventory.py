@@ -39,36 +39,16 @@ def render_inventory(user, start, end, seleccion_pais):
     if key_wish not in st.session_state: st.session_state[key_wish] = ids_wishlist_db
     
     # --- ENCABEZADO Y BOTONES MASIVOS ---
-    
-    # INYECCIÓN CSS: BOTÓN "NINGUNA" (ROJO)
-    # Apuntamos al botón en la tercera columna del bloque horizontal (col_btn_none)
-    st.markdown("""
-        <style>
-        /* Estado Normal: Borde Rojo, Texto Rojo */
-        div[data-testid="stHorizontalBlock"] div[data-testid="column"]:nth-of-type(3) button {
-            border-color: #FF4B4B !important;
-            color: #FF4B4B !important;
-        }
-        /* Estado Hover: Fondo Rojo, Texto Blanco */
-        div[data-testid="stHorizontalBlock"] div[data-testid="column"]:nth-of-type(3) button:hover {
-            border-color: #FF4B4B !important;
-            background-color: #FF4B4B !important;
-            color: white !important;
-        }
-        </style>
-    """, unsafe_allow_html=True)
-
     col_head_1, col_btn_all, col_btn_none = st.columns([4, 1, 1])
     col_head_1.markdown("### 1️⃣ Tus Figus")
 
-    # Botón "Todas" -> VERDE (Primary)
-    if col_btn_all.button("Todas", type="primary", use_container_width=True, key=f"all_{seleccion_pais}"):
+    # Botones masivos (CORREGIDO: use_container_width=True)
+    if col_btn_all.button("Todas", use_container_width=True, key=f"all_{seleccion_pais}"):
         st.session_state[key_pills] = list(range(start, end + 1))
         st.session_state[key_wish] = [] 
         st.session_state.unsaved_changes = True 
         st.rerun()
 
-    # Botón "Ninguna" -> ROJO (Estilo inyectado arriba)
     if col_btn_none.button("Ninguna", use_container_width=True, key=f"none_{seleccion_pais}"):
         st.session_state[key_pills] = []
         st.session_state.unsaved_changes = True 
@@ -171,7 +151,7 @@ def render_inventory(user, start, end, seleccion_pais):
 
     st.divider()
 
-    # --- BOTÓN GUARDAR (Dinámico: Verde si hay cambios) ---
+    # --- BOTÓN GUARDAR (CORREGIDO: use_container_width=True) ---
     btn_type = "primary" if st.session_state.get('unsaved_changes', False) else "secondary"
     btn_lbl = "💾 GUARDAR CAMBIOS (*)" if st.session_state.get('unsaved_changes', False) else "💾 GUARDAR CAMBIOS"
 

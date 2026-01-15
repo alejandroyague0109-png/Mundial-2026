@@ -82,19 +82,17 @@ def mostrar_login():
                         user, msg = db.login_user(phone, password)
                         time.sleep(1)
                     
-               # ... (código previo) ...
                     if user:
                         st.session_state.user = user
                         
-                        # --- NUEVO: PERSISTENCIA DE SESIÓN ---
+                        # --- PERSISTENCIA DE SESIÓN ---
                         token = utils.crear_token_sesion(user['id'])
                         st.query_params["token"] = token 
-                        # -------------------------------------
+                        # ------------------------------
 
                         st.toast(f"¡Hola {user['nick']}!", icon="👋")
                         time.sleep(0.5)
                         st.rerun()
-                    # ... (resto del código) ...
                     else:
                         st.error(msg)
                 
@@ -104,7 +102,7 @@ def mostrar_login():
 
             # Pestaña 2: Registro
             with tab2:
-                new_nick = st.text_input("Tu Apodo / Nick", placeholder="El 10")
+                new_nick = st.text_input("Tu Apodo / Nick", placeholder="El 10", help="Debe ser único. Así te buscarán tus amigos.")
                 new_phone = st.text_input("Celular", placeholder="Ej: 2604...", key="r_phone")
                 
                 c_prov, c_zone = st.columns(2)
@@ -136,6 +134,7 @@ def mostrar_login():
                         st.error("⚠️ Debés aceptar los Términos y Condiciones para registrarte.")
                     else:
                         with utils.spinner_futbolero():
+                            # Aquí se llama a database.py, que ahora verifica si el nick existe
                             user, msg = db.register_user(new_nick, new_phone, prov, zone, new_pass, secret_q, secret_a)
                         
                         if user:
