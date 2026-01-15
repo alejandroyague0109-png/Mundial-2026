@@ -9,6 +9,31 @@ from views import market
 
 # --- MODALES ESPECÍFICOS DEL SIDEBAR ---
 
+@st.dialog("📲 Instalar App")
+def mostrar_instrucciones_instalacion():
+    st.markdown("### ¿Cómo tener Figus 26 en tu inicio?")
+    st.markdown("Al instalarla, funcionará como una app nativa: pantalla completa y acceso rápido.")
+    
+    tab_android, tab_ios = st.tabs(["🤖 Android", "🍎 iPhone (iOS)"])
+    
+    with tab_android:
+        st.info("Para **Chrome** en Android:")
+        st.markdown("""
+        1. Tocá los **3 puntitos (⋮)** arriba a la derecha.
+        2. Buscá la opción **'Instalar aplicación'** o **'Agregar a la pantalla principal'**.
+        3. Confirmá y ¡listo!
+        """)
+        # Ejemplo visual simulado con texto
+        st.caption("Tip: Si no ves la opción, actualizá Chrome.")
+
+    with tab_ios:
+        st.info("Para **Safari** en iPhone:")
+        st.markdown("""
+        1. Tocá el botón **Compartir** (cuadrado con flecha hacia arriba).
+        2. Bajá hasta encontrar **'Agregar al Inicio'** (Add to Home Screen).
+        3. Dale a **'Agregar'**.
+        """)
+
 @st.dialog("⚡ Guía de Carga Rápida")
 def mostrar_ayuda_carga_rapida():
     st.markdown("""
@@ -23,6 +48,8 @@ def mostrar_ayuda_carga_rapida():
     * **🟦 Tengo:** Las que pegaste en el álbum.
     * **🟩 Repetidas:** Las que tenés para cambiar. **Si ponés una acá, el sistema asume que la TENÉS.** No hace falta ponerla en la caja azul.
     * **🟥 Wishlist:** Las que te faltan. Si el sistema detecta que ya la tenés (o es repe), la ignora para evitar errores.
+    
+    ⚠️ **Nota:** Al procesar, se borrará lo que hayas cargado antes **solo para ese país** y se reemplazará por lo nuevo.
     """)
 
 @st.dialog("✏️ Editar Perfil")
@@ -65,6 +92,11 @@ def render_user_sidebar(user):
         # EDITAR PERFIL
         if st.button("✏️ Editar Perfil", key="btn_edit_profile"):
              mostrar_editar_perfil(user)
+        
+        # --- NUEVO BOTÓN: INSTALAR APP ---
+        # Lo ponemos visible y destacado arriba
+        if st.button("📲 Instalar App", type="secondary", use_container_width=True, help="Agregá Figus 26 a tu inicio"):
+            mostrar_instrucciones_instalacion()
              
         st.caption(f"⭐ Reputación: {user.get('reputation', 0)}")
         
@@ -92,9 +124,7 @@ def render_user_sidebar(user):
         st.divider()
         
         # --- BARRA DE PROGRESO GLOBAL ---
-        # 1. Calculamos el total de figuritas de todo el álbum
         total_album = sum([(v[1] - v[0] + 1) for v in config.ALBUM_PAGES.values()])
-        # 2. Usamos la función optimizada de DB
         pegadas_reales = db.get_completion_stats(user['id'])
         
         progreso = 0.0
@@ -111,23 +141,18 @@ def render_user_sidebar(user):
         
         st.divider()
         
-        # --- NUEVA SECCIÓN: CARGA RÁPIDA INTELIGENTE ---
+        # --- CARGA RÁPIDA INTELIGENTE ---
         with st.expander("⚡ Carga Rápida (Por Página)", expanded=False):
             st.caption("Elegí el país y cargá los números de esa página (ej: 1 al 19).")
             
-            # 1. Selector de Página
             opciones_paginas = list(config.ALBUM_PAGES.keys())
             page_key = st.selectbox("Seleccioná Equipo:", opciones_paginas)
             
-            # Obtener Rango Real (Backend)
             start_id, end_id = config.ALBUM_PAGES[page_key]
             
-            # 2. Ayuda
             if st.button("❓ ¿Cómo funciona?", key="btn_help_smart", use_container_width=True):
                 mostrar_ayuda_carga_rapida()
             
-            # 3. Inputs de Texto
-            # Nota: Usamos height pequeño para que no ocupe todo el sidebar, pero suficiente para ver.
             st.markdown("**🟦 TENGO (Pegadas)**")
             txt_tengo = st.text_area("Lista Tengo", placeholder="Ej: 1-5, 8, 11", height=70, label_visibility="collapsed")
             
@@ -137,25 +162,21 @@ def render_user_sidebar(user):
             st.markdown("**🟥 WISHLIST (Buscadas)**")
             txt_wish = st.text_area("Lista Deseados", placeholder="Ej: 15-19", height=70, label_visibility="collapsed")
             
-            # 4. Procesar
-            # Extraemos el nombre corto del país para el botón (ej: "ARG - Argentina" -> "ARG")
             short_name = page_key.split('-')[0].strip()
             
             if st.button(f"🚀 Procesar {short_name}", type="primary", use_container_width=True):
                 with utils.spinner_futbolero():
-                    # Parsing Inteligente
                     ids_tengo = utils.parse_smart_input(txt_tengo, start_id, end_id)
                     ids_repes = utils.parse_smart_input(txt_repes, start_id, end_id)
                     ids_wish = utils.parse_smart_input(txt_wish, start_id, end_id)
                     
-                    # Actualización Masiva en DB
                     ok, msg = db.bulk_smart_update(user['id'], start_id, end_id, ids_tengo, ids_repes, ids_wish)
                 
                 if ok:
                     st.toast(f"¡{short_name} Actualizado!", icon="✅")
                     st.success(msg)
                     time.sleep(1.5)
-                    st.rerun() # Recargamos para actualizar barra de progreso y mercado
+                    st.rerun()
                 else:
                     st.error(msg)
         
