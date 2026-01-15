@@ -3,95 +3,96 @@ import base64
 import json
 
 def get_pwa_manifest():
-    """
-    Genera un Manifest JSON en base64 para inyectar en el HTML.
-    Esto hace que Android/Chrome detecten la web como una App Instalable.
-    """
+    """Genera un Manifest JSON en base64 para PWA."""
     manifest = {
         "name": "Figus 26",
         "short_name": "Figus 26",
         "start_url": "/",
         "display": "standalone",
         "background_color": "#FFFFFF",
-        "theme_color": "#2e7d32", # Usamos el verde de tus pills para la barra de estado
+        "theme_color": "#2e7d32",
         "description": "Tu álbum digital de intercambios.",
-        "icons": [
-            {
-                "src": "https://cdn-icons-png.flaticon.com/512/188/188333.png", # Icono genérico de fútbol
-                "sizes": "192x192",
-                "type": "image/png"
-            }
-        ]
+        "icons": [{"src": "https://cdn-icons-png.flaticon.com/512/188/188333.png", "sizes": "192x192", "type": "image/png"}]
     }
-    # Convertimos a JSON string y luego a base64 data-uri
     json_str = json.dumps(manifest)
     b64_str = base64.b64encode(json_str.encode()).decode()
     return f"data:application/manifest+json;base64,{b64_str}"
 
 def load_css():
-    # Obtenemos el link del manifest
     manifest_href = get_pwa_manifest()
 
     st.markdown(f"""
     <link rel="manifest" href="{manifest_href}">
     <meta name="theme-color" content="#2e7d32">
     <meta name="apple-mobile-web-app-capable" content="yes">
-    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 
     <style>
-    /* Ocultar enlaces de títulos */
+    /* Ocultar elementos default de Streamlit */
     .stHeading a {{ display: none !important; }}
     [data-testid="stHeaderActionElements"] {{ display: none !important; }}
+    footer {{ display: none !important; }}
     
-    /* Sidebar Ajustado */
-    section[data-testid="stSidebar"] {{ min-width: 350px !important; max-width: 350px !important; }}
-    section[data-testid="stSidebar"] .block-container {{ padding-top: 2rem !important; padding-bottom: 2rem !important; }}
-    
-    /* Espaciados */
-    section[data-testid="stSidebar"] hr, 
-    section[data-testid="stSidebar"] .stMarkdown p, 
-    section[data-testid="stSidebar"] .stButton, 
-    section[data-testid="stSidebar"] .stProgress {{ 
-        margin-bottom: 0.5rem !important; margin-top: 0.2rem !important; 
+    /* === BOTTOM NAVBAR FIJA (Clave para UX Móvil) === */
+    .fixed-bottom-nav {{
+        position: fixed;
+        bottom: 0;
+        left: 0;
+        width: 100%;
+        height: 70px; /* Altura de la barra */
+        background-color: #ffffff;
+        border-top: 1px solid #e0e0e0;
+        z-index: 999999;
+        display: flex;
+        justify-content: space-around;
+        align-items: center;
+        padding: 0 10px;
+        box-shadow: 0px -2px 10px rgba(0,0,0,0.05);
     }}
-    section[data-testid="stSidebar"] h1 {{ font-size: 2rem !important; padding-bottom: 0.5rem !important; }}
+    
+    /* Ajuste para que el contenido no quede tapado por la barra */
+    .block-container {{
+        padding-bottom: 90px !important; /* Espacio extra abajo */
+    }}
+
+    /* Estilo de los Botones de Navegación (Streamlit Buttons hackeados) */
+    /* Usamos un selector específico para los botones que pondremos en la barra */
+    div[data-testid="stHorizontalBlock"] button {{
+        border: none !important;
+        background: transparent !important;
+        box-shadow: none !important;
+        color: #666 !important;
+        font-size: 0.8rem !important;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        height: 100% !important;
+    }}
+    
+    /* Estado Activo (Simulado con lógica Python + CSS condicional si fuera posible, 
+       pero aquí dependemos de Primary/Secondary) */
+    div[data-testid="stHorizontalBlock"] button:focus {{
+        color: #2e7d32 !important;
+        outline: none !important;
+    }}
+
+    /* Sidebar Ajustado */
+    section[data-testid="stSidebar"] {{ min-width: 300px !important; max-width: 320px !important; }}
+    
+    /* Espaciados Generales */
+    .stButton > button {{ min-height: 45px !important; margin-top: 0px !important; }}
     
     /* Pills Verdes */
-    div[data-testid="stPills"] span[aria-selected="true"] {{ background-color: #2e7d32 !important; border-color: #2e7d32 !important; color: white !important; }}
-    div[data-testid="stPills"] button[aria-selected="true"] {{ background-color: #2e7d32 !important; border-color: #2e7d32 !important; color: white !important; }}
+    div[data-testid="stPills"] span[aria-selected="true"] {{ background-color: #2e7d32 !important; color: white !important; }}
     
-    /* Botones Redondeados */
-    button[kind="secondary"] {{ border-radius: 20px; }}
-    
-    /* Centrar Paginación */
-    div[data-testid="column"] {{ text-align: center; }}
-
-    /* Corrección altura botones */
-    div.stButton > button, div.stDownloadButton > button {{ 
-        min-height: 45px !important; 
-        height: 45px !important;
-        margin-top: 0px !important;
-    }} 
-
-    /* Botón WhatsApp/Footer Blanco */
-    a[kind="secondary"] {{
-        background-color: #ffffff !important;
-        color: #000000 !important;
-        border: 1px solid #cccccc !important;
-        text-decoration: none !important;
-    }}
-    a[kind="secondary"]:hover {{
-        background-color: #f0f0f0 !important;
-        border-color: #999999 !important;
-        color: #000000 !important;
-    }}
-    
-    /* Footer Texto */
+    /* Footer Texto (dentro del flujo) */
     .footer-text {{
         text-align: center;
         font-size: 0.8em;
         color: #888;
         margin-top: 20px;
+        margin-bottom: 20px;
     }}
     </style>
     """, unsafe_allow_html=True)
