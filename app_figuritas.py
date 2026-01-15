@@ -11,12 +11,7 @@ import styles
 from views import auth, inventory, market, admin, sidebar, modals
 
 # --- CONFIGURACIÓN UI ---
-st.set_page_config(
-    page_title="Figus 26 | Colección", 
-    layout="wide", 
-    page_icon="⚽",
-    initial_sidebar_state="expanded"
-)
+st.set_page_config(page_title="Figus 26 | Colección", layout="wide", page_icon="⚽")
 
 # --- CARGAR ESTILOS CSS ---
 styles.load_css()
@@ -34,7 +29,7 @@ if 'current_country' not in st.session_state: st.session_state.current_country =
 if 'unsaved_changes' not in st.session_state: st.session_state.unsaved_changes = False
 
 # ==========================================
-#      FLUJO LÓGICO PRINCIPAL
+#     FLUJO LÓGICO PRINCIPAL
 # ==========================================
 
 # 1. VERIFICAR URL +18
@@ -68,23 +63,7 @@ else:
     if user.get('is_admin', False):
         with st.sidebar:
             st.title("Admin Panel")
-            
-            # Estilo Rojo para el Logout de Admin
-            st.markdown("""
-                <style>
-                section[data-testid="stSidebar"] button {
-                    color: #FF4B4B !important;
-                    border-color: #ffcccc !important;
-                }
-                section[data-testid="stSidebar"] button:hover {
-                    background-color: #FF4B4B !important;
-                    color: white !important;
-                    border-color: #FF4B4B !important;
-                }
-                </style>
-            """, unsafe_allow_html=True)
-            
-            if st.button("Salir / Logout", use_container_width=True): 
+            if st.button("Salir / Logout", use_container_width=True): # <--- CORREGIDO
                 st.session_state.user = None
                 st.query_params.clear()
                 st.rerun()
@@ -135,7 +114,7 @@ else:
         # --- FOOTER ---
         st.divider()
         fc1, fc2, fc3 = st.columns(3)
-        # Botones de footer en estilo secundario (Outline verde)
+        # CORREGIDOS: use_container_width=True
         if fc1.button("📧 Contacto", use_container_width=True, type="secondary"): modals.mostrar_contacto()
         if fc2.button("❓ FAQ", use_container_width=True, type="secondary"): modals.mostrar_faq()
         if fc3.button("⚖️ Legales", use_container_width=True, type="secondary"): modals.mostrar_legales()

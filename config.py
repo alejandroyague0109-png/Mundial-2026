@@ -2,6 +2,9 @@
 ADMIN_PHONE = "5492604000000" # Tu número
 
 # --- DATOS DEL ÁLBUM (Mundial 2026) ---
+# Estructura: "NOMBRE_PAIS": (ID_INICIAL, ID_FINAL)
+# El ID_INICIAL es el número real en el álbum.
+# Ejemplo: Si Brasil empieza en la 20, la figurita "Brasil 1" es la #20 absoluta.
 ALBUM_PAGES = {
     "ARG - Argentina": (1, 19),
     "BRA - Brasil": (20, 38),

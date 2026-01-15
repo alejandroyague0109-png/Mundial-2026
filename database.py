@@ -18,6 +18,16 @@ except Exception as e:
     st.error(f"Error de conexión DB/MP: {e}")
     st.stop()
 
+# --- VALIDACIONES AUXILIARES (NUEVO) ---
+def check_nick_exists(nick):
+    """Verifica si un alias ya está registrado (case-insensitive)."""
+    try:
+        # Buscamos coincidencias exactas ignorando mayúsculas
+        response = supabase.table("users").select("id").ilike("nick", nick).execute()
+        return len(response.data) > 0
+    except Exception:
+        return False
+
 # --- USUARIOS ---
 def login_user(phone, password):
     clean_phone = utils.limpiar_telefono(phone)
@@ -38,6 +48,10 @@ def register_user(nick, phone, province, zone, password, secret_q, secret_a):
         return None, "Faltan datos obligatorios."
     if not secret_q or not secret_a:
         return None, "La pregunta de seguridad es obligatoria."
+
+    # --- MODIFICACIÓN: Validación de Alias Único ---
+    if check_nick_exists(nick):
+        return None, "Ese Alias ya está en uso. ¡Elegite otro más original!"
 
     p_hash = utils.hash_phone_searchable(phone)
     p_enc = utils.encrypt_phone(phone)
@@ -396,11 +410,9 @@ def get_user_by_id(user_id):
         return None
     except: return None
 
-# --- FUNCIONES DE SOPORTE PARA TRIANGULACIÓN (NUEVAS: AGREGADAS AL FINAL) ---
+# --- FUNCIONES DE SOPORTE PARA TRIANGULACIÓN ---
 def get_users_with_sticker(figu_num):
-    """Busca usuarios con la figurita y devuelve phone_encrypted."""
     try:
-        # Usamos sticker_num como en el resto de tu backup
         response = supabase.table("inventory")\
             .select("user_id, status, users(nick, province, zone, phone_encrypted)")\
             .eq("sticker_num", figu_num)\
@@ -473,19 +485,86 @@ def find_potential_bridges(needed_figus, my_repes):
         return bridges
     except: return []
 
-def get_completion_stats(user_id):
+def bulk_smart_update(user_id, page_start, page_end, ids_tengo, ids_repe, ids_wish):
     """
-    Calcula el progreso real del álbum (únicas pegadas) para la barra lateral.
+    Actualiza inteligentemente el inventario de una página completa.
+    Lógica:
+    1. Borra TODO lo que el usuario tenía registrado para ESA página (limpieza).
+    2. Inserta los nuevos estados.
+    3. Resuelve conflictos: Si es Repetida, automáticamente es Tengo. Si es Tengo, no puede ser Wishlist.
     """
     try:
-        # Traemos todas las figuritas que el usuario TIENE (tengo, repetida o repe)
+        # 1. Definir rango de la página
+        page_range = list(range(page_start, page_end + 1))
+        
+        # 2. Borrar estado actual de esa página para evitar duplicados/errores
+        supabase.table("inventory").delete().eq("user_id", user_id).in_("sticker_num", page_range).execute()
+        
+        # 3. Preparar filas para insertar
+        rows_to_insert = []
+        
+        # Sets para búsqueda rápida O(1)
+        set_tengo = set(ids_tengo)
+        set_repe = set(ids_repe)
+        set_wish = set(ids_wish)
+        
+        # REGLA DE ORO: Si es REPE, también cuenta como TENGO.
+        # Unificamos Tengo + Repe para marcar 'tengo'
+        final_tengo = set_tengo.union(set_repe)
+        
+        # REGLA DE ORO 2: Si la tengo (o es repe), NO puede estar en Wishlist.
+        final_wish = set_wish - final_tengo
+        
+        # Generar filas 'tengo'
+        for num in final_tengo:
+            rows_to_insert.append({
+                "user_id": user_id, 
+                "sticker_num": num, 
+                "status": "tengo", 
+                "price": 0, 
+                "quantity": 1
+            })
+            
+        # Generar filas 'repetida' (adicionales a 'tengo')
+        # En tu modelo, 'repetida' es un status separado que indica disponibilidad para cambio
+        for num in set_repe:
+            rows_to_insert.append({
+                "user_id": user_id, 
+                "sticker_num": num, 
+                "status": "repetida", 
+                "price": 0, 
+                "quantity": 1 # Por defecto 1 en carga masiva
+            })
+            
+        # Generar filas 'wishlist'
+        for num in final_wish:
+            rows_to_insert.append({
+                "user_id": user_id, 
+                "sticker_num": num, 
+                "status": "wishlist", 
+                "price": 0, 
+                "quantity": 1
+            })
+            
+        # 4. Inserción Masiva
+        if rows_to_insert:
+            supabase.table("inventory").insert(rows_to_insert).execute()
+            fetch_market.clear() # Limpiar caché
+            return True, f"¡Listo! Se actualizaron {len(rows_to_insert)} figuritas."
+        
+        return True, "Página limpiada (no cargaste nada)."
+        
+    except Exception as e:
+        return False, f"Error DB: {str(e)}"
+
+def get_completion_stats(user_id):
+    try:
         data = supabase.table("inventory")\
             .select("sticker_num")\
             .eq("user_id", user_id)\
             .in_("status", ["tengo", "repetida", "repe"])\
             .execute()
             
-        # Usamos un set para contar figuritas únicas (evita duplicados)
         unique_stickers = {row['sticker_num'] for row in data.data}
         return len(unique_stickers)
         

@@ -15,6 +15,52 @@ def limpiar_telefono(phone):
     if not phone: return ""
     return re.sub(r'\D', '', phone)
 
+# --- PARSER INTELIGENTE (CARGA MASIVA) ---
+def parse_smart_input(text_input, page_start_id, page_end_id):
+    """
+    Convierte texto tipo '1, 2, 5-8' en una lista de IDs absolutos reales.
+    Ejemplo: Si page_start_id es 20 (Brasil) y el usuario escribe '1', devuelve [20].
+    """
+    if not text_input: return []
+    
+    # 1. Normalizar separadores (cambiar saltos de línea y comas por espacios)
+    normalized = re.sub(r'[,\n;]', ' ', text_input)
+    parts = normalized.split()
+    
+    result_ids = set()
+    offset = page_start_id - 1 # Si la pág empieza en 20, el '1' es 20. O sea 1 + 19.
+    
+    for part in parts:
+        part = part.strip()
+        if not part: continue
+        
+        try:
+            # Caso Rango: "5-10"
+            if '-' in part:
+                start, end = part.split('-')
+                s = int(start)
+                e = int(end)
+                # Validar orden
+                if s > e: s, e = e, s
+                
+                # Generar rango y aplicar offset
+                for num in range(s, e + 1):
+                    abs_id = num + offset
+                    if page_start_id <= abs_id <= page_end_id:
+                        result_ids.add(abs_id)
+            
+            # Caso Número Único: "5"
+            else:
+                num = int(part)
+                abs_id = num + offset
+                if page_start_id <= abs_id <= page_end_id:
+                    result_ids.add(abs_id)
+                    
+        except ValueError:
+            continue # Si escribe basura ("hola"), se ignora.
+
+    return list(result_ids)
+
 # --- CRIPTOGRAFÍA SIMPLE (PARA DATOS SENSIBLES) ---
 def encrypt_phone(phone):
     """
@@ -81,10 +127,6 @@ def generar_link_whatsapp_wishlist(wishlist_ids):
     texto = f"¡Hola! 👋 Me faltan estas figus del Mundial 2026:\n\n{lista_str}\n\nSi tenés alguna, avisame! 🙏\n\n_Gestionado por Figus26_\n¡Sumate y cambiá las tuyas! ⚽ 👉 {app_url}"
     
     return f"https://wa.me/?text={quote(texto)}"
-
-# ... (MANTENER TODO EL CÓDIGO ANTERIOR IGUAL) ...
-
-# ... (Mantené todo lo anterior igual)
 
 # --- GESTIÓN DE SESIÓN (PERSISTENCIA) ---
 def crear_token_sesion(user_id):
