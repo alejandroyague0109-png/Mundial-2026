@@ -83,14 +83,17 @@ def render_card(item, tipo, user, is_pending_view=False):
     suffix = "pend" if is_pending_view else "mkt"
     
     is_target_premium = item.get('is_premium', False)
+    target_id = item['target_id']
     
+    # LÓGICA STRICTA: Solo está desbloqueado si está explícitamente en la lista de desbloqueados
+    # No importa si el target es Premium, el usuario Free debe gastar su crédito para verlo.
+    is_unlocked = target_id in st.session_state.unlocked_users
+
     with st.container(border=True):
         col_info, col_actions = st.columns([0.75, 0.25])
-        target_id = item['target_id']
         fig_recibo = item['figu']
         
         is_wishlist = item.get('is_wishlist', False)
-        is_unlocked = target_id in st.session_state.unlocked_users
         phone_target = None
         link_wa = "#"
         
@@ -176,6 +179,7 @@ def render_card(item, tipo, user, is_pending_view=False):
                          st.rerun()
 
             else:
+                # ESTADO BLOQUEADO (Por defecto para todos, incluidos targets Premium)
                 btn_lbl = "🔓 Desbloquear"
                 if st.button(btn_lbl, key=f"ul_{tipo}_{fig_recibo}_{target_id}_{suffix}", type="secondary", use_container_width=True):
                     if db.check_contact_limit(user):
@@ -271,10 +275,13 @@ def render_market(user):
             modal_explicacion_triangulacion()
 
     if st.button(lbl_btn, type="primary", use_container_width=True):
-        if not filtro_num:
-            st.warning("⚠️ Primero escribí el número de la figurita que buscás en 'Figurita #'.")
-        elif not user.get('is_premium', False):
+        # [CORRECCIÓN CRÍTICA] 
+        # Verificamos si es Premium ANTES de validar cualquier otra cosa.
+        # Esto impide que el usuario Free inicie el proceso.
+        if not user.get('is_premium', False):
             mostrar_modal_premium()
+        elif not filtro_num:
+            st.warning("⚠️ Primero escribí el número de la figurita que buscás en 'Figurita #'.")
         else:
             with utils.spinner_futbolero():
                 _, _, repes_info, _ = db.get_inventory_status(user['id'], 1, 999)
@@ -329,18 +336,14 @@ def render_market(user):
     with utils.spinner_futbolero():
         if filtro_num and filtro_num.strip().isdigit():
             # [OPTIMIZACIÓN] RUTA RÁPIDA (SQL)
-            # Solo buscamos si hay un número de figurita. Evitamos descargar todo el DB.
             target_figu = int(filtro_num)
             zonas_a_buscar = filtro_zonas if filtro_zonas else [user['zone']]
             
-            # 1. Buscamos IDs candidatos en la DB (O(1))
             candidate_ids = set()
             for z in zonas_a_buscar:
                 res = db.search_market_sql(user['id'], target_figu, z)
                 candidate_ids.update([r['user_id'] for r in res])
             
-            # 2. Descargamos solo la data de esos usuarios (Repes + Wishlist)
-            # Traemos solo lo útil (neq 'tengo') para ahorrar ancho de banda
             if candidate_ids:
                 resp = db.supabase.table("inventory")\
                     .select("*, users(nick, province, zone, phone_encrypted, reputation, is_premium)")\
@@ -351,29 +354,24 @@ def render_market(user):
                 temp_df = pd.DataFrame(resp.data)
                 
                 if not temp_df.empty:
-                    # Normalizamos tipos
                     temp_df['sticker_num'] = pd.to_numeric(temp_df['sticker_num'], errors='coerce').fillna(0).astype(int)
                     temp_df['price'] = pd.to_numeric(temp_df['price'], errors='coerce').fillna(0).astype(int)
                     market_df = temp_df
         else:
             # [LEGACY] RUTA LENTA (TODO EL MERCADO)
-            # Si no filtran por número, mostramos todo lo disponible (Browsing mode)
             market_df = db.fetch_market(user['id'])
     
-    # Procesamiento de coincidencias (Reutilizamos la lógica robusta de Pandas)
+    # Procesamiento de coincidencias
     matches, ventas = db.find_matches(user['id'], market_df)
 
-    # Marcamos usuarios Premium
+    # Marcamos usuarios Premium (Solo para el Badge, NO para desbloquear)
     try:
         if 'is_premium' not in market_df.columns and not market_df.empty:
-             # Fallback si no vino en el join
              prem_response = db.supabase.table("users").select("id").eq("is_premium", True).execute()
              premium_ids = {u['id'] for u in prem_response.data}
              for m in matches: m['is_premium'] = m['target_id'] in premium_ids
              for v in ventas: v['is_premium'] = v['target_id'] in premium_ids
         elif not market_df.empty:
-             # Si vino en el join (Optimized Path), lo procesamos
-             # Nota: find_matches a veces aplana la estructura, re-verificamos
              pass 
     except: pass
 
@@ -391,15 +389,11 @@ def render_market(user):
     unlocked_ids = st.session_state.unlocked_users
     pendientes_total = []
     
-    # Para pendientes, necesitamos data, si usamos ruta rápida quizás falte data de pendientes de otros.
-    # Por seguridad, si hay filtro numérico, los pendientes pueden no mostrarse todos, 
-    # pero es aceptable en una búsqueda filtrada.
     if unlocked_ids and not market_df.empty:
         p_df = market_df[market_df['user_id'].isin(unlocked_ids)]
         p_match, p_ventas = db.find_matches(user['id'], p_df)
         pendientes_total = p_match + p_ventas
     elif unlocked_ids and market_df.empty and not filtro_num:
-         # Si no hay filtro y df vacio, no hay nada.
          pass
 
     def aplicar(lista):
