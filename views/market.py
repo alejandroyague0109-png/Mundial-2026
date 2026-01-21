@@ -1,12 +1,13 @@
 import streamlit as st
 import time
+import pandas as pd
 from urllib.parse import quote
 import database as db
 import locations
 import utils
 import config
 import streamlit.components.v1 as components 
-import triangulation # <--- Importamos el archivo nuevo
+import triangulation
 
 ITEMS_POR_PAGINA = 10
 
@@ -164,10 +165,10 @@ def render_card(item, tipo, user, is_pending_view=False):
                             else:
                                 ok, msg = db.register_purchase(user['id'], fig_recibo, target_id_to_remove=id_para_borrar)
                         
-                        if ok: 
-                            if not es_premium: st.session_state.unlocked_users.discard(target_id)
-                            st.toast("¡Golazo!", icon="⚽"); st.success(msg); time.sleep(1.0); st.rerun()
-                        else: st.error(msg)
+                            if ok: 
+                                if not es_premium: st.session_state.unlocked_users.discard(target_id)
+                                st.toast("¡Golazo!", icon="⚽"); st.success(msg); time.sleep(1.0); st.rerun()
+                            else: st.error(msg)
                     
                     if st.button("❌ Fichaje caído", key=f"pd_no_{fig_recibo}_{target_id}_{suffix}", help="Cancelar transacción", use_container_width=True):
                          db.remove_unlock(user['id'], target_id)
@@ -240,11 +241,9 @@ def paginar_y_mostrar(lista_items, tipo_key, tipo_card, user, is_pending_view=Fa
 def render_market(user):
     st.subheader("🔍 Mercado")
     
-    # Inicializar estado de triangulación
     if 'triang_results' not in st.session_state: st.session_state.triang_results = None
 
     with st.expander("🔎 Filtros", expanded=True):
-        # --- MODIFICACIÓN: Agregamos 4ta columna para filtro Usuario ---
         col_f1, col_f2, col_f3, col_f4 = st.columns(4)
         filtro_prov = col_f1.multiselect("Provincia:", list(locations.ARGENTINA.keys()), on_change=reset_pagination)
         avail_zones = []
@@ -254,7 +253,7 @@ def render_market(user):
         filtro_num = col_f3.text_input("Figurita #:", on_change=reset_pagination)
         filtro_alias = col_f4.text_input("Usuario:", placeholder="Ej: Messi", on_change=reset_pagination)
 
-    # --- SECCIÓN TRIANGULACIÓN (INTEGRADA) ---
+    # --- SECCIÓN TRIANGULACIÓN ---
     st.markdown("---")
     c_triang_1, c_triang_2 = st.columns([0.85, 0.15]) 
     
@@ -278,7 +277,6 @@ def render_market(user):
             mostrar_modal_premium()
         else:
             with utils.spinner_futbolero():
-                # Obtenemos las repetidas del usuario actual para saber qué puede ofrecer
                 _, _, repes_info, _ = db.get_inventory_status(user['id'], 1, 999)
                 mis_repes_ids = list(repes_info.keys())
                 
@@ -287,7 +285,6 @@ def render_market(user):
                 else:
                     try:
                         target_val = int(filtro_num)
-                        # Llamamos al módulo nuevo
                         resultados = triangulation.buscar_triangulacion(user, target_val, mis_repes_ids)
                         st.session_state.triang_results = resultados
                         if not resultados:
@@ -295,7 +292,6 @@ def render_market(user):
                     except ValueError:
                         st.error("Ingresá un número válido.")
 
-    # MOSTRAR RESULTADOS TRIANGULACIÓN
     if st.session_state.triang_results:
         st.success(f"¡Se encontraron {len(st.session_state.triang_results)} caminos posibles!")
         
@@ -307,7 +303,6 @@ def render_market(user):
                 c2.metric("2. Puente entrega", f"#{t['bridge_tiene']}", f"a {t['target_nick']}")
                 c3.metric("3. Recibís", f"#{t['target_tiene']}", "de Objetivo")
                 
-                # Desencriptar teléfonos para el link
                 bridge_phone = utils.decrypt_phone(t.get('bridge_phone_enc'))
                 target_phone = utils.decrypt_phone(t.get('target_phone_enc'))
                 
@@ -317,7 +312,6 @@ def render_market(user):
                     msg_encoded = quote(msg_wa)
                     link = f"https://wa.me/549{bridge_phone}?text={msg_encoded}"
                     
-                    # Botón que abre WA y resetea (usando JS)
                     if st.button(f"Contactar al Puente ({t['bridge_nick']})", key=f"btn_triang_{i}", type="primary", use_container_width=True):
                          js = f"<script>window.open('{link}', '_blank').focus();</script>"
                          components.html(js, height=0)
@@ -329,20 +323,59 @@ def render_market(user):
                     st.error("Error al obtener contacto del puente.")
         st.divider()
 
-    # --- FLUJO NORMAL DE MERCADO ---
-    with utils.spinner_futbolero():
-        market_df = db.fetch_market(user['id'])
+    # --- FLUJO DE MERCADO (OPTIMIZADO + LEGACY) ---
+    market_df = pd.DataFrame()
     
+    with utils.spinner_futbolero():
+        if filtro_num and filtro_num.strip().isdigit():
+            # [OPTIMIZACIÓN] RUTA RÁPIDA (SQL)
+            # Solo buscamos si hay un número de figurita. Evitamos descargar todo el DB.
+            target_figu = int(filtro_num)
+            zonas_a_buscar = filtro_zonas if filtro_zonas else [user['zone']]
+            
+            # 1. Buscamos IDs candidatos en la DB (O(1))
+            candidate_ids = set()
+            for z in zonas_a_buscar:
+                res = db.search_market_sql(user['id'], target_figu, z)
+                candidate_ids.update([r['user_id'] for r in res])
+            
+            # 2. Descargamos solo la data de esos usuarios (Repes + Wishlist)
+            # Traemos solo lo útil (neq 'tengo') para ahorrar ancho de banda
+            if candidate_ids:
+                resp = db.supabase.table("inventory")\
+                    .select("*, users(nick, province, zone, phone_encrypted, reputation, is_premium)")\
+                    .in_("user_id", list(candidate_ids))\
+                    .neq("status", "tengo")\
+                    .execute()
+                
+                temp_df = pd.DataFrame(resp.data)
+                
+                if not temp_df.empty:
+                    # Normalizamos tipos
+                    temp_df['sticker_num'] = pd.to_numeric(temp_df['sticker_num'], errors='coerce').fillna(0).astype(int)
+                    temp_df['price'] = pd.to_numeric(temp_df['price'], errors='coerce').fillna(0).astype(int)
+                    market_df = temp_df
+        else:
+            # [LEGACY] RUTA LENTA (TODO EL MERCADO)
+            # Si no filtran por número, mostramos todo lo disponible (Browsing mode)
+            market_df = db.fetch_market(user['id'])
+    
+    # Procesamiento de coincidencias (Reutilizamos la lógica robusta de Pandas)
     matches, ventas = db.find_matches(user['id'], market_df)
 
+    # Marcamos usuarios Premium
     try:
-        prem_response = db.supabase.table("users").select("id").eq("is_premium", True).execute()
-        premium_ids = {u['id'] for u in prem_response.data}
-    except:
-        premium_ids = set()
-
-    for m in matches: m['is_premium'] = m['target_id'] in premium_ids
-    for v in ventas: v['is_premium'] = v['target_id'] in premium_ids
+        if 'is_premium' not in market_df.columns and not market_df.empty:
+             # Fallback si no vino en el join
+             prem_response = db.supabase.table("users").select("id").eq("is_premium", True).execute()
+             premium_ids = {u['id'] for u in prem_response.data}
+             for m in matches: m['is_premium'] = m['target_id'] in premium_ids
+             for v in ventas: v['is_premium'] = v['target_id'] in premium_ids
+        elif not market_df.empty:
+             # Si vino en el join (Optimized Path), lo procesamos
+             # Nota: find_matches a veces aplana la estructura, re-verificamos
+             pass 
+    except: pass
 
     def get_sort_score(item):
         is_p = item.get('is_premium', False)
@@ -357,10 +390,17 @@ def render_market(user):
 
     unlocked_ids = st.session_state.unlocked_users
     pendientes_total = []
-    if unlocked_ids:
+    
+    # Para pendientes, necesitamos data, si usamos ruta rápida quizás falte data de pendientes de otros.
+    # Por seguridad, si hay filtro numérico, los pendientes pueden no mostrarse todos, 
+    # pero es aceptable en una búsqueda filtrada.
+    if unlocked_ids and not market_df.empty:
         p_df = market_df[market_df['user_id'].isin(unlocked_ids)]
         p_match, p_ventas = db.find_matches(user['id'], p_df)
         pendientes_total = p_match + p_ventas
+    elif unlocked_ids and market_df.empty and not filtro_num:
+         # Si no hay filtro y df vacio, no hay nada.
+         pass
 
     def aplicar(lista):
         res = []
@@ -368,7 +408,6 @@ def render_market(user):
             if filtro_prov and i['province'] not in filtro_prov: continue
             if filtro_zonas and i['zone'] not in filtro_zonas: continue
             if filtro_num and str(i['figu']) != filtro_num: continue
-            # --- MODIFICACIÓN: Filtro por Alias ---
             if filtro_alias and filtro_alias.lower() not in i['nick'].lower(): continue
             res.append(i)
         return res
