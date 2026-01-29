@@ -3,7 +3,7 @@ import streamlit as st
 
 # Configuración General
 PRECIO_PREMIUM = 5000 
-MP_LINK = "https://link.mercadopago.com.ar/..." # Tu link real aquí
+MP_LINK = "https://mpago.la/1DR8e6S" # Tu link real aquí
 
 # Obtener ADMIN_PHONE de forma segura
 ADMIN_PHONE = os.environ.get("ADMIN_PHONE")
