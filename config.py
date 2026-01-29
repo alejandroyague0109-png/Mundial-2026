@@ -1,13 +1,17 @@
 import os
 import streamlit as st
 
-# Intenta leer de entorno, si no, de secretos
+# Configuración General
+PRECIO_PREMIUM = 5000 
+MP_LINK = "https://link.mercadopago.com.ar/..." # Tu link real aquí
+
+# Obtener ADMIN_PHONE de forma segura
 ADMIN_PHONE = os.environ.get("ADMIN_PHONE")
 if not ADMIN_PHONE:
     try:
         ADMIN_PHONE = st.secrets["ADMIN_PHONE"]
     except:
-        ADMIN_PHONE = "SIN_CONFIGURAR" # Evita que explote si no encuentra nada
+        ADMIN_PHONE = "0000000000" # Valor dummy para que no rompa si falta
 
 # --- TELEGRAM (SEGURO) ---
 # Leemos el token desde los secretos de Streamlit para no exponerlo en GitHub.

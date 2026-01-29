@@ -6,28 +6,36 @@ from datetime import date
 import time
 import config 
 import utils
-import os # <--- IMPORTANTE: AGREGAR ESTO
+import os
 
-# --- CONEXIÓN ROBUSTA (PC + NUBE) ---
+# --- HELPER PARA GESTIONAR SECRETOS ---
+def get_secret(key_name):
+    # 1. Busca en Variables de Entorno (Railway/Nube)
+    value = os.environ.get(key_name)
+    if value:
+        return value
+    
+    # 2. Si no está, busca en secrets.toml (Local/PC)
+    try:
+        return st.secrets[key_name]
+    except:
+        return None
+
+# --- CONEXIÓN ---
 try:
-    # Intenta leer primero de las Variables de Entorno (Railway)
-    # Si no existen (estás en tu PC), usa st.secrets
-    url = os.environ.get("SUPABASE_URL")
-    if not url:
-        url = st.secrets["SUPABASE_URL"]
+    url = get_secret("SUPABASE_URL")
+    key = get_secret("SUPABASE_KEY")
+    mp_token = get_secret("MP_ACCESS_TOKEN")
 
-    key = os.environ.get("SUPABASE_KEY")
-    if not key:
-        key = st.secrets["SUPABASE_KEY"]
-
-    mp_token = os.environ.get("MP_ACCESS_TOKEN")
-    if not mp_token:
-        mp_token = st.secrets["MP_ACCESS_TOKEN"]
+    # Validación explícita para saber qué falta
+    if not url: raise Exception("Falta la variable SUPABASE_URL")
+    if not key: raise Exception("Falta la variable SUPABASE_KEY")
+    if not mp_token: raise Exception("Falta la variable MP_ACCESS_TOKEN")
 
     supabase: Client = create_client(url, key)
     sdk = mercadopago.SDK(mp_token)
 except Exception as e:
-    st.error(f"Error de conexión DB/MP: {e}")
+    st.error(f"Error de Configuración: {e}")
     st.stop()
 
 # --- VALIDACIONES AUXILIARES ---
