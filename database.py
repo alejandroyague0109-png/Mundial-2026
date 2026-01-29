@@ -6,12 +6,24 @@ from datetime import date
 import time
 import config 
 import utils
+import os # <--- IMPORTANTE: AGREGAR ESTO
 
-# --- CONEXIÓN ---
+# --- CONEXIÓN ROBUSTA (PC + NUBE) ---
 try:
-    url = st.secrets["SUPABASE_URL"]
-    key = st.secrets["SUPABASE_KEY"]
-    mp_token = st.secrets["MP_ACCESS_TOKEN"]
+    # Intenta leer primero de las Variables de Entorno (Railway)
+    # Si no existen (estás en tu PC), usa st.secrets
+    url = os.environ.get("SUPABASE_URL")
+    if not url:
+        url = st.secrets["SUPABASE_URL"]
+
+    key = os.environ.get("SUPABASE_KEY")
+    if not key:
+        key = st.secrets["SUPABASE_KEY"]
+
+    mp_token = os.environ.get("MP_ACCESS_TOKEN")
+    if not mp_token:
+        mp_token = st.secrets["MP_ACCESS_TOKEN"]
+
     supabase: Client = create_client(url, key)
     sdk = mercadopago.SDK(mp_token)
 except Exception as e:

@@ -1,7 +1,13 @@
+import os
 import streamlit as st
 
-# --- CONFIGURACIÓN GENERAL ---
-ADMIN_PHONE = "5492604000000" 
+# Intenta leer de entorno, si no, de secretos
+ADMIN_PHONE = os.environ.get("ADMIN_PHONE")
+if not ADMIN_PHONE:
+    try:
+        ADMIN_PHONE = st.secrets["ADMIN_PHONE"]
+    except:
+        ADMIN_PHONE = "SIN_CONFIGURAR" # Evita que explote si no encuentra nada
 
 # --- TELEGRAM (SEGURO) ---
 # Leemos el token desde los secretos de Streamlit para no exponerlo en GitHub.
