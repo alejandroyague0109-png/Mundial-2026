@@ -1,7 +1,7 @@
 import streamlit as st
 import threading
 import requests
-import config # Asegurate de importar config
+import config 
 import hashlib
 import re
 import random
@@ -168,3 +168,40 @@ def validar_token_sesion(token):
         return None
     except:
         return None
+
+# --- NOTIFICACIONES ASÍNCRONAS (TELEGRAM) ---
+# AGREGADO: Esta función faltaba y es requerida por database.py
+def _enviar_telegram_async(matches_dict, uploader_nick):
+    """
+    Función interna que se ejecuta en segundo plano.
+    Envía mensajes a los usuarios Premium que tenían en Wishlist lo que se acaba de cargar.
+    """
+    token = getattr(config, 'TELEGRAM_BOT_TOKEN', None)
+    if not token or token == "TOKEN_NO_CONFIGURADO":
+        return
+
+    base_url = f"https://api.telegram.org/bot{token}/sendMessage"
+
+    for chat_id, figus_encontradas in matches_dict.items():
+        try:
+            figus_str = ", ".join(map(str, figus_encontradas))
+            texto = (
+                f"🔔 **¡Alerta de Mercado!**\n\n"
+                f"El usuario *{uploader_nick}* acaba de publicar figuritas que buscabas:\n"
+                f"🔥 **#{figus_str}**\n\n"
+                f"Entrá ya a la app para ofertar."
+            )
+            requests.post(base_url, data={"chat_id": chat_id, "text": texto, "parse_mode": "Markdown"})
+        except Exception as e:
+            print(f"Error enviando notificación: {e}")
+
+def disparar_notificaciones_thread(matches_dict, uploader_nick):
+    """
+    Lanza el proceso de notificaciones en un hilo separado para no bloquear la UI.
+    """
+    if not matches_dict:
+        return
+    
+    # Creamos y arrancamos el hilo
+    thread = threading.Thread(target=_enviar_telegram_async, args=(matches_dict, uploader_nick))
+    thread.start()

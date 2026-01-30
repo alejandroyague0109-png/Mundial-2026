@@ -119,12 +119,11 @@ def render_user_sidebar(user):
         st.title(f"Hola {user['nick']}")
         st.caption(f"📍 {user.get('province', '')} - {user.get('zone', '')}")
         
-        # EDITAR PERFIL
-        if st.button("✏️ Editar Perfil", key="btn_edit_profile"):
+        # EDITAR PERFIL - [CORREGIDO: Ancho completo]
+        if st.button("✏️ Editar Perfil", key="btn_edit_profile", use_container_width=True):
              mostrar_editar_perfil(user)
         
         # --- NUEVO BOTÓN: INSTALAR APP ---
-        # AHORA SÍ FUNCIONARÁ PORQUE LA FUNCIÓN ESTÁ DEFINIDA ARRIBA
         if st.button("📲 Instalar App", type="secondary", use_container_width=True, help="Agregá Figus 26 a tu inicio"):
             mostrar_instrucciones_instalacion()
              
