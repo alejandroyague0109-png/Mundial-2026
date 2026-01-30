@@ -309,19 +309,22 @@ def render_market(user):
                 bridge_phone = utils.decrypt_phone(t.get('bridge_phone_enc'))
                 target_phone = utils.decrypt_phone(t.get('target_phone_enc'))
                 
+                # --- SOLUCIÓN: Usar st.link_button en lugar de JS hack ---
                 if bridge_phone:
+                    # Construimos el mensaje de forma segura
                     info_contacto_target = f"{t['target_nick']} (WhatsApp: +549{target_phone})" if target_phone else t['target_nick']
+                    
                     msg_wa = f"Hola! Vi una triangulación en Figus26. Yo te doy la #{t['bridge_quiere']}, vos le das la #{t['bridge_tiene']} a *{info_contacto_target}*, y yo recibo la #{t['target_tiene']}. ¿Te copás?"
                     msg_encoded = quote(msg_wa)
                     link = f"https://wa.me/549{bridge_phone}?text={msg_encoded}"
                     
-                    if st.button(f"Contactar al Puente ({t['bridge_nick']})", key=f"btn_triang_{i}", type="primary", use_container_width=True):
-                         js = f"<script>window.open('{link}', '_blank').focus();</script>"
-                         components.html(js, height=0)
-                         st.toast("Abriendo WhatsApp...", icon="🚀")
-                         time.sleep(1.5)
-                         st.session_state.triang_results = None
-                         st.rerun()
+                    # Botón Nativo (funciona siempre)
+                    st.link_button(
+                        label=f"💬 Contactar al Puente ({t['bridge_nick']})",
+                        url=link,
+                        type="primary",
+                        use_container_width=True
+                    )
                 else:
                     st.error("Error al obtener contacto del puente.")
         st.divider()
@@ -332,11 +335,8 @@ def render_market(user):
     with utils.spinner_futbolero():
         if filtro_num and filtro_num.strip().isdigit():
             # [OPTIMIZACIÓN CORREGIDA] 
-            # Si busca un número, BUSCAMOS EN TODOS LADOS (globalmente),
-            # sin restringir zona, porque el usuario quiere esa figurita.
             target_figu = int(filtro_num)
             
-            # Consultamos directo a DB sin pasar por el filtro de zona de search_market_sql
             resp = db.supabase.table("inventory")\
                 .select("*, users(nick, province, zone, phone_encrypted, reputation, is_premium)")\
                 .eq("sticker_num", target_figu)\
@@ -351,7 +351,7 @@ def render_market(user):
                 temp_df['price'] = pd.to_numeric(temp_df['price'], errors='coerce').fillna(0).astype(int)
                 market_df = temp_df
         else:
-            # [LEGACY] Ruta lenta (Trae todo el mercado visible por defecto)
+            # [LEGACY] Ruta lenta
             market_df = db.fetch_market(user['id'])
     
     # Procesamiento de coincidencias
@@ -394,7 +394,7 @@ def render_market(user):
             if filtro_prov and i['province'] not in filtro_prov: continue
             if filtro_zonas and i['zone'] not in filtro_zonas: continue
             
-            # [CORRECCIÓN 2] Comparamos ENTEROS para evitar error de espacios/formato
+            # Comparamos ENTEROS para evitar error de espacios/formato
             if filtro_num and filtro_num.strip().isdigit():
                 if int(i['figu']) != int(filtro_num): continue
             
