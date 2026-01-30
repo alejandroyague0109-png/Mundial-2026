@@ -11,70 +11,91 @@ def mostrar_barrera_entrada():
     st.info("🤝 Facilitamos el contacto entre coleccionistas, pero no intervenimos en los canjes. No nos hacemos responsables de las reuniones pactadas por los usuarios ni de las transacciones realizadas.")
     st.markdown("**Al continuar, declarás bajo juramento que sos mayor de edad.**")
     
-    # CORREGIDO: use_container_width=True
     if st.button("✅ Entendido, soy +18", type="primary", use_container_width=True):
         st.session_state.barrera_superada = True
         st.query_params["over18"] = "true"
         st.rerun()
 
-# --- 2. NAVEGACIÓN SEGURA ---
+# --- 2. NAVEGACIÓN SEGURA (PAÍSES) ---
 @st.dialog("⚠️ Cambios sin guardar")
 def confirmar_cambio_pais(target_pais, user):
+    st.write(f"Tenés cambios pendientes en **{st.session_state.current_country}**.")
+    st.warning("¿Querés guardar antes de cambiar de país?")
+    
+    col1, col2 = st.columns(2)
+    
+    # Opción 1: Guardar y Continuar
+    if col1.button("💾 Guardar y Cambiar", type="primary", use_container_width=True):
+        _guardar_cambios_actuales(user)
+        st.session_state.current_country = target_pais
+        st.rerun()
+        
+    # Opción 2: Descartar
+    if col2.button("🗑️ Descartar", use_container_width=True):
+        st.session_state.unsaved_changes = False
+        st.session_state.current_country = target_pais
+        st.rerun()
+
+# --- 3. NAVEGACIÓN SEGURA (SECCIONES: ALBUM <-> MERCADO) ---
+@st.dialog("⚠️ Cambios sin guardar")
+def confirmar_cambio_seccion(target_view, user):
+    """
+    Nuevo modal para cuando cambiás de 'Mi Álbum' a 'Mercado' (o viceversa)
+    con cambios pendientes.
+    """
     st.write(f"Tenés cambios pendientes en **{st.session_state.current_country}**.")
     st.warning("¿Querés guardar antes de salir?")
     
     col1, col2 = st.columns(2)
     
-    # Opción 1: Guardar y Continuar
-    # CORREGIDO: use_container_width=True
-    if col1.button("💾 Guardar y Continuar", type="primary", use_container_width=True):
-        curr = st.session_state.current_country
-        tengo_data = st.session_state.get(f"pills_tengo_{curr}", [])
-        wish_data = st.session_state.get(f"pills_wish_{curr}", [])
-        
-        # --- LÓGICA DE RECUPERACIÓN (SNAPSHOT + DELTAS) ---
-        snapshot_key = f"snapshot_df_{curr}"
-        editor_key = f"editor_{curr}"
-        
-        # A. Recuperar Base
-        if snapshot_key in st.session_state:
-            df_repes = st.session_state[snapshot_key].copy()
-        else:
-            # Fallback
-            repes_ids = st.session_state.get(f"repes_{curr}", [])
-            df_repes = pd.DataFrame([{"Figurita": r, "Modo": "Canje", "Precio": 0, "Cantidad": 1} for r in repes_ids])
-
-        # B. Aplicar Cambios Pendientes del Editor (Streamlit no actualiza el session_state inmediatamente)
-        if editor_key in st.session_state:
-            cambios = st.session_state[editor_key]
-            # Si el editor devolvió un dict con cambios (versiones nuevas de st)
-            if isinstance(cambios, dict) and "edited_rows" in cambios:
-                for idx_str, updated_cols in cambios["edited_rows"].items():
-                    idx = int(idx_str)
-                    if idx in df_repes.index:
-                        for col, val in updated_cols.items():
-                            df_repes.at[idx, col] = val
-            # Si el editor devolvió el DF directo (configuraciones antiguas/ciertos modos)
-            elif isinstance(cambios, pd.DataFrame):
-                 df_repes = cambios
-
-        with utils.spinner_futbolero():
-             s, e = config.ALBUM_PAGES[curr]
-             # Llamamos a la función segura
-             db.save_inventory_positive(user['id'], s, e, tengo_data, wish_data, df_repes)
-        
-        st.session_state.unsaved_changes = False
-        st.session_state.current_country = target_pais
+    # Opción 1: Guardar y Cambiar de Sección
+    if col1.button("💾 Guardar y Salir", type="primary", use_container_width=True):
+        _guardar_cambios_actuales(user)
+        st.session_state.current_view = target_view
         st.rerun()
         
     # Opción 2: Descartar
-    # CORREGIDO: use_container_width=True
-    if col2.button("🗑️ Descartar Cambios", use_container_width=True):
+    if col2.button("🗑️ Descartar", use_container_width=True):
         st.session_state.unsaved_changes = False
-        st.session_state.current_country = target_pais
+        st.session_state.current_view = target_view
         st.rerun()
 
-# --- 3. MODALES INFORMATIVOS (FOOTER) ---
+# --- FUNCIÓN HELPER INTERNA (PARA NO REPETIR CÓDIGO) ---
+def _guardar_cambios_actuales(user):
+    """Lógica unificada para guardar lo que está en pantalla antes de salir."""
+    curr = st.session_state.current_country
+    tengo_data = st.session_state.get(f"pills_tengo_{curr}", [])
+    wish_data = st.session_state.get(f"pills_wish_{curr}", [])
+    
+    # Recuperación de Inventario Repes
+    snapshot_key = f"snapshot_df_{curr}"
+    editor_key = f"editor_{curr}"
+    
+    if snapshot_key in st.session_state:
+        df_repes = st.session_state[snapshot_key].copy()
+    else:
+        repes_ids = st.session_state.get(f"repes_{curr}", [])
+        df_repes = pd.DataFrame([{"Figurita": r, "Modo": "Canje", "Precio": 0, "Cantidad": 1} for r in repes_ids])
+
+    # Aplicar deltas del editor
+    if editor_key in st.session_state:
+        cambios = st.session_state[editor_key]
+        if isinstance(cambios, dict) and "edited_rows" in cambios:
+            for idx_str, updated_cols in cambios["edited_rows"].items():
+                idx = int(idx_str)
+                if idx in df_repes.index:
+                    for col, val in updated_cols.items():
+                        df_repes.at[idx, col] = val
+        elif isinstance(cambios, pd.DataFrame):
+             df_repes = cambios
+
+    with utils.spinner_futbolero():
+         s, e = config.ALBUM_PAGES[curr]
+         db.save_inventory_positive(user['id'], s, e, tengo_data, wish_data, df_repes)
+    
+    st.session_state.unsaved_changes = False
+
+# --- 4. MODALES INFORMATIVOS (FOOTER) ---
 @st.dialog("📧 Contacto")
 def mostrar_contacto():
     st.markdown("### Soporte\n* 📧 soporte@figus26.com\n* 📷 @figus26_oficial")

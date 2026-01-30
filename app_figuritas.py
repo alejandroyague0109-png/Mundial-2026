@@ -86,13 +86,22 @@ else:
         tipo_album = "primary" if st.session_state.current_view == 'album' else "secondary"
         tipo_mercado = "primary" if st.session_state.current_view == 'mercado' else "secondary"
         
+        # [MODIFICACIÓN] Chequeo de cambios sin guardar antes de cambiar de sección
         if nav_c1.button("📖 MI ÁLBUM", type=tipo_album, use_container_width=True):
-            st.session_state.current_view = 'album'
-            st.rerun()
+            if st.session_state.current_view != 'album':
+                if st.session_state.unsaved_changes:
+                    modals.confirmar_cambio_seccion('album', user)
+                else:
+                    st.session_state.current_view = 'album'
+                    st.rerun()
             
         if nav_c2.button("🔍 MERCADO", type=tipo_mercado, use_container_width=True):
-            st.session_state.current_view = 'mercado'
-            st.rerun()
+            if st.session_state.current_view != 'mercado':
+                if st.session_state.unsaved_changes:
+                    modals.confirmar_cambio_seccion('mercado', user)
+                else:
+                    st.session_state.current_view = 'mercado'
+                    st.rerun()
         
         st.divider()
 
