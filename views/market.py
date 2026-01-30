@@ -331,30 +331,27 @@ def render_market(user):
     
     with utils.spinner_futbolero():
         if filtro_num and filtro_num.strip().isdigit():
-            # [OPTIMIZACIÓN] RUTA RÁPIDA (SQL)
+            # [OPTIMIZACIÓN CORREGIDA] 
+            # Si busca un número, BUSCAMOS EN TODOS LADOS (globalmente),
+            # sin restringir zona, porque el usuario quiere esa figurita.
             target_figu = int(filtro_num)
-            zonas_a_buscar = filtro_zonas if filtro_zonas else [user['zone']]
             
-            candidate_ids = set()
-            for z in zonas_a_buscar:
-                res = db.search_market_sql(user['id'], target_figu, z)
-                candidate_ids.update([r['user_id'] for r in res])
+            # Consultamos directo a DB sin pasar por el filtro de zona de search_market_sql
+            resp = db.supabase.table("inventory")\
+                .select("*, users(nick, province, zone, phone_encrypted, reputation, is_premium)")\
+                .eq("sticker_num", target_figu)\
+                .neq("user_id", user['id'])\
+                .neq("status", "tengo")\
+                .execute()
             
-            if candidate_ids:
-                resp = db.supabase.table("inventory")\
-                    .select("*, users(nick, province, zone, phone_encrypted, reputation, is_premium)")\
-                    .in_("user_id", list(candidate_ids))\
-                    .neq("status", "tengo")\
-                    .execute()
-                
-                temp_df = pd.DataFrame(resp.data)
-                
-                if not temp_df.empty:
-                    temp_df['sticker_num'] = pd.to_numeric(temp_df['sticker_num'], errors='coerce').fillna(0).astype(int)
-                    temp_df['price'] = pd.to_numeric(temp_df['price'], errors='coerce').fillna(0).astype(int)
-                    market_df = temp_df
+            temp_df = pd.DataFrame(resp.data)
+            
+            if not temp_df.empty:
+                temp_df['sticker_num'] = pd.to_numeric(temp_df['sticker_num'], errors='coerce').fillna(0).astype(int)
+                temp_df['price'] = pd.to_numeric(temp_df['price'], errors='coerce').fillna(0).astype(int)
+                market_df = temp_df
         else:
-            # [LEGACY] RUTA LENTA (TODO EL MERCADO)
+            # [LEGACY] Ruta lenta (Trae todo el mercado visible por defecto)
             market_df = db.fetch_market(user['id'])
     
     # Procesamiento de coincidencias
@@ -397,8 +394,9 @@ def render_market(user):
             if filtro_prov and i['province'] not in filtro_prov: continue
             if filtro_zonas and i['zone'] not in filtro_zonas: continue
             
-            # --- CORRECCIÓN AQUÍ: .strip() ---
-            if filtro_num and str(i['figu']) != filtro_num.strip(): continue
+            # [CORRECCIÓN 2] Comparamos ENTEROS para evitar error de espacios/formato
+            if filtro_num and filtro_num.strip().isdigit():
+                if int(i['figu']) != int(filtro_num): continue
             
             if filtro_alias and filtro_alias.lower() not in i['nick'].lower(): continue
             res.append(i)
