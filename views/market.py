@@ -86,7 +86,6 @@ def render_card(item, tipo, user, is_pending_view=False):
     target_id = item['target_id']
     
     # LÓGICA STRICTA: Solo está desbloqueado si está explícitamente en la lista de desbloqueados
-    # No importa si el target es Premium, el usuario Free debe gastar su crédito para verlo.
     is_unlocked = target_id in st.session_state.unlocked_users
 
     with st.container(border=True):
@@ -179,7 +178,7 @@ def render_card(item, tipo, user, is_pending_view=False):
                          st.rerun()
 
             else:
-                # ESTADO BLOQUEADO (Por defecto para todos, incluidos targets Premium)
+                # ESTADO BLOQUEADO
                 btn_lbl = "🔓 Desbloquear"
                 if st.button(btn_lbl, key=f"ul_{tipo}_{fig_recibo}_{target_id}_{suffix}", type="secondary", use_container_width=True):
                     if db.check_contact_limit(user):
@@ -275,9 +274,6 @@ def render_market(user):
             modal_explicacion_triangulacion()
 
     if st.button(lbl_btn, type="primary", use_container_width=True):
-        # [CORRECCIÓN CRÍTICA] 
-        # Verificamos si es Premium ANTES de validar cualquier otra cosa.
-        # Esto impide que el usuario Free inicie el proceso.
         if not user.get('is_premium', False):
             mostrar_modal_premium()
         elif not filtro_num:
@@ -330,7 +326,7 @@ def render_market(user):
                     st.error("Error al obtener contacto del puente.")
         st.divider()
 
-    # --- FLUJO DE MERCADO (OPTIMIZADO + LEGACY) ---
+    # --- FLUJO DE MERCADO ---
     market_df = pd.DataFrame()
     
     with utils.spinner_futbolero():
@@ -364,7 +360,6 @@ def render_market(user):
     # Procesamiento de coincidencias
     matches, ventas = db.find_matches(user['id'], market_df)
 
-    # Marcamos usuarios Premium (Solo para el Badge, NO para desbloquear)
     try:
         if 'is_premium' not in market_df.columns and not market_df.empty:
              prem_response = db.supabase.table("users").select("id").eq("is_premium", True).execute()
@@ -401,7 +396,10 @@ def render_market(user):
         for i in lista:
             if filtro_prov and i['province'] not in filtro_prov: continue
             if filtro_zonas and i['zone'] not in filtro_zonas: continue
-            if filtro_num and str(i['figu']) != filtro_num: continue
+            
+            # --- CORRECCIÓN AQUÍ: .strip() ---
+            if filtro_num and str(i['figu']) != filtro_num.strip(): continue
+            
             if filtro_alias and filtro_alias.lower() not in i['nick'].lower(): continue
             res.append(i)
         return res
