@@ -1,0 +1,61 @@
+{% if user and not user.is_premium %}
+<div x-data="dailyRenewalToast()" 
+     x-init="check()" 
+     x-show="show" 
+     x-transition:enter="transition ease-out duration-300"
+     x-transition:enter-start="opacity-0 translate-y-2"
+     x-transition:enter-end="opacity-100 translate-y-0"
+     x-transition:leave="transition ease-in duration-300"
+     x-transition:leave-start="opacity-100 translate-y-0"
+     x-transition:leave-end="opacity-0 translate-y-2"
+     style="display: none;"
+     class="fixed bottom-4 right-4 z-50 max-w-sm w-full bg-slate-800 border-l-4 border-green-500 rounded-r-lg shadow-2xl p-4 flex items-start gap-3">
+    
+    <div class="flex-shrink-0 text-green-400">
+        <svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+        </svg>
+    </div>
+    
+    <div class="flex-1">
+        <h3 class="text-sm font-bold text-white">¡Contacto Diario Renovado!</h3>
+        <p class="text-xs text-gray-400 mt-1">
+            Ya tenés disponible tu crédito diario para escribirle a otro coleccionista.
+        </p>
+    </div>
+
+    <button @click="show = false" class="text-gray-500 hover:text-white">✕</button>
+</div>
+
+<script>
+    function dailyRenewalToast() {
+        return {
+            show: false,
+            check() {
+                // 1. Obtenemos la fecha de hoy (string simple)
+                const today = new Date().toDateString();
+                const key = 'figus_renewal_seen_' + '{{ user.id }}';
+                
+                // 2. Verificamos si ya lo vio hoy
+                const lastSeen = localStorage.getItem(key);
+                
+                // 3. Verificamos si realmente tiene el crédito disponible (count == 0)
+                // Usamos la variable de Jinja {{ user.daily_contacts_count }}
+                const contactsUsed = parseInt('{{ user.daily_contacts_count|default(0) }}');
+
+                if (lastSeen !== today && contactsUsed === 0) {
+                    // Esperamos un poquito para que no sea agresivo al cargar la página
+                    setTimeout(() => {
+                        this.show = true;
+                        // Guardamos que ya lo vio hoy
+                        localStorage.setItem(key, today);
+                        
+                        // Auto-ocultar después de 6 segundos
+                        setTimeout(() => this.show = false, 6000);
+                    }, 1500);
+                }
+            }
+        }
+    }
+</script>
+{% endif %}

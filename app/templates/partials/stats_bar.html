@@ -1,0 +1,23 @@
+<div id="dashboard-stats" 
+     class="bg-slate-800 p-5 rounded-xl border border-slate-700 mb-6 flex justify-between items-center shadow-md transition-all duration-300"
+     {% if oob %}hx-swap-oob="true"{% endif %}>
+    
+    <div>
+        <h1 class="text-2xl font-bold text-white flex items-center gap-2">
+            Mi Álbum <span class="text-sm font-normal text-gray-500 hidden sm:inline">| Panel de Control</span>
+        </h1>
+        <p class="text-sm text-gray-400 mt-1">Seleccioná un país del índice para gestionar tus figuritas.</p>
+    </div>
+    
+    <div class="flex items-center gap-6 bg-slate-900/50 px-4 py-2 rounded-lg border border-slate-700">
+        <div class="text-center">
+            <span class="block text-xl font-bold text-green-400 transition-all">{{ stats.tengo }}</span>
+            <span class="text-[10px] text-gray-500 tracking-wider">PEGADAS</span>
+        </div>
+        <div class="w-px h-8 bg-slate-700"></div>
+        <div class="text-center">
+            <span class="block text-xl font-bold text-blue-400">{{ stats.porcentaje }}%</span>
+            <span class="text-[10px] text-gray-500 tracking-wider">COMPLETO</span>
+        </div>
+    </div>
+</div>

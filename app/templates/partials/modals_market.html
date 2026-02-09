@@ -1,0 +1,262 @@
+<dialog id="expertInfoModal" class="bg-slate-900 text-white p-0 rounded-xl border border-indigo-500/50 w-full max-w-md shadow-2xl backdrop:bg-slate-900/90 overflow-hidden">
+    <div class="bg-slate-800 p-4 border-b border-indigo-500/30 flex justify-between items-center">
+        <h3 class="text-lg font-bold text-indigo-300 flex items-center gap-2">
+            <span>📐</span> ¿Qué es la Triangulación?
+        </h3>
+        <button onclick="document.getElementById('expertInfoModal').close()" class="text-gray-400 hover:text-white transition p-1">✕</button>
+    </div>
+
+    <div class="p-6 space-y-6 text-sm text-gray-300 overflow-y-auto max-h-[70vh]">
+        
+        <div>
+            <h4 class="text-white font-bold mb-2">La jugada maestra 🧠</h4>
+            <p class="leading-relaxed">
+                A veces, <strong class="text-indigo-400">A</strong> quiere lo que tiene <strong class="text-white">C</strong>, pero <strong class="text-white">C</strong> no quiere nada de <strong class="text-indigo-400">A</strong>.
+            </p>
+            <p class="mt-2 text-red-300 font-bold bg-red-900/20 p-2 rounded border border-red-900/50 text-center">
+                ¡El mercado se traba! ⛔
+            </p>
+            <p class="mt-2">
+                Ahí entra <strong class="text-gray-400">B</strong> (el Puente) para destrabarlo.
+            </p>
+        </div>
+
+        <div class="bg-slate-800/50 rounded-xl p-4 border border-slate-700 space-y-4">
+            <h4 class="text-white font-bold text-xs uppercase tracking-wider border-b border-slate-700 pb-2 mb-2">⚽ La jugada a 3 toques:</h4>
+
+            <div class="flex gap-3">
+                <div class="flex-shrink-0 w-6 h-6 rounded-full bg-indigo-900 text-indigo-300 flex items-center justify-center font-bold text-xs border border-indigo-500/30">1</div>
+                <div>
+                    <strong class="text-indigo-300 block text-xs">Vos → Puente</strong>
+                    <span class="text-xs text-gray-400">Le das una repe al Puente.</span>
+                </div>
+            </div>
+
+            <div class="flex gap-3">
+                <div class="flex-shrink-0 w-6 h-6 rounded-full bg-slate-600 text-gray-300 flex items-center justify-center font-bold text-xs border border-slate-500/30">2</div>
+                <div>
+                    <strong class="text-gray-300 block text-xs">Puente → Dueño</strong>
+                    <span class="text-xs text-gray-400">El Puente le da una suya al Dueño (la que el Dueño quería).</span>
+                </div>
+            </div>
+
+            <div class="flex gap-3">
+                <div class="flex-shrink-0 w-6 h-6 rounded-full bg-green-900 text-green-300 flex items-center justify-center font-bold text-xs border border-green-500/30">3</div>
+                <div>
+                    <strong class="text-white block text-xs">Dueño → Vos</strong>
+                    <span class="text-xs text-gray-400">¡El Dueño te da a vos la figurita que buscás! 🎯</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="bg-indigo-900/20 p-4 rounded-xl border border-indigo-500/30 flex gap-3 items-start">
+            <span class="text-xl mt-0.5">📍</span>
+            <div>
+                <strong class="text-indigo-300 block text-xs mb-1 uppercase tracking-wider">Requisito</strong>
+                <p class="text-xs text-gray-300">
+                    Para que la logística sea fácil, el sistema solo busca "Puentes" que vivan en tu misma zona:
+                    <br>
+                    <strong class="text-white mt-1.5 block text-sm border-l-2 border-indigo-500 pl-2">
+                        {{ user.zone }} / {{ user.province }}
+                    </strong>
+                </p>
+            </div>
+        </div>
+    </div>
+
+    <div class="p-4 bg-slate-800 border-t border-slate-700">
+        <button onclick="document.getElementById('expertInfoModal').close()" class="w-full bg-indigo-600 hover:bg-indigo-500 text-white font-bold py-3 rounded-lg transition shadow-lg shadow-indigo-900/20">
+            Entendido
+        </button>
+    </div>
+</dialog>
+
+<dialog id="triangulationInputModal" class="bg-slate-900 text-white p-6 rounded-xl border border-indigo-500/50 w-full max-w-sm shadow-2xl backdrop:bg-slate-900/90">
+    <div class="flex justify-between items-start mb-4">
+        <h3 class="text-lg font-bold text-white flex items-center gap-2">
+            <span>🎯</span> Figurita Objetivo
+        </h3>
+        <button onclick="document.getElementById('triangulationInputModal').close()" class="text-gray-400 hover:text-white transition">✕</button>
+    </div>
+
+    <div class="bg-yellow-900/20 border border-yellow-700/50 rounded p-3 mb-5">
+        <p class="text-xs text-yellow-200">
+            ⚠️ <strong>Importante:</strong> Para participar en una triangulación, la figurita debe estar marcada previamente como <strong>Wishlist</strong> en tu álbum.
+        </p>
+    </div>
+
+    <p class="text-sm text-gray-400 mb-4">
+        Seleccioná cuál de tus faltantes querés conseguir ahora:
+    </p>
+
+    <form onsubmit="startTriangulationSearch(event)" class="space-y-4">
+        <div>
+            <label class="block text-[10px] font-bold text-indigo-300 uppercase mb-1">Tu Wishlist</label>
+            
+            <div class="relative">
+                <select id="targetStickerInput" name="sticker" required class="w-full bg-slate-800 border border-slate-600 rounded px-3 py-3 text-white focus:border-indigo-500 outline-none appearance-none font-mono text-center tracking-wide cursor-pointer hover:bg-slate-700 transition">
+                    
+                    {% if wishlist %}
+                        <option value="" disabled selected>-- Elegí una figurita --</option>
+                        {% for item in wishlist %}
+                            <option value="{{ item.num }}">{{ item.name }}</option>
+                        {% endfor %}
+                    {% else %}
+                        <option value="" disabled selected>No tenés faltantes marcadas</option>
+                    {% endif %}
+
+                </select>
+                <div class="absolute inset-y-0 right-0 flex items-center px-3 pointer-events-none text-gray-400">
+                    ▼
+                </div>
+            </div>
+        </div>
+
+        {% if wishlist %}
+            <button type="submit" class="w-full bg-indigo-600 hover:bg-indigo-500 text-white font-bold py-3 rounded-lg transition shadow-lg shadow-indigo-900/20 flex justify-center items-center gap-2">
+                <span>🔍</span> Buscar Triangulación
+            </button>
+        {% else %}
+            <a href="/album" class="block w-full text-center bg-slate-700 hover:bg-slate-600 text-gray-300 font-bold py-3 rounded-lg transition">
+                Ir al Álbum a marcar faltantes
+            </a>
+        {% endif %}
+    </form>
+</dialog>
+
+<dialog id="triangulationResultsModal" class="bg-slate-900 text-white p-0 rounded-xl border border-green-500/50 w-full max-w-2xl shadow-2xl backdrop:bg-slate-900/95 overflow-hidden">
+    <div class="bg-gradient-to-r from-green-900 to-slate-900 p-4 border-b border-green-500/30 flex justify-between items-center">
+        <div>
+            <h3 class="text-lg font-bold text-white flex items-center gap-2"><span>✅</span> ¡Triangulación Encontrada!</h3>
+            <p class="text-[10px] text-green-300 uppercase tracking-wider font-bold" id="resultsCountSubtitle">Calculando...</p>
+        </div>
+        <button onclick="document.getElementById('triangulationResultsModal').close()" class="text-gray-400 hover:text-white transition p-1">✕</button>
+    </div>
+    
+    <div id="resultsContainer" class="p-4 space-y-4 overflow-y-auto max-h-[70vh] bg-slate-900">
+        </div>
+</dialog>
+
+<script>
+    async function startTriangulationSearch(e) {
+        e.preventDefault();
+        const select = document.getElementById('targetStickerInput');
+        const stickerNum = select.value;
+        const btn = e.target.querySelector('button');
+        const originalText = btn.innerHTML;
+
+        if(!stickerNum) return;
+
+        try {
+            // UI Loading
+            btn.disabled = true;
+            btn.innerHTML = `<span class="animate-spin">🔄</span> Buscando cadenas...`;
+
+            // Fetch Backend
+            const response = await fetch(`/triangulation/search?sticker_num=${stickerNum}`);
+            const data = await response.json();
+
+            // RESTAURAR UI
+            btn.disabled = false;
+            btn.innerHTML = originalText;
+
+            // --- DETECCIÓN DE USUARIO FREE (403) ---
+            if (response.status === 403) {
+                // 1. Cerramos el modal de búsqueda
+                document.getElementById('triangulationInputModal').close();
+                
+                // 2. Preparamos el Modal Premium con texto personalizado
+                const pModal = document.getElementById('premiumModal');
+                const pTitle = document.getElementById('premiumTitle');
+                const pSub = document.getElementById('premiumSubtitle');
+
+                if (pModal) {
+                    // Cambiamos el texto para que tenga sentido en este contexto
+                    if(pTitle) pTitle.innerText = "💎 Función Premium";
+                    if(pSub) pSub.innerHTML = "La <strong>Triangulación</strong> es una herramienta exclusiva.";
+                    
+                    pModal.showModal();
+                } else {
+                    alert("Función exclusiva para usuarios Premium.");
+                }
+                return;
+            }
+            // ----------------------------------------------
+
+            if (response.ok && data.found) {
+                document.getElementById('triangulationInputModal').close();
+                renderResults(data.results);
+                document.getElementById('triangulationResultsModal').showModal();
+            } else {
+                alert(data.message || "❌ No se encontraron triangulaciones posibles en tu zona para esta figurita hoy.");
+            }
+
+        } catch (error) {
+            console.error(error);
+            alert("Error de conexión.");
+            btn.disabled = false;
+            btn.innerHTML = originalText;
+        }
+    }
+    function renderResults(results) {
+        const container = document.getElementById('resultsContainer');
+        document.getElementById('resultsCountSubtitle').innerText = `${results.length} Opciones Disponibles`;
+        
+        container.innerHTML = results.map((t, index) => {
+            // Mensaje de WhatsApp MEJORADO: Incluye el teléfono de B
+            const phoneBridge = String(t.user_C.phone).replace(/\D/g, '');
+            
+            const msg = `Hola *${t.user_C.nick}*! Vi en Figus26 que tenés la *${t.bridge_sticker.name}* y buscás la *${t.my_payment_sticker.name}*.
+            
+Propongo una triangulación:
+1. Yo te doy la *${t.my_payment_sticker.name}* a vos.
+2. Vos le das la *${t.bridge_sticker.name}* a *${t.user_B.nick}* (Su cel: ${t.user_B.phone}).
+3. Y él me da la *${t.target_sticker.name}* a mí.
+
+¿Te copa? Avisame y coordinamos. 📐⚽`;
+
+            const waLink = `https://wa.me/${phoneBridge}?text=${encodeURIComponent(msg)}`;
+
+            return `
+            <div class="bg-slate-800 rounded-xl border border-slate-700 p-4 relative overflow-hidden group hover:border-green-500 transition-colors shadow-lg animate-fade-in">
+                <div class="absolute top-0 right-0 bg-slate-700 text-[10px] text-gray-400 px-2 py-0.5 rounded-bl">Opción #${index + 1}</div>
+                
+                <div class="flex items-center justify-between text-xs mb-5 mt-2 relative z-10">
+                    
+                    <div class="text-center w-1/3 flex flex-col items-center">
+                        <div class="font-bold text-indigo-300 mb-1">VOS</div>
+                        <div class="bg-slate-900 border border-slate-600 rounded p-1.5 text-white font-mono shadow-sm w-full">${t.my_payment_sticker.name}</div>
+                        <div class="text-[9px] text-gray-500 mt-1">Entregás a C</div>
+                    </div>
+
+                    <div class="text-gray-600 font-bold">➔</div>
+
+                    <div class="text-center w-1/3 flex flex-col items-center">
+                        <div class="font-bold text-white mb-1 flex items-center gap-1">
+                            <span>🌉</span> ${t.user_C.nick}
+                        </div>
+                        <div class="bg-slate-900 border border-slate-600 rounded p-1.5 text-gray-300 font-mono shadow-sm w-full">${t.bridge_sticker.name}</div>
+                        <div class="text-[9px] text-gray-500 mt-1">Entrega a B</div>
+                    </div>
+
+                    <div class="text-gray-600 font-bold">➔</div>
+
+                    <div class="text-center w-1/3 flex flex-col items-center">
+                        <div class="font-bold text-gray-400 mb-1">${t.user_B.nick}</div>
+                        <div class="bg-slate-900 border border-slate-600 rounded p-1.5 text-green-400 font-bold font-mono shadow-sm w-full border-green-500/30">${t.target_sticker.name}</div>
+                        <div class="text-[9px] text-gray-500 mt-1">Te entrega</div>
+                    </div>
+                </div>
+
+                <div class="pt-3 border-t border-slate-700 flex flex-col gap-2">
+                    <p class="text-[10px] text-gray-400 text-center italic">
+                        Contactá al <strong>Puente</strong> (${t.user_C.nick}) y pasale el contacto de <strong>${t.user_B.nick}</strong> para cerrar el círculo.
+                    </p>
+                    <a href="${waLink}" target="_blank" class="w-full bg-green-600 hover:bg-green-500 text-white text-xs font-bold py-3 px-4 rounded-lg transition flex justify-center items-center gap-2 shadow-lg hover:shadow-green-900/30">
+                        <span>📲</span> Proponer a ${t.user_C.nick} por WhatsApp
+                    </a>
+                </div>
+            </div>`;
+        }).join('');
+    }
+</script>

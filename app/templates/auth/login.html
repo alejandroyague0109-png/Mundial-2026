@@ -1,0 +1,331 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Acceso - Figus 26</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="//unpkg.com/alpinejs" defer></script>
+    <script src="https://unpkg.com/htmx.org@1.9.10"></script>
+    
+    <style>
+        [x-cloak] { display: none !important; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
+        .animate-fade-in { animation: fadeIn 0.3s ease-out; }
+        
+        dialog::backdrop {
+            background: rgba(0, 0, 0, 0.9);
+            backdrop-filter: blur(5px);
+        }
+        .custom-scrollbar::-webkit-scrollbar { width: 6px; }
+        .custom-scrollbar::-webkit-scrollbar-track { background: #1e293b; }
+        .custom-scrollbar::-webkit-scrollbar-thumb { background: #475569; border-radius: 4px; }
+        .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: #64748b; }
+
+        /* Clases para el spinner de HTMX */
+        .htmx-indicator { display: none; }
+        .htmx-request .htmx-indicator { display: block; }
+        .htmx-request .htmx-indicator-hide { display: none; }
+    </style>
+</head>
+<body class="bg-slate-900 text-white h-screen flex items-center justify-center overflow-hidden">
+
+    <div class="w-full max-w-md" x-data="authApp()">
+        
+        <div class="bg-slate-800 rounded-2xl shadow-2xl border border-slate-700 overflow-hidden relative">
+            
+            <div class="p-6 pb-0 text-center">
+                <h1 class="text-4xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-yellow-400 to-yellow-600 mb-1">
+                    ⚽ Figus 26
+                </h1>
+                <p class="text-xs text-gray-400 uppercase tracking-widest">Álbum Digital de Intercambios</p>
+            </div>
+
+            {% if error %}
+            <div class="mx-6 mt-4 bg-red-500/10 border border-red-500/50 text-red-200 p-3 rounded-lg text-sm flex items-center gap-2 animate-pulse">
+                <span>⚠️</span> {{ error }}
+            </div>
+            {% endif %}
+
+            <div class="flex border-b border-slate-700 mt-6" x-show="view !== 'recovery'">
+                <button @click="view = 'login'" 
+                    :class="view === 'login' ? 'border-yellow-500 text-yellow-400 bg-slate-700/50' : 'border-transparent text-gray-500 hover:text-gray-300'"
+                    class="w-1/2 py-3 text-center text-sm font-bold border-b-2 transition-all focus:outline-none">
+                    INGRESAR
+                </button>
+                <button @click="view = 'register'" 
+                    :class="view === 'register' ? 'border-yellow-500 text-yellow-400 bg-slate-700/50' : 'border-transparent text-gray-500 hover:text-gray-300'"
+                    class="w-1/2 py-3 text-center text-sm font-bold border-b-2 transition-all focus:outline-none">
+                    REGISTRARSE
+                </button>
+            </div>
+
+            <div class="p-6">
+                
+                <form x-show="view === 'login'" action="/login" method="POST" class="space-y-5 animate-fade-in">
+                    <div>
+                        <label class="block text-xs font-medium text-gray-400 mb-1">Celular</label>
+                        <input name="phone" type="tel" required placeholder="Ej: 2604445566" 
+                            class="w-full px-4 py-3 bg-slate-900 border border-slate-600 rounded-lg focus:outline-none focus:border-yellow-500 focus:ring-1 focus:ring-yellow-500 transition text-sm text-white">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-medium text-gray-400 mb-1">Contraseña</label>
+                        <input name="password" type="password" required placeholder="••••••" 
+                            class="w-full px-4 py-3 bg-slate-900 border border-slate-600 rounded-lg focus:outline-none focus:border-yellow-500 focus:ring-1 focus:ring-yellow-500 transition text-sm text-white">
+                    </div>
+
+                    <div class="text-right">
+                        <button type="button" @click="view = 'recovery'" class="text-xs text-yellow-500 hover:text-yellow-400 font-medium hover:underline">
+                            ¿Olvidaste tu contraseña?
+                        </button>
+                    </div>
+
+                    <button type="submit" class="w-full py-3 bg-gradient-to-r from-yellow-600 to-yellow-500 hover:from-yellow-500 hover:to-yellow-400 text-slate-900 font-bold rounded-lg shadow-lg transform active:scale-95 transition-all">
+                        Entrar a la Cancha ➡️
+                    </button>
+                </form>
+
+                <form x-show="view === 'register'" action="/register" method="POST" class="space-y-4 animate-fade-in" x-cloak>
+                    
+                    <div class="grid grid-cols-2 gap-3">
+                        <div>
+                            <label class="block text-[10px] text-gray-400 uppercase font-bold mb-1">Nick / Apodo</label>
+                            <input name="nick" type="text" required placeholder="El 10" 
+                                class="w-full px-3 py-2 bg-slate-900 border border-slate-600 rounded focus:border-yellow-500 focus:outline-none text-sm text-white">
+                        </div>
+                        <div>
+                            <label class="block text-[10px] text-gray-400 uppercase font-bold mb-1">Celular</label>
+                            <input name="phone" type="tel" required placeholder="Sin 0 ni 15" pattern="[0-9]+"
+                                class="w-full px-3 py-2 bg-slate-900 border border-slate-600 rounded focus:border-yellow-500 focus:outline-none text-sm text-white">
+                        </div>
+                    </div>
+
+                    <div class="grid grid-cols-2 gap-3">
+                        <div>
+                            <label class="block text-[10px] text-gray-400 uppercase font-bold mb-1">Provincia</label>
+                            <select x-model="provincia" name="province" required class="w-full px-3 py-2 bg-slate-900 border border-slate-600 rounded focus:border-yellow-500 focus:outline-none text-sm text-white">
+                                <option value="" disabled>Elegir...</option>
+                                <template x-for="(zonas, prov) in locations" :key="prov">
+                                    <option :value="prov" x-text="prov"></option>
+                                </template>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-[10px] text-gray-400 uppercase font-bold mb-1">Zona</label>
+                            <select x-model="zona" name="zone" required :disabled="!provincia" class="w-full px-3 py-2 bg-slate-900 border border-slate-600 rounded focus:border-yellow-500 focus:outline-none text-sm text-white disabled:opacity-50">
+                                <option value="" disabled>Elegir...</option>
+                                <template x-for="z in (provincia ? locations[provincia] : [])" :key="z">
+                                    <option :value="z" x-text="z"></option>
+                                </template>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div>
+                        <label class="block text-[10px] text-gray-400 uppercase font-bold mb-1">Contraseña</label>
+                        <input name="password" type="password" required 
+                            class="w-full px-3 py-2 bg-slate-900 border border-slate-600 rounded focus:border-yellow-500 focus:outline-none text-sm text-white">
+                    </div>
+
+                    <div class="pt-2 border-t border-slate-700">
+                        <label class="flex items-center gap-1 text-yellow-500 text-xs font-bold mb-2">
+                            🔐 Seguridad (Recuperación)
+                        </label>
+                        
+                        <div class="mb-3 p-2 bg-yellow-900/20 border border-yellow-600/40 rounded text-center">
+                            <p class="text-[10px] text-yellow-200 font-bold leading-tight">
+                                ⚠️ IMPORTANTE: Esta es la ÚNICA forma de recuperar tu cuenta si olvidás la contraseña. ¡Elegí bien!
+                            </p>
+                        </div>
+
+                        <select name="secret_question" required class="w-full px-3 py-2 bg-slate-900 border border-slate-600 rounded focus:border-yellow-500 focus:outline-none text-xs mb-2 text-white">
+                            <option value="" disabled selected>Pregunta Secreta...</option>
+                            <option>¿Nombre de tu primera mascota?</option>
+                            <option>¿Calle donde vivías de niño?</option>
+                            <option>¿Comida favorita?</option>
+                            <option>¿Primer recital?</option>
+                            <option>¿Equipo de fútbol favorito?</option>
+                        </select>
+                        <input name="secret_answer" type="password" required placeholder="Respuesta secreta" 
+                            class="w-full px-3 py-2 bg-slate-900 border border-slate-600 rounded focus:border-yellow-500 focus:outline-none text-sm text-white">
+                    </div>
+
+                    <div class="flex items-start gap-2 pt-2">
+                        <input type="checkbox" id="tyc" name="tyc" required class="mt-1 w-4 h-4 bg-slate-900 border-slate-600 rounded text-yellow-500 focus:ring-yellow-500">
+                        <label for="tyc" class="text-xs text-gray-400">
+                            Acepto los <button type="button" onclick="document.getElementById('termsModal').showModal()" class="text-yellow-500 hover:underline">Términos y Condiciones</button>
+                        </label>
+                    </div>
+
+                    <button type="submit" class="w-full py-3 bg-yellow-600 hover:bg-yellow-500 text-white font-bold rounded-lg shadow-lg transform active:scale-95 transition-all">
+                        Crear Cuenta
+                    </button>
+                </form>
+
+                <div x-show="view === 'recovery'" class="animate-fade-in space-y-4" x-cloak>
+                    <div class="text-center mb-4">
+                        <h3 class="text-lg font-bold text-white">Recuperar Cuenta</h3>
+                        <p class="text-xs text-gray-400">Ingresá tu celular para validar identidad.</p>
+                    </div>
+
+                    <div id="recovery-container">
+                        
+                        <form hx-post="/auth/recover/step1" 
+                              hx-target="#recovery-container" 
+                              hx-swap="innerHTML" 
+                              class="space-y-4">
+                              
+                            <input name="phone" type="tel" required placeholder="Celular registrado" 
+                                class="w-full px-4 py-3 bg-slate-900 border border-slate-600 rounded-lg focus:border-yellow-500 text-sm text-white">
+                            
+                            <button type="submit" class="w-full py-2 bg-slate-700 hover:bg-slate-600 text-white font-bold rounded transition flex justify-center items-center gap-2">
+                                <span class="htmx-indicator-hide">Buscar Cuenta</span>
+                                <svg class="htmx-indicator w-5 h-5 text-white animate-spin" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                    <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                                    <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                                </svg>
+                            </button>
+                        </form>
+
+                        <div class="htmx-error-message text-red-400 text-xs text-center mt-2 hidden">
+                            Error de conexión. Intentá de nuevo.
+                        </div>
+                    </div>
+
+                    <button @click="view = 'login'" class="w-full text-xs text-gray-500 hover:text-white mt-4 block text-center">
+                        🔙 Volver al Login
+                    </button>
+                </div>
+
+            </div>
+        </div>
+    </div>
+
+    <dialog id="welcomeModal" class="bg-slate-900 text-white p-0 rounded-xl border border-yellow-600/50 shadow-2xl overflow-hidden max-w-sm w-full z-50">
+        <div class="bg-yellow-600/10 p-4 border-b border-yellow-600/30 flex items-center gap-3">
+            <span class="text-2xl">🔞</span>
+            <h3 class="text-lg font-bold text-yellow-400">Atención</h3>
+        </div>
+        <div class="p-5 space-y-4 text-sm text-gray-300">
+            <p><strong>Esta aplicación es exclusiva para mayores de 18 años.</strong></p>
+            <p>Facilitamos el contacto entre coleccionistas, pero <strong>no intervenimos en los canjes</strong> ni nos hacemos responsables por las transacciones.</p>
+            <div class="bg-slate-950 p-2 rounded text-xs text-gray-500 text-center border border-slate-800">
+                "Al continuar, declarás bajo juramento que sos mayor de edad."
+            </div>
+        </div>
+        <div class="p-4 bg-slate-950 border-t border-slate-800">
+            <form method="dialog">
+                <button class="w-full bg-yellow-600 hover:bg-yellow-500 text-white font-bold py-3 rounded-lg">Entendido, soy +18</button>
+            </form>
+        </div>
+    </dialog>
+
+    <dialog id="termsModal" class="bg-slate-800 text-white p-0 rounded-xl border border-slate-600 backdrop:bg-slate-900/90 w-full max-w-lg shadow-2xl overflow-hidden">
+        
+        <div class="bg-slate-950 p-4 border-b border-slate-700 flex justify-between items-center sticky top-0 z-10">
+            <h3 class="text-lg font-bold text-white flex items-center gap-2">
+                <span>⚖️</span> Términos y Condiciones
+            </h3>
+            <button onclick="termsModal.close()" class="text-gray-400 hover:text-white transition">✕</button>
+        </div>
+
+        <div class="p-6 space-y-6 max-h-[70vh] overflow-y-auto custom-scrollbar text-sm text-gray-300 leading-relaxed">
+            
+            <div class="bg-slate-900 border-l-4 border-yellow-500 p-3 rounded">
+                <h4 class="font-bold text-yellow-400 mb-1">Declaración de Independencia</h4>
+                <p class="text-xs">
+                    <strong>Figus 26</strong> es una plataforma independiente de intercambio entre particulares y 
+                    <strong>no posee vinculación alguna, afiliación, patrocinio ni respaldo de FIFA, Panini, ni sus subsidiarias.</strong> 
+                    Todas las marcas registradas mencionadas son propiedad de sus respectivos dueños y se utilizan aquí únicamente con fines descriptivos (Uso Nominativo).
+                </p>
+            </div>
+
+            <div>
+                <h4 class="font-bold text-white mb-2">1. ACEPTACIÓN DE RIESGOS Y ROL DEL INTERMEDIARIO</h4>
+                <p>
+                    Al utilizar esta aplicación, usted comprende y acepta que <strong>Figus 26</strong> actúa exclusivamente como un proveedor de información de contacto y ubicación (tablón de anuncios digital). 
+                    La plataforma <strong>no organiza, supervisa, ni garantiza</strong> la seguridad de los intercambios físicos ni las transacciones monetarias.
+                </p>
+            </div>
+
+            <div>
+                <h4 class="font-bold text-white mb-2">2. DESLINDE DE RESPONSABILIDAD (WAIVER)</h4>
+                <p><strong>Figus 26</strong>, sus desarrolladores, socios y empleados quedan liberados de toda responsabilidad civil o penal derivada de:</p>
+                <ul class="list-disc ml-5 mt-2 space-y-1 text-xs">
+                    <li>Lesiones, pérdidas, hurtos o agresiones ocurridas durante los canjes presenciales.</li>
+                    <li>Figuritas falsas, dañadas o discrepancias con lo publicado.</li>
+                    <li>Estafas económicas o transferencias no recibidas.</li>
+                    <li>El uso indebido de datos de contacto por terceros.</li>
+                </ul>
+                <p class="mt-2 text-xs italic border-t border-slate-700 pt-2">
+                    El usuario asume la responsabilidad personal, completa y exclusiva por su seguridad e integridad física durante cualquier encuentro pactado a través de la aplicación.
+                </p>
+            </div>
+
+            <div>
+                <h4 class="font-bold text-white mb-2">3. REGLAS DE SEGURIDAD OBLIGATORIAS</h4>
+                <p>El usuario se compromete a:</p>
+                <ul class="list-disc ml-5 mt-2 space-y-1">
+                    <li>Realizar los intercambios <strong>únicamente en lugares públicos, concurridos y de día</strong> (ej: plazas céntricas, centros comerciales, "Puntos Seguros" sugeridos).</li>
+                    <li>No compartir información sensible (dirección particular, horarios) con desconocidos.</li>
+                    <li>Verificar el material antes de finalizar el canje.</li>
+                </ul>
+            </div>
+
+            <div>
+                <h4 class="font-bold text-white mb-2">4. MENORES DE EDAD</h4>
+                <p>
+                    El uso de la plataforma por menores de 18 años debe estar supervisado por un padre o tutor legal. 
+                    El tutor legal asume la plena responsabilidad por las acciones del menor y por su seguridad durante los intercambios físicos.
+                </p>
+            </div>
+
+            <div>
+                <h4 class="font-bold text-white mb-2">5. PRIVACIDAD Y DATOS</h4>
+                <p>
+                    Su número de teléfono se mantendrá encriptado y solo será revelado a otro usuario cuando este utilice explícitamente la función "Contactar" bajo el sistema de créditos o suscripción Premium. 
+                    No recolectamos datos fiscales innecesarios para operaciones de bajo monto.
+                </p>
+            </div>
+
+            <div>
+                <h4 class="font-bold text-white mb-2">6. DERECHO DE ADMISIÓN</h4>
+                <p>Nos reservamos el derecho de suspender o eliminar permanentemente cuentas que:</p>
+                <ul class="list-disc ml-5 mt-2 space-y-1 text-xs">
+                    <li>Reciban múltiples reportes de fraude.</li>
+                    <li>Utilicen lenguaje ofensivo o discriminatorio.</li>
+                    <li>Intenten comercializar artículos ilegales.</li>
+                </ul>
+            </div>
+
+        </div>
+
+        <div class="bg-slate-950 p-4 border-t border-slate-700 text-center">
+            <p class="text-[10px] text-gray-500 mb-3">
+                Al hacer clic en "Acepto", usted declara ser mayor de 18 años (o tener autorización de tutor) y libera a Figus 26 de toda responsabilidad derivada del uso de la plataforma.
+            </p>
+            <button onclick="termsModal.close()" class="w-full bg-blue-600 hover:bg-blue-500 text-white font-bold py-3 rounded-lg transition shadow-lg">
+                Acepto los Términos y Condiciones
+            </button>
+        </div>
+    </dialog>
+
+    <script>
+        // Abrir modal +18 al cargar
+        document.addEventListener("DOMContentLoaded", () => {
+            const modal = document.getElementById('welcomeModal');
+            if(modal) setTimeout(() => modal.showModal(), 300);
+        });
+
+        // Configuración de Alpine
+        function authApp() {
+            return {
+                view: 'login', // 'login', 'register', 'recovery'
+                provincia: '',
+                zona: '',
+                locations: {{ locations | tojson }}
+            }
+        }
+    </script>
+</body>
+</html>

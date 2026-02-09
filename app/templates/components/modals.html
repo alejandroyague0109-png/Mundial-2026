@@ -1,0 +1,742 @@
+<dialog id="clicksModal" class="bg-slate-800 text-white p-6 rounded-xl border border-slate-600 backdrop:bg-slate-900/80 w-full max-w-md shadow-2xl">
+    <div class="flex justify-between items-start mb-4">
+        <h3 class="text-xl font-bold text-blue-400">👆 ¿Cómo marcar figuritas?</h3>
+        <button onclick="document.getElementById('clicksModal').close()" class="text-gray-400 hover:text-white">✕</button>
+    </div>
+    
+    <div class="space-y-4 text-sm text-gray-300">
+        <p>El sistema funciona por ciclos al hacer clic sobre una figurita:</p>
+        <ul class="space-y-3 ml-2">
+            <li class="flex items-center gap-3">
+                <div class="w-6 h-8 bg-slate-900 border border-slate-600 rounded flex-shrink-0"></div> 
+                <span>1️⃣ <strong>Gris:</strong> No la tenés (Falta).</span>
+            </li>
+            <li class="flex items-center gap-3">
+                <div class="w-6 h-8 bg-gradient-to-br from-green-600 to-green-800 border-green-500 rounded flex-shrink-0"></div> 
+                <span>2️⃣ <strong>Verde:</strong> ¡La tenés! (Pegada).</span>
+            </li>
+            <li class="flex items-center gap-3">
+                <div class="w-6 h-8 bg-gradient-to-br from-yellow-600 to-yellow-800 border-yellow-500 rounded flex-shrink-0"></div> 
+                <span>3️⃣ <strong>Amarillo:</strong> Repetida (Va al Mercado).</span>
+            </li>
+            <li class="flex items-center gap-3">
+                <div class="w-6 h-8 bg-slate-700 border-red-500 border rounded flex justify-center items-center flex-shrink-0">❤️</div> 
+                <span>4️⃣ <strong>Rojo:</strong> Wishlist (La buscás urgente).</span>
+            </li>
+        </ul>
+        <div class="bg-slate-900/50 p-2 rounded text-xs text-gray-400 italic text-center border border-slate-700">
+            Tip: Vuelve a hacer clic en Rojo para regresar a Gris (Borrar).
+        </div>
+    </div>
+    <div class="mt-6 text-right">
+        <button onclick="document.getElementById('clicksModal').close()" class="px-4 py-2 bg-slate-700 rounded hover:bg-slate-600 text-sm font-bold transition">Entendido</button>
+    </div>
+</dialog>
+
+<dialog id="repesModal" class="bg-slate-800 text-white p-6 rounded-xl border border-slate-600 backdrop:bg-slate-900/80 w-full max-w-md shadow-2xl">
+    <div class="flex justify-between items-start mb-4">
+        <h3 class="text-xl font-bold text-yellow-400">💰 Tabla de Repetidas</h3>
+        <button onclick="document.getElementById('repesModal').close()" class="text-gray-400 hover:text-white">✕</button>
+    </div>
+
+    <div class="space-y-4 text-sm text-gray-300">
+        <p>Cuando marcás una figurita como <strong>Amarilla (Repetida)</strong>, aparecerá una tabla debajo de la grilla del país.</p>
+        
+        <div class="bg-slate-900/50 p-4 rounded border border-slate-700 space-y-2">
+            <p class="font-bold text-white border-b border-slate-700 pb-1 mb-2">Configuración:</p>
+            <div class="flex items-center gap-2">
+                <span class="text-blue-400 font-bold bg-blue-900/20 px-2 py-0.5 rounded border border-blue-900 text-xs">PRECIO $0</span> 
+                <span>= <strong>CANJE 🔄</strong> (Solo cambio).</span>
+            </div>
+            <div class="flex items-center gap-2">
+                <span class="text-green-400 font-bold bg-green-900/20 px-2 py-0.5 rounded border border-green-900 text-xs">PRECIO > $0</span> 
+                <span>= <strong>VENTA 💰</strong> (La vendés).</span>
+            </div>
+        </div>
+        <p class="text-xs text-yellow-500 mt-2 flex items-center justify-center gap-1">
+            <span>💾</span> ¡Los cambios se guardan automáticamente al escribir!
+        </p>
+    </div>
+    <div class="mt-6 text-right">
+        <button onclick="document.getElementById('repesModal').close()" class="px-4 py-2 bg-slate-700 rounded hover:bg-slate-600 text-sm font-bold transition">Cerrar</button>
+    </div>
+</dialog>
+
+<dialog id="wishModal" class="bg-slate-800 text-white p-6 rounded-xl border border-slate-600 backdrop:bg-slate-900/80 w-full max-w-md shadow-2xl">
+    <div class="flex justify-between items-start mb-4">
+        <h3 class="text-xl font-bold text-red-400">🎯 El Poder de la Wishlist</h3>
+        <button onclick="document.getElementById('wishModal').close()" class="text-gray-400 hover:text-white">✕</button>
+    </div>
+
+    <div class="space-y-4 text-sm text-gray-300">
+        <div class="bg-slate-700/30 p-3 rounded border-l-4 border-slate-500">
+            <h4 class="font-bold text-white mb-1">1. Para TODOS (Prioridad y Compartir)</h4>
+            <p class="mb-2">¡Organizá tu búsqueda! 📋</p>
+            <ul class="list-disc ml-4 space-y-1 text-gray-400">
+                <li><strong class="text-white">🚀 Prioridad:</strong> En el Mercado, las figuritas que marcás acá aparecen <strong>PRIMERAS</strong>.</li>
+                <li><strong class="text-white">📲 WhatsApp:</strong> Te sirve para tener tu lista de faltantes a mano y compartirla.</li>
+            </ul>
+        </div>
+
+        <div class="bg-yellow-900/10 p-3 rounded border-l-4 border-yellow-500">
+            <h4 class="font-bold text-yellow-400 mb-1">2. Para PREMIUM (IA 🤖)</h4>
+            <ul class="list-disc ml-4 space-y-1 text-gray-400">
+                <li><strong class="text-white">🔔 Alertas:</strong> Notificación automática cuando alguien publica una de tu lista.</li>
+                <li><strong class="text-white">📐 Triangulación:</strong> Habilita canje a 3 bandas (Vos -> Puente -> Objetivo).</li>
+            </ul>
+        </div>
+    </div>
+    <div class="mt-6 text-right">
+        <button onclick="document.getElementById('wishModal').close()" class="px-4 py-2 bg-slate-700 rounded hover:bg-slate-600 text-sm font-bold transition">Genial</button>
+    </div>
+</dialog>
+
+<dialog id="faqModal" class="bg-slate-800 text-white p-0 rounded-xl border border-slate-600 backdrop:bg-slate-900/90 w-full max-w-2xl shadow-2xl overflow-hidden">
+    
+    <div class="bg-slate-950 p-4 border-b border-slate-700 flex justify-between items-center sticky top-0 z-10">
+        <h3 class="text-xl font-bold text-white flex items-center gap-2">
+            <span class="text-purple-400">❓</span> Preguntas Frecuentes
+        </h3>
+        <button onclick="document.getElementById('faqModal').close()" class="text-gray-400 hover:text-white transition">✕</button>
+    </div>
+
+    <div class="p-6 space-y-3 max-h-[70vh] overflow-y-auto custom-scrollbar text-sm text-gray-300">
+        
+        <details class="group bg-slate-900/50 rounded-lg border border-slate-700 overflow-hidden">
+            <summary class="cursor-pointer p-4 font-bold text-white flex justify-between items-center list-none select-none hover:bg-slate-800 transition">
+                <span>🤔 ¿Cómo funciona?</span>
+                <span class="transition-transform group-open:rotate-180">▼</span>
+            </summary>
+            <div class="p-4 pt-0 border-t border-slate-700/50 mt-2 space-y-2 leading-relaxed">
+                <p><strong class="text-blue-400">Mi Álbum:</strong> Entrá a la sección de tu país/equipo.</p>
+                <p><strong class="text-blue-400">Cargá:</strong> Marcá las que <strong>TENÉS</strong> y las que <strong>DESEÁS</strong> (Wishlist).</p>
+                <p><strong class="text-blue-400">Repes:</strong> Si tenés repetidas, marcalas abajo para canje o venta.</p>
+                <p><strong class="text-blue-400">Mercado:</strong> El sistema cruza datos y te muestra quién tiene lo que buscás y quiere lo que vos tenés (Match).</p>
+            </div>
+        </details>
+
+        <details class="group bg-slate-900/50 rounded-lg border border-slate-700 overflow-hidden">
+            <summary class="cursor-pointer p-4 font-bold text-white flex justify-between items-center list-none select-none hover:bg-slate-800 transition">
+                <span>💸 ¿Es gratis?</span>
+                <span class="transition-transform group-open:rotate-180">▼</span>
+            </summary>
+            <div class="p-4 pt-0 border-t border-slate-700/50 mt-2 leading-relaxed">
+                <p><strong>Sí.</strong> Podés usar la app totalmente gratis. Tenés <strong>1 crédito diario</strong> para contactar (ver el WhatsApp) de otro coleccionista. Los créditos se renuevan cada 24hs automáticamente.</p>
+            </div>
+        </details>
+
+        <details class="group bg-slate-900/50 rounded-lg border border-slate-700 overflow-hidden">
+            <summary class="cursor-pointer p-4 font-bold text-white flex justify-between items-center list-none select-none hover:bg-slate-800 transition">
+                <span>🛡️ Seguridad</span>
+                <span class="transition-transform group-open:rotate-180">▼</span>
+            </summary>
+            <div class="p-4 pt-0 border-t border-slate-700/50 mt-2 space-y-2 leading-relaxed">
+                <ul class="list-disc ml-4 space-y-1">
+                    <li>Reunite siempre en <strong>lugares públicos</strong> y concurridos.</li>
+                    <li>Revisá bien las figuritas antes de cerrar el trato.</li>
+                    <li><strong>Nunca envíes dinero</strong> por adelantado.</li>
+                    <li>Figus 26 conecta partes pero no participa de la transacción.</li>
+                </ul>
+            </div>
+        </details>
+
+        <details class="group bg-slate-900/50 rounded-lg border border-slate-700 overflow-hidden border-l-4 border-l-blue-500">
+            <summary class="cursor-pointer p-4 font-bold text-white flex justify-between items-center list-none select-none hover:bg-slate-800 transition">
+                <span>⚡ ¿Cómo uso la Carga Rápida?</span>
+                <span class="transition-transform group-open:rotate-180">▼</span>
+            </summary>
+            <div class="p-4 pt-0 border-t border-slate-700/50 mt-2 leading-relaxed">
+                <p class="mb-2">Es la forma más veloz de llenar tu álbum sin ir figurita por figurita.</p>
+                <ul class="list-disc ml-5 space-y-1 text-gray-400">
+                    <li>Elegí un país y escribí los números en la caja de texto.</li>
+                    <li>Usá <strong>comas</strong> para separar (ej: <code>1, 5, 10</code>) o <strong>guiones</strong> para rangos (ej: <code>1-5</code>).</li>
+                    <li>El sistema detecta automáticamente qué pegar y qué poner en repetidas.</li>
+                </ul>
+            </div>
+        </details>
+
+        <details class="group bg-slate-900/50 rounded-lg border border-slate-700 overflow-hidden border-l-4 border-l-red-500">
+            <summary class="cursor-pointer p-4 font-bold text-white flex justify-between items-center list-none select-none hover:bg-slate-800 transition">
+                <span>❤️ ¿Por qué es importante la Wishlist?</span>
+                <span class="transition-transform group-open:rotate-180">▼</span>
+            </summary>
+            <div class="p-4 pt-0 border-t border-slate-700/50 mt-2 leading-relaxed">
+                <p>
+                    Marcar tus faltantes (Wishlist) es vital para el motor de búsqueda. 
+                    Tus figuritas deseadas tienen <strong>prioridad</strong> en el mercado, ayudando a que otros usuarios te encuentren más rápido para cambiar.
+                    Además, es el requisito para recibir <strong>Alertas</strong> automáticas y para participar de la <strong>Triangulación</strong>.
+                </p>
+            </div>
+        </details>
+
+        <details class="group bg-slate-900/50 rounded-lg border border-slate-700 overflow-hidden border-l-4 border-l-yellow-500">
+            <summary class="cursor-pointer p-4 font-bold text-white flex justify-between items-center list-none select-none hover:bg-slate-800 transition">
+                <span>📐 ¿Qué es la Triangulación?</span>
+                <span class="transition-transform group-open:rotate-180">▼</span>
+            </summary>
+            <div class="p-4 pt-0 border-t border-slate-700/50 mt-2 leading-relaxed">
+                <p>
+                    Es una función avanzada para <strong>Usuarios Premium</strong>. 
+                    Si nadie quiere hacer un cambio directo con vos (A ↔ B), el sistema busca un <strong>Puente</strong> (C) en tu misma zona para hacer un canje circular: 
+                </p>
+                <div class="block text-center font-mono text-yellow-300 mt-2 bg-slate-800 p-2 rounded border border-yellow-500/30">
+                    Vos → Puente → Objetivo → Vos
+                </div>
+            </div>
+        </details>
+
+        <details class="group bg-gradient-to-br from-slate-900 to-slate-800 rounded-lg border border-yellow-500/30 overflow-hidden shadow-lg">
+            <summary class="cursor-pointer p-4 font-bold text-yellow-400 flex justify-between items-center list-none select-none hover:bg-slate-800/50 transition">
+                <span class="flex items-center gap-2">💎 ¿Qué beneficios tiene ser Premium?</span>
+                <span class="transition-transform group-open:rotate-180 text-white">▼</span>
+            </summary>
+            
+            <div class="p-4 pt-0 border-t border-slate-700/50 mt-2">
+                <p class="mb-3 font-semibold text-white">Por un único pago (acceso todo el mundial), obtenés:</p>
+                <ul class="space-y-3">
+                    <li class="flex gap-2 items-start">
+                        <span class="text-lg">🔓</span>
+                        <div><strong class="text-white">Contactos Ilimitados:</strong> Sin restricciones diarias.</div>
+                    </li>
+                    <li class="flex gap-2 items-start">
+                        <span class="text-lg">📐</span>
+                        <div><strong class="text-white">Triangulación:</strong> Acceso a la herramienta de canjes a 3 bandas.</div>
+                    </li>
+                    <li class="flex gap-2 items-start">
+                        <span class="text-lg">🥇</span>
+                        <div><strong class="text-white">Prioridad:</strong> Tus cartas aparecen primeras y con borde dorado.</div>
+                    </li>
+                    <li class="flex gap-2 items-start">
+                        <span class="text-lg">🔔</span>
+                        <div><strong class="text-white">Alertas:</strong> Te avisamos si alguien carga una figu de tu Wishlist.</div>
+                    </li>
+                </ul>
+                <div class="mt-4 pt-4 border-t border-slate-700 text-center">
+                    <button onclick="document.getElementById('faqModal').close(); document.getElementById('premiumModal').showModal()" class="text-xs bg-yellow-600 hover:bg-yellow-500 text-white font-bold py-2 px-6 rounded-full transition shadow-lg transform hover:scale-105">
+                        Ver Planes y Precios
+                    </button>
+                </div>
+            </div>
+        </details>
+
+    </div>
+
+    <div class="bg-slate-950 p-4 border-t border-slate-700 text-center">
+        <button onclick="document.getElementById('faqModal').close()" class="w-full bg-slate-700 hover:bg-slate-600 text-white font-bold py-2 rounded transition shadow-lg">
+            Cerrar
+        </button>
+    </div>
+</dialog>
+
+<style>
+    details > summary { list-style: none; }
+    details > summary::-webkit-details-marker { display: none; }
+</style>
+
+<dialog id="contactModal" class="bg-slate-800 text-white p-6 rounded-xl border border-slate-600 backdrop:bg-slate-900/80 w-full max-w-sm shadow-2xl">
+    <h3 class="text-lg font-bold mb-4 text-white">Información</h3>
+    
+    <div class="mb-4">
+        <h4 class="text-yellow-400 font-bold text-sm mb-1">📧 Contacto & Soporte</h4>
+        <ul class="text-sm text-gray-300 space-y-1">
+            <li>Email: soporte@figus26.com</li>
+            <li>Instagram: @figus26_oficial</li>
+        </ul>
+    </div>
+
+    <div class="mb-4 pt-4 border-t border-slate-700">
+        <h4 class="text-gray-400 font-bold text-sm mb-1">⚖️ Legales</h4>
+        <p class="text-xs text-gray-500">
+            Esta aplicación es para mayores de 18 años. Facilitamos el contacto entre coleccionistas pero no intervenimos en los canjes.
+        </p>
+    </div>
+
+    <div class="text-right">
+        <button onclick="document.getElementById('contactModal').close()" class="px-4 py-2 bg-slate-700 rounded hover:bg-slate-600 text-sm">Cerrar</button>
+    </div>
+</dialog>
+
+<dialog id="quickLoadModal" class="bg-slate-800 text-white p-6 rounded-xl border border-slate-600 backdrop:bg-slate-900/80 w-full max-w-lg shadow-2xl">
+    <div class="flex justify-between items-center mb-4 border-b border-slate-700 pb-2">
+        <h3 class="text-xl font-bold text-yellow-400">⚡ Carga Rápida</h3>
+        <button onclick="document.getElementById('quickLoadModal').close()" class="text-gray-400 hover:text-white">✕</button>
+    </div>
+
+    <form hx-post="/quick_load" hx-target="#dynamic-content" class="space-y-4">
+        <div>
+            <label class="block text-xs font-bold text-gray-400 mb-1 uppercase">1. Elegí el Equipo</label>
+            <select name="country_code" class="w-full bg-slate-900 border border-slate-600 rounded px-3 py-2 text-white focus:border-yellow-500 outline-none">
+                {% for code, info in album_structure.items() %}
+                <option value="{{ code }}">{{ info.name }}</option>
+                {% endfor %}
+            </select>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div>
+                <label class="block text-xs font-bold text-blue-400 mb-1">🟦 TENGO</label>
+                <textarea name="tengo_txt" class="w-full h-24 bg-slate-900/50 border border-blue-900/50 rounded p-2 text-xs text-gray-300 focus:border-blue-500 outline-none resize-none" placeholder="Ej: 1-5, 8, 11"></textarea>
+            </div>
+            <div>
+                <label class="block text-xs font-bold text-green-400 mb-1">🟩 REPES</label>
+                <textarea name="repes_txt" class="w-full h-24 bg-slate-900/50 border border-green-900/50 rounded p-2 text-xs text-gray-300 focus:border-green-500 outline-none resize-none" placeholder="Ej: 5, 9"></textarea>
+            </div>
+            <div>
+                <label class="block text-xs font-bold text-red-400 mb-1">🟥 WISHLIST</label>
+                <textarea name="wish_txt" class="w-full h-24 bg-slate-900/50 border border-red-900/50 rounded p-2 text-xs text-gray-300 focus:border-red-500 outline-none resize-none" placeholder="Ej: 15-20"></textarea>
+            </div>
+        </div>
+
+        <div class="bg-slate-900/50 p-3 rounded text-[10px] text-gray-500 flex gap-2 items-start">
+            <span>ℹ️</span>
+            <p>Usá comas, espacios o guiones (1-5). Al procesar, se reemplazará lo que tenías cargado en este país.</p>
+        </div>
+
+        <div class="pt-2">
+            <button type="submit" class="w-full bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-500 hover:to-blue-600 text-white font-bold py-2 rounded shadow-lg transition transform active:scale-95">
+                🚀 Procesar Carga
+            </button>
+        </div>
+    </form>
+</dialog>
+
+<dialog id="installModal" class="bg-slate-800 text-white p-6 rounded-xl border border-slate-600 backdrop:bg-slate-900/80 w-full max-w-sm shadow-2xl">
+    <div class="flex justify-between items-start mb-4">
+        <h3 class="text-lg font-bold text-white">📲 Instalar App</h3>
+        <button onclick="document.getElementById('installModal').close()" class="text-gray-400 hover:text-white">✕</button>
+    </div>
+
+    <div class="space-y-4">
+        <details class="group bg-slate-900 rounded border border-slate-700">
+            <summary class="p-3 cursor-pointer text-sm font-bold text-green-400 flex justify-between">
+                🤖 Android (Chrome) <span>▼</span>
+            </summary>
+            <div class="p-3 pt-0 text-xs text-gray-300 space-y-2 border-t border-slate-800 mt-2">
+                <p>1. Tocá los <strong>3 puntitos (⋮)</strong> arriba.</p>
+                <p>2. Elegí <strong>"Instalar aplicación"</strong> o "Agregar a inicio".</p>
+                <p>3. Confirmá y listo.</p>
+            </div>
+        </details>
+
+        <details class="group bg-slate-900 rounded border border-slate-700">
+            <summary class="p-3 cursor-pointer text-sm font-bold text-gray-200 flex justify-between">
+                🍎 iPhone (Safari) <span>▼</span>
+            </summary>
+            <div class="p-3 pt-0 text-xs text-gray-300 space-y-2 border-t border-slate-800 mt-2">
+                <p>1. Tocá el botón <strong>Compartir</strong> (cuadrado con flecha).</p>
+                <p>2. Bajá hasta <strong>"Agregar al Inicio"</strong>.</p>
+                <p>3. Dale a "Agregar".</p>
+            </div>
+        </details>
+    </div>
+</dialog>
+
+<dialog id="profileModal" class="bg-slate-800 text-white p-6 rounded-xl border border-slate-600 backdrop:bg-slate-900/80 w-full max-w-md shadow-2xl">
+    <h3 class="text-lg font-bold text-white mb-4">✏️ Editar Ubicación</h3>
+    
+    <form hx-post="/update_profile" hx-target="#profile-response" class="space-y-4">
+        <div>
+            <label class="text-xs text-gray-400 font-bold uppercase">Provincia</label>
+            <select name="province" class="w-full bg-slate-900 border border-slate-700 rounded px-2 py-2 text-sm text-white focus:border-yellow-500 outline-none"
+                hx-get="/locations/zones" hx-target="#zone-select" hx-trigger="change">
+                <option value="{{ user.province }}" selected>{{ user.province }}</option>
+                <option disabled>──────────</option>
+                {% for prov in locations.keys() %}
+                    {% if prov != user.province %}
+                    <option value="{{ prov }}">{{ prov }}</option>
+                    {% endif %}
+                {% endfor %}
+            </select>
+        </div>
+
+        <div>
+            <label class="text-xs text-gray-400 font-bold uppercase">Localidad / Barrio</label>
+            <select id="zone-select" name="zone" class="w-full bg-slate-900 border border-slate-700 rounded px-2 py-2 text-sm text-white focus:border-yellow-500 outline-none">
+                <option value="{{ user.zone }}" selected>{{ user.zone }}</option>
+                {% if user.province in locations %}
+                    {% for z in locations[user.province] %}
+                        {% if z != user.zone %}
+                        <option value="{{ z }}">{{ z }}</option>
+                        {% endif %}
+                    {% endfor %}
+                {% endif %}
+            </select>
+        </div>
+        
+        <button type="submit" class="w-full mt-4 bg-slate-700 hover:bg-green-600 hover:text-white text-gray-200 font-bold py-2 rounded text-sm transition shadow-lg">
+            💾 Guardar Ubicación
+        </button>
+    </form>
+</form>
+
+    <div class="mt-8 pt-4 border-t border-slate-700">
+        <h4 class="text-[10px] font-bold text-red-500 uppercase mb-2 tracking-wider">Zona de Peligro</h4>
+        
+        <form action="/delete_account" method="POST" onsubmit="return confirm('⚠️ ¿Estás COMPLETAMENTE SEGURO?\n\nEsta acción es irreversible:\n❌ Se borrará tu álbum completo.\n❌ Perderás tu reputación y canjes.\n\n¿Realmente querés eliminar tu cuenta?');">
+            <button type="submit" class="w-full bg-red-950/30 hover:bg-red-600 text-red-400 hover:text-white border border-red-900/50 font-bold py-2 rounded text-xs transition flex items-center justify-center gap-2 group">
+                <span class="group-hover:scale-110 transition-transform">🗑️</span> Eliminar mi Cuenta para siempre
+            </button>
+        </form>
+    </div>
+    <div id="profile-response"></div>
+    <div class="mt-4 text-right">
+        <button onclick="document.getElementById('profileModal').close()" class="text-xs text-gray-500 hover:text-white">Cancelar</button>
+    </div>
+</dialog>
+
+<dialog id="premiumModal" class="bg-slate-800 text-white p-6 rounded-xl border border-slate-600 backdrop:bg-slate-900/90 w-full max-w-md shadow-2xl">
+    
+    <div class="text-center mb-4">
+        <h3 id="premiumTitle" class="text-2xl font-bold text-white mb-1">🚀 Límite Alcanzado</h3>
+        <p id="premiumSubtitle" class="text-sm text-gray-400">Tenés <strong class="text-white">1 contacto gratis</strong> por día.</p>
+        <p class="text-sm text-yellow-400 font-bold mt-1">Jugá en Primera con Premium:</p>
+    </div>
+
+    <div class="space-y-3 text-sm mb-6 bg-slate-900/50 p-4 rounded-lg border border-slate-700">
+        <div class="flex items-start gap-3">
+            <span class="text-lg">🔓</span>
+            <div><strong class="text-white">Ilimitado:</strong> Contactá sin restricciones.</div>
+        </div>
+        <div class="flex items-start gap-3">
+            <span class="text-lg">🔔</span>
+            <div><strong class="text-white">Alertas Wishlist:</strong> Aviso si aparece una difícil.</div>
+        </div>
+        <div class="flex items-start gap-3">
+            <span class="text-lg">📐</span>
+            <div><strong class="text-white">Triangulaciones:</strong> Acceso a cadenas de cambio.</div>
+        </div>
+        <div class="flex items-start gap-3">
+            <span class="text-lg">🌍</span>
+            <div><strong class="text-white">Un pago único:</strong> Todo el mundial.</div>
+        </div>
+        <div class="flex items-start gap-3">
+            <span class="text-lg">⭐</span>
+            <div><strong class="text-white">Destacado:</strong> Aparecés primero en las listas.</div>
+        </div>
+    </div>
+
+    <div class="text-center mb-6">
+        <div class="text-3xl font-black text-white drop-shadow-[0_0_10px_rgba(234,179,8,0.5)]">
+            Precio Final: $5000
+        </div>
+    </div>
+
+    <a href="https://mpago.la/1DR8e6S" target="_blank" class="block w-full text-center bg-gradient-to-r from-yellow-500 to-yellow-600 hover:from-yellow-400 hover:to-yellow-500 text-slate-900 font-black py-3 rounded-lg shadow-lg mb-4 transition transform hover:scale-105">
+        🚀 ACTIVAR PREMIUM
+    </a>
+
+    <details class="group border-t border-slate-700 pt-4">
+        <summary class="text-xs text-gray-500 text-center cursor-pointer hover:text-white transition list-none">
+            ¿Ya pagaste? <span class="underline">Validar pago</span>
+        </summary>
+        
+        <form hx-post="/validate_payment" hx-target="#payment-response" class="mt-3 flex flex-col gap-2 animate-fade-in">
+            <p class="text-[10px] text-gray-400 text-center">Ingresá el ID de operación de Mercado Pago:</p>
+            <div class="flex gap-2">
+                <input type="text" name="payment_id" placeholder="Ej: 1234567890" required 
+                       class="flex-1 bg-slate-900 border border-slate-600 rounded px-3 py-2 text-sm text-white focus:border-yellow-500 outline-none">
+                <button type="submit" class="bg-slate-700 px-4 py-2 rounded hover:bg-green-600 text-white text-xs font-bold transition">
+                    Validar
+                </button>
+            </div>
+        </form>
+        <div id="payment-response"></div>
+    </details>
+    
+    <div class="mt-4 text-center">
+        <button onclick="document.getElementById('premiumModal').close()" class="text-xs text-gray-500 hover:text-white">Cerrar</button>
+    </div>
+</dialog>
+
+<dialog id="telegramModal" class="bg-slate-800 text-white p-6 rounded-xl border border-slate-600 backdrop:bg-slate-900/80 w-full max-w-md shadow-2xl">
+    <div class="flex justify-between items-start mb-4">
+        <h3 class="text-lg font-bold text-yellow-400">🔔 Configurar Alertas</h3>
+        <button onclick="document.getElementById('telegramModal').close()" class="text-gray-400 hover:text-white">✕</button>
+    </div>
+
+    <p class="text-sm text-gray-300 mb-4">
+        Recibí notificaciones en tu celular cuando alguien publique figuritas de tu Wishlist.
+    </p>
+
+    <form hx-post="/update_telegram" hx-target="#telegram-response" class="space-y-4">
+        <div>
+            <label class="text-xs text-blue-400 font-bold">PASO 1: Iniciá el Bot</label>
+            <a href="https://t.me/Canje_Al_Toque_bot" target="_blank" class="block w-full text-center bg-blue-600 hover:bg-blue-500 text-white py-2 rounded text-sm font-bold mt-1 mb-3 transition">
+                🤖 Abrir @Canje_Al_Toque_bot
+            </a>
+            <p class="text-[10px] text-gray-400">Dale "Iniciar" o escribí <code>/start</code> y el bot te dará tu ID.</p>
+        </div>
+
+        <div class="border-t border-slate-700 pt-4">
+            <label class="text-xs text-yellow-500 font-bold">PASO 2: Pegá tu ID acá</label>
+            <input type="text" name="telegram_id" value="{{ user.telegram_chat_id or '' }}" placeholder="Ej: 123456789" class="w-full bg-slate-900 border border-slate-700 rounded px-3 py-2 text-sm mt-1 text-white focus:border-yellow-500 outline-none font-mono text-center">
+        </div>
+
+        <button type="submit" class="w-full bg-slate-700 hover:bg-green-600 hover:text-white text-gray-200 font-bold py-2 rounded text-sm transition shadow-lg">
+            💾 Guardar ID
+        </button>
+    </form>
+
+    <div id="telegram-response"></div>
+</dialog>
+
+<dialog id="termsModal" class="bg-slate-800 text-white p-0 rounded-xl border border-slate-600 backdrop:bg-slate-900/90 w-full max-w-lg shadow-2xl overflow-hidden">
+    
+    <div class="bg-slate-950 p-4 border-b border-slate-700 flex justify-between items-center sticky top-0 z-10">
+        <h3 class="text-lg font-bold text-white flex items-center gap-2">
+            <span>⚖️</span> Términos y Condiciones
+        </h3>
+        <button onclick="document.getElementById('termsModal').close()" class="text-gray-400 hover:text-white transition">✕</button>
+    </div>
+
+    <div class="p-6 space-y-6 max-h-[70vh] overflow-y-auto custom-scrollbar text-sm text-gray-300 leading-relaxed">
+        
+        <div class="bg-slate-900 border-l-4 border-yellow-500 p-3 rounded">
+            <h4 class="font-bold text-yellow-400 mb-1">Declaración de Independencia</h4>
+            <p class="text-xs">
+                <strong>Figus 26</strong> es una plataforma independiente de intercambio entre particulares y 
+                <strong>no posee vinculación alguna, afiliación, patrocinio ni respaldo de FIFA, Panini, ni sus subsidiarias.</strong> 
+                Todas las marcas registradas mencionadas son propiedad de sus respectivos dueños y se utilizan aquí únicamente con fines descriptivos (Uso Nominativo).
+            </p>
+        </div>
+
+        <div>
+            <h4 class="font-bold text-white mb-2">1. ACEPTACIÓN DE RIESGOS Y ROL DEL INTERMEDIARIO</h4>
+            <p>
+                Al utilizar esta aplicación, usted comprende y acepta que <strong>Figus 26</strong> actúa exclusivamente como un proveedor de información de contacto y ubicación (tablón de anuncios digital). 
+                La plataforma <strong>no organiza, supervisa, ni garantiza</strong> la seguridad de los intercambios físicos ni las transacciones monetarias.
+            </p>
+        </div>
+
+        <div>
+            <h4 class="font-bold text-white mb-2">2. DESLINDE DE RESPONSABILIDAD (WAIVER)</h4>
+            <p><strong>Figus 26</strong>, sus desarrolladores, socios y empleados quedan liberados de toda responsabilidad civil o penal derivada de:</p>
+            <ul class="list-disc ml-5 mt-2 space-y-1 text-xs">
+                <li>Lesiones, pérdidas, hurtos o agresiones ocurridas durante los canjes presenciales.</li>
+                <li>Figuritas falsas, dañadas o discrepancias con lo publicado.</li>
+                <li>Estafas económicas o transferencias no recibidas.</li>
+                <li>El uso indebido de datos de contacto por terceros.</li>
+            </ul>
+            <p class="mt-2 text-xs italic border-t border-slate-700 pt-2">
+                El usuario asume la responsabilidad personal, completa y exclusiva por su seguridad e integridad física durante cualquier encuentro pactado a través de la aplicación.
+            </p>
+        </div>
+
+        <div>
+            <h4 class="font-bold text-white mb-2">3. REGLAS DE SEGURIDAD OBLIGATORIAS</h4>
+            <p>El usuario se compromete a:</p>
+            <ul class="list-disc ml-5 mt-2 space-y-1">
+                <li>Realizar los intercambios <strong>únicamente en lugares públicos, concurridos y de día</strong> (ej: plazas céntricas, centros comerciales, "Puntos Seguros" sugeridos).</li>
+                <li>No compartir información sensible (dirección particular, horarios) con desconocidos.</li>
+                <li>Verificar el material antes de finalizar el canje.</li>
+            </ul>
+        </div>
+
+        <div>
+            <h4 class="font-bold text-white mb-2">4. MENORES DE EDAD</h4>
+            <p>
+                El uso de la plataforma por menores de 18 años debe estar supervisado por un padre o tutor legal. 
+                El tutor legal asume la plena responsabilidad por las acciones del menor y por su seguridad durante los intercambios físicos.
+            </p>
+        </div>
+
+        <div>
+            <h4 class="font-bold text-white mb-2">5. PRIVACIDAD Y DATOS</h4>
+            <p>
+                Su número de teléfono se mantendrá encriptado y solo será revelado a otro usuario cuando este utilice explícitamente la función "Contactar" bajo el sistema de créditos o suscripción Premium. 
+                No recolectamos datos fiscales innecesarios para operaciones de bajo monto.
+            </p>
+        </div>
+
+        <div>
+            <h4 class="font-bold text-white mb-2">6. DERECHO DE ADMISIÓN</h4>
+            <p>Nos reservamos el derecho de suspender o eliminar permanentemente cuentas que:</p>
+            <ul class="list-disc ml-5 mt-2 space-y-1 text-xs">
+                <li>Reciban múltiples reportes de fraude.</li>
+                <li>Utilicen lenguaje ofensivo o discriminatorio.</li>
+                <li>Intenten comercializar artículos ilegales.</li>
+            </ul>
+        </div>
+
+    </div>
+
+    <div class="bg-slate-950 p-4 border-t border-slate-700 text-center">
+        <p class="text-[10px] text-gray-500 mb-3">
+            Al hacer clic en "Acepto", usted declara ser mayor de 18 años (o tener autorización de tutor) y libera a Figus 26 de toda responsabilidad derivada del uso de la plataforma.
+        </p>
+        <button onclick="document.getElementById('termsModal').close()" class="w-full bg-blue-600 hover:bg-blue-500 text-white font-bold py-3 rounded-lg transition shadow-lg">
+            Acepto los Términos y Condiciones
+        </button>
+    </div>
+</dialog>
+
+<dialog id="wishlistInfoModal" class="bg-slate-800 text-white p-6 rounded-xl border border-slate-600 backdrop:bg-slate-900/90 w-full max-w-md shadow-2xl">
+    <div class="flex justify-between items-start mb-4">
+        <h3 class="text-lg font-bold text-yellow-400">🤔 ¿Por qué es clave marcar tu wishlist?</h3>
+        <button onclick="document.getElementById('wishlistInfoModal').close()" class="text-gray-400 hover:text-white">✕</button>
+    </div>
+
+    <div class="space-y-4 text-sm text-gray-300">
+        <div class="bg-slate-900/50 p-3 rounded border-l-4 border-blue-500">
+            <h4 class="font-bold text-white mb-1">1. Para TODOS (Prioridad y Compartir)</h4>
+            <p class="mb-2">¡Organizá tu búsqueda! 📋</p>
+            <ul class="list-disc ml-4 space-y-1">
+                <li><strong class="text-white">🚀 Prioridad:</strong> En el Mercado, las figuritas que marcás acá aparecen <strong>PRIMERAS</strong>.</li>
+                <li><strong class="text-white">📲 WhatsApp:</strong> Te sirve para tener tu lista de faltantes siempre a mano y compartirla rápido por WhatsApp con tus amigos.</li>
+            </ul>
+        </div>
+
+        <div class="bg-slate-900/50 p-3 rounded border-l-4 border-yellow-500">
+            <h4 class="font-bold text-yellow-400 mb-1">2. Para PREMIUM (Alertas y Triangulación)</h4>
+            <p class="mb-2">Desbloqueá la inteligencia artificial del álbum 🤖.</p>
+            <ul class="list-disc ml-4 space-y-1">
+                <li><strong class="text-white">🔔 Alertas:</strong> El sistema te <strong>notifica automáticamente</strong> cuando alguien publica una figurita de tu Wishlist.</li>
+                <li><strong class="text-white">📐 Triangulación:</strong> Habilita el canje a 3 bandas (Vos → Puente → Objetivo) cuando no hay cambio directo.</li>
+            </ul>
+        </div>
+    </div>
+
+    <div class="mt-6 text-center">
+        <button onclick="document.getElementById('wishlistInfoModal').close()" class="w-full bg-slate-700 hover:bg-slate-600 text-white font-bold py-2 rounded transition">
+            Entendido
+        </button>
+    </div>
+</dialog>
+
+<dialog id="quickLoadInfoModal" class="bg-slate-800 text-white p-0 rounded-xl border border-slate-600 backdrop:bg-slate-900/90 w-full max-w-md shadow-2xl overflow-hidden">
+    
+    <div class="bg-slate-950 p-4 border-b border-slate-700 flex justify-between items-center">
+        <h3 class="text-lg font-bold text-yellow-400 flex items-center gap-2">
+            <span>⚡</span> Guía de Carga Rápida
+        </h3>
+        <button onclick="document.getElementById('quickLoadInfoModal').close()" class="text-gray-400 hover:text-white transition">✕</button>
+    </div>
+
+    <div class="p-6 space-y-5 overflow-y-auto max-h-[70vh] custom-scrollbar text-sm text-gray-300">
+        
+        <div>
+            <h4 class="font-bold text-white text-base">🚀 Cómo cargar tus figus volando</h4>
+            <p class="mt-1 text-gray-400">Olvidate de buscar número por número. Hacelo por país.</p>
+        </div>
+
+        <div class="space-y-3 bg-slate-900/50 p-3 rounded-lg border border-slate-700">
+            <div>
+                <strong class="text-white block mb-1">1. Elegí el Equipo:</strong>
+                <span class="text-gray-400">(Ej: Argentina).</span>
+            </div>
+            <div>
+                <strong class="text-white block mb-1">2. Escribí los números:</strong>
+                <span class="text-gray-400">Usá comas, espacios, enters o guiones para rangos.</span>
+            </div>
+            <div class="text-xs bg-slate-800 p-2 rounded border border-slate-600 font-mono text-yellow-200">
+                Ejemplo: 1, 2, 5-10, 15 <br>
+                <span class="text-gray-500 opacity-70">(Carga la 1, 2, 5, 6, 7, 8, 9, 10 y 15).</span>
+            </div>
+        </div>
+
+        <div class="space-y-3">
+            <h4 class="font-bold text-white border-b border-slate-700 pb-1">🧠 Inteligencia Artificial</h4>
+            
+            <div class="flex gap-3 items-start">
+                <div class="w-4 h-4 rounded bg-blue-600 border border-blue-400 mt-0.5 flex-shrink-0"></div>
+                <div>
+                    <strong class="text-blue-300">Tengo:</strong>
+                    <p class="text-xs leading-relaxed">Las que pegaste en el álbum.</p>
+                </div>
+            </div>
+
+            <div class="flex gap-3 items-start">
+                <div class="w-4 h-4 rounded bg-green-600 border border-green-400 mt-0.5 flex-shrink-0"></div>
+                <div>
+                    <strong class="text-green-300">Repetidas:</strong>
+                    <p class="text-xs leading-relaxed">Las que tenés para cambiar. <span class="text-yellow-200 font-semibold">Si ponés una acá, el sistema asume que la TENÉS.</span> No hace falta ponerla en la caja azul.</p>
+                </div>
+            </div>
+
+            <div class="flex gap-3 items-start">
+                <div class="w-4 h-4 rounded bg-red-600 border border-red-400 mt-0.5 flex-shrink-0"></div>
+                <div>
+                    <strong class="text-red-300">Wishlist:</strong>
+                    <p class="text-xs leading-relaxed">Las que te faltan. Si el sistema detecta que ya la tenés (o es repe), la ignora para evitar errores.</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="bg-red-900/20 border-l-4 border-red-500 p-3 rounded text-xs text-red-100">
+            <strong>⚠️ Nota:</strong> Al procesar, se borrará lo que hayas cargado antes <u>solo para ese país</u> y se reemplazará por lo nuevo.
+        </div>
+
+    </div>
+
+    <div class="bg-slate-950 p-4 border-t border-slate-700">
+        <button onclick="document.getElementById('quickLoadInfoModal').close()" class="w-full bg-slate-700 hover:bg-slate-600 text-white font-bold py-2 rounded transition shadow-lg">
+            ¡Entendido!
+        </button>
+    </div>
+</dialog>
+
+<dialog id="triangulationModal" class="bg-slate-800 text-white p-6 rounded-xl border border-slate-600 backdrop:bg-slate-900/90 w-full max-w-lg shadow-2xl">
+    <div class="flex justify-between items-start mb-4 border-b border-slate-700 pb-2">
+        <h3 class="text-xl font-bold text-yellow-400 flex items-center gap-2">
+            <span>📐</span> ¿Qué es la Triangulación?
+        </h3>
+        <button onclick="document.getElementById('triangulationModal').close()" class="text-gray-400 hover:text-white transition">✕</button>
+    </div>
+
+    <div class="space-y-5 text-sm text-gray-300">
+        
+        <div class="bg-slate-900/50 p-4 rounded-lg border-l-4 border-yellow-500">
+            <h4 class="font-bold text-white text-base mb-1">La jugada maestra 🧠</h4>
+            <p class="leading-relaxed">
+                A veces, <strong>A</strong> quiere lo que tiene <strong>C</strong>, pero <strong>C</strong> no quiere nada de <strong>A</strong>. 
+                <br>¡El mercado se traba! ⛔
+                <br>Ahí entra <strong>B</strong> (el <span class="text-blue-400 font-bold">Puente</span>) para destrabarlo.
+            </p>
+        </div>
+
+        <div>
+            <h4 class="font-bold text-white mb-3">⚽ La jugada a 3 toques:</h4>
+            <ul class="space-y-3 relative">
+                <div class="absolute left-[19px] top-2 bottom-4 w-0.5 bg-slate-700 -z-10"></div>
+
+                <li class="flex items-start gap-3">
+                    <div class="w-10 h-10 rounded-full bg-slate-700 flex items-center justify-center text-lg shadow-md border border-slate-600 font-bold text-gray-400">1</div>
+                    <div>
+                        <strong class="text-white block">Vos → Puente</strong>
+                        <span class="text-xs text-gray-400">Le das una repe al Puente.</span>
+                    </div>
+                </li>
+                <li class="flex items-start gap-3">
+                    <div class="w-10 h-10 rounded-full bg-blue-900/50 flex items-center justify-center text-lg shadow-md border border-blue-500/50 font-bold text-blue-400">2</div>
+                    <div>
+                        <strong class="text-blue-300 block">Puente → Dueño</strong>
+                        <span class="text-xs text-gray-400">El Puente le da una suya al Dueño (la que el Dueño quería).</span>
+                    </div>
+                </li>
+                <li class="flex items-start gap-3">
+                    <div class="w-10 h-10 rounded-full bg-yellow-600/20 flex items-center justify-center text-lg shadow-md border border-yellow-500 font-bold text-yellow-400">3</div>
+                    <div>
+                        <strong class="text-yellow-400 block">Dueño → Vos</strong>
+                        <span class="text-xs text-gray-400">¡El Dueño te da a vos la figurita que buscás! 🎯</span>
+                    </div>
+                </li>
+            </ul>
+        </div>
+
+        <div class="bg-red-900/20 p-3 rounded border border-red-500/30 text-xs flex gap-2 items-start">
+            <span class="text-lg">📍</span>
+            <p>
+                <strong class="text-red-200">Requisito:</strong> 
+                Para que la logística sea fácil, el sistema solo busca "Puentes" que vivan en tu misma 
+                <strong class="text-white uppercase">{{ user.province }} / {{ user.zone }}</strong>.
+            </p>
+        </div>
+
+    </div>
+
+    <div class="mt-6 text-right">
+        <button onclick="document.getElementById('triangulationModal').close()" class="px-6 py-2 bg-slate-700 hover:bg-slate-600 text-white font-bold rounded transition shadow-lg">
+            ¡Entendido!
+        </button>
+    </div>
+</dialog>

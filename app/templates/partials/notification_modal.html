@@ -1,0 +1,64 @@
+<div id="exchangeNotificationModal" 
+     class="fixed inset-0 z-[60] flex items-center justify-center bg-black/80 backdrop-blur-sm animate-fade-in px-4">
+    
+    <div class="bg-slate-900 border border-indigo-500 rounded-xl shadow-2xl w-full max-w-sm overflow-hidden transform transition-all scale-100 relative">
+        
+        <button onclick="document.getElementById('exchangeNotificationModal').remove()" class="absolute top-2 right-2 text-gray-500 hover:text-white p-2">✕</button>
+
+        <div class="bg-gradient-to-r from-indigo-900 to-slate-900 p-4 border-b border-indigo-500/30">
+            <h3 class="font-bold text-white flex items-center gap-2">
+                <span class="animate-bounce">🔔</span> Propuesta de Cambio
+            </h3>
+        </div>
+
+        <div class="p-6 text-center" id="exchangeContent">
+            <p class="text-sm text-gray-300 mb-6">
+                <strong class="text-white text-base">{{ sender.nick }}</strong> te ofrece un trato:
+            </p>
+
+            <div class="flex items-center justify-center gap-4 mb-8 bg-slate-800/50 p-4 rounded-xl border border-slate-700">
+                <div class="flex flex-col items-center gap-2">
+                    <span class="text-[10px] uppercase font-bold text-green-400 tracking-wider">Recibís</span>
+                    <div class="w-16 h-20 bg-slate-800 rounded flex items-center justify-center border-2 border-green-500 shadow-[0_0_15px_rgba(34,197,94,0.2)] text-white font-bold font-mono text-lg">
+                        {{ format_sticker(ex.sticker_offered) }}
+                    </div>
+                </div>
+
+                <div class="text-gray-500 text-xl font-bold">⇄</div>
+
+                <div class="flex flex-col items-center gap-2">
+                    <span class="text-[10px] uppercase font-bold text-red-400 tracking-wider">Entregás</span>
+                    <div class="w-16 h-20 bg-slate-800 rounded flex items-center justify-center border-2 border-red-500 shadow-[0_0_15px_rgba(239,68,68,0.2)] text-white font-bold font-mono text-lg">
+                        {{ format_sticker(ex.sticker_wanted) }}
+                    </div>
+                </div>
+            </div>
+
+            <p class="text-[10px] text-gray-400 mb-6 italic">
+                Al confirmar, las figuritas se moverán de álbum automáticamente.
+            </p>
+
+            <div class="flex gap-3">
+                <button hx-post="/exchange/reject/{{ ex.id }}"
+                        hx-target="#exchangeNotificationModal"
+                        hx-swap="outerHTML"
+                        class="flex-1 py-3 bg-slate-800 hover:bg-slate-700 border border-slate-600 text-gray-300 rounded-lg font-bold text-sm transition">
+                    No, gracias
+                </button>
+                
+                <button hx-post="/exchange/accept/{{ ex.id }}"
+                        hx-target="#exchangeContent"
+                        class="flex-1 py-3 bg-green-600 hover:bg-green-500 text-white rounded-lg font-bold text-sm shadow-lg shadow-green-900/30 transition flex justify-center items-center gap-2">
+                    <span>🤝</span> Aceptar
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        document.body.addEventListener('closeModal', function(){
+            const m = document.getElementById('exchangeNotificationModal');
+            if(m) m.remove();
+        });
+    </script>
+</div>

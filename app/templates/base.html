@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Figus 26 - Tu Álbum Digital</title>
+    <script src="https://unpkg.com/htmx.org@1.9.10"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="//unpkg.com/alpinejs" defer></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap" rel="stylesheet">
+    
+    <style>
+        body { font-family: 'Inter', sans-serif; }
+        [x-cloak] { display: none !important; }
+        
+        /* Scrollbar Global */
+        .custom-scrollbar::-webkit-scrollbar { width: 6px; }
+        .custom-scrollbar::-webkit-scrollbar-track { background: #1e293b; }
+        .custom-scrollbar::-webkit-scrollbar-thumb { background: #475569; border-radius: 4px; }
+        .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: #64748b; }
+
+        /* Animaciones */
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
+        .animate-fade-in { animation: fadeIn 0.3s ease-out; }
+
+        dialog::backdrop {
+            background: rgba(0, 0, 0, 0.85);
+            backdrop-filter: blur(4px);
+        }
+    </style>
+</head>
+<body class="bg-slate-900 text-gray-200 min-h-screen flex flex-col pt-20">
+
+    <header class="fixed top-0 left-0 right-0 z-50 bg-slate-950/95 backdrop-blur-sm border-b border-slate-800 h-16 shadow-lg">
+        <div class="max-w-7xl mx-auto px-4 h-full grid grid-cols-3 items-center">
+            
+            <div class="flex justify-start items-center gap-2">
+                <span class="text-2xl hidden sm:block">⚽</span>
+                <a href="/" class="text-lg md:text-2xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-yellow-400 to-yellow-600 hover:to-yellow-300 truncate transition">
+                    Figus 26
+                </a>
+            </div>
+
+            <nav class="flex justify-center items-center h-full gap-1 md:gap-8">
+                <a href="/album" 
+                   class="relative h-full flex items-center px-2 md:px-4 font-bold text-xs md:text-sm uppercase tracking-wider transition-colors
+                   {{ 'text-yellow-400' if active_tab == 'album' else 'text-gray-400 hover:text-gray-200' }}">
+                    <span>📖 <span class="hidden md:inline">Mi Álbum</span></span>
+                    
+                    {% if active_tab == 'album' %}
+                    <div class="absolute bottom-0 left-0 w-full h-1 bg-yellow-500 rounded-t-full shadow-[0_-2px_10px_rgba(234,179,8,0.5)] animate-fade-in"></div>
+                    {% endif %}
+                </a>
+
+                <a href="/market" 
+                   class="relative h-full flex items-center px-2 md:px-4 font-bold text-xs md:text-sm uppercase tracking-wider transition-colors
+                   {{ 'text-yellow-400' if active_tab == 'market' else 'text-gray-400 hover:text-gray-200' }}">
+                    <span>⚖️ <span class="hidden md:inline">Mercado</span></span>
+                    
+                    {% if active_tab == 'market' %}
+                    <div class="absolute bottom-0 left-0 w-full h-1 bg-yellow-500 rounded-t-full shadow-[0_-2px_10px_rgba(234,179,8,0.5)] animate-fade-in"></div>
+                    {% endif %}
+                </a>
+            </nav>
+
+            <div class="flex justify-end items-center gap-3">
+                {% if user %}
+                    <div class="text-right hidden sm:block leading-tight">
+                        <span class="block text-[10px] text-gray-500 uppercase font-bold">Jugador</span>
+                        <span class="block text-sm font-bold text-white">{{ user.nick }}</span>
+                    </div>
+                    
+                    <form action="/logout" method="POST">
+                        <button type="submit" class="bg-slate-900 hover:bg-red-900/20 text-gray-400 hover:text-red-400 border border-slate-800 p-2 rounded-lg transition group" title="Cerrar Sesión">
+                            <svg class="w-5 h-5 group-hover:scale-110 transition-transform" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
+                            </svg>
+                        </button>
+                    </form>
+                {% else %}
+                    <a href="/login" class="text-sm text-yellow-400 font-bold hover:underline">Ingresar</a>
+                {% endif %}
+            </div>
+
+        </div>
+    </header>
+
+    <div class="flex-1 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 w-full">
+        {% block content %}{% endblock %}
+    </div>
+
+    <footer class="bg-slate-950 text-slate-500 text-center p-6 mt-8 border-t border-slate-900">
+        <p class="text-sm font-medium text-slate-400">© 2026 Figus 26 - Hecho con 🧉 y FastAPI</p>
+        <div class="mt-2 text-xs flex justify-center gap-4 text-slate-600 font-mono flex-wrap">
+            <span>📧 soporte@figus26.com</span>
+            <span class="text-slate-800">|</span>
+            <span>📷 @figus26_oficial</span>
+        </div>
+    </footer>
+
+<script src="/static/js/htmx.min.js"></script>
+
+    {% include "components/modals.html" %}
+
+    {% include "partials/toast_renewal.html" %}
+
+</body>
+</html>

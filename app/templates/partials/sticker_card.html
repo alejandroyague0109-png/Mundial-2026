@@ -1,0 +1,67 @@
+<div id="sticker-{{ num }}"
+     {% if force_oob %}hx-swap-oob="true"{% endif %}
+     x-data="{ 
+        // Inicializamos el estado local
+        localStatus: '{{ status if status else 'falta' }}',
+        
+        // Función para calcular la próxima clase visualmente (UI Optimista)
+        nextState() {
+            const el = this.$el;
+            // Quitamos las clases de colores actuales para limpiar
+            el.classList.remove('bg-gradient-to-br', 'from-green-600', 'to-green-800', 'border-green-500', 'shadow-[0_0_10px_rgba(34,197,94,0.3)]');
+            el.classList.remove('from-yellow-600', 'to-yellow-800', 'border-yellow-500', 'shadow-[0_0_10px_rgba(234,179,8,0.3)]');
+            el.classList.remove('bg-slate-700', 'border-red-500/50', 'shadow-[0_0_10px_rgba(239,68,68,0.2)]');
+            el.classList.remove('bg-slate-900', 'border-slate-700', 'opacity-60');
+
+            // Aplicamos el nuevo estado lógico
+            if (this.localStatus === 'falta') this.localStatus = 'tengo';
+            else if (this.localStatus === 'tengo') this.localStatus = 'repetida';
+            else if (this.localStatus === 'repetida') this.localStatus = 'wishlist';
+            else this.localStatus = 'falta';
+
+            // Forzamos las clases nuevas INMEDIATAMENTE (sin esperar al server)
+            if (this.localStatus === 'tengo') {
+                el.classList.add('bg-gradient-to-br', 'from-green-600', 'to-green-800', 'border-green-500', 'shadow-[0_0_10px_rgba(34,197,94,0.3)]');
+            } else if (this.localStatus === 'repetida') {
+                el.classList.add('bg-gradient-to-br', 'from-yellow-600', 'to-yellow-800', 'border-yellow-500', 'shadow-[0_0_10px_rgba(234,179,8,0.3)]');
+            } else if (this.localStatus === 'wishlist') {
+                el.classList.add('bg-slate-700', 'border-red-500/50', 'shadow-[0_0_10px_rgba(239,68,68,0.2)]');
+            } else {
+                el.classList.add('bg-slate-900', 'border-slate-700', 'opacity-60');
+            }
+        }
+     }"
+     @click="nextState()"
+     hx-post="/sticker/{{ num }}" 
+     hx-swap="outerHTML"
+     class="relative aspect-[3/4] rounded-lg flex items-center justify-center border transition-all cursor-pointer hover:scale-105 select-none
+     {% if status == 'tengo' %}
+        bg-gradient-to-br from-green-600 to-green-800 border-green-500 shadow-[0_0_10px_rgba(34,197,94,0.3)]
+     {% elif status == 'repetida' %}
+        bg-gradient-to-br from-yellow-600 to-yellow-800 border-yellow-500 shadow-[0_0_10px_rgba(234,179,8,0.3)]
+     {% elif status == 'wishlist' %}
+        bg-slate-700 border-red-500/50 shadow-[0_0_10px_rgba(239,68,68,0.2)]
+     {% else %}
+        bg-slate-900 border-slate-700 opacity-60 hover:opacity-100 hover:border-slate-500
+     {% endif %}
+     ">
+    
+    <span class="text-xl font-bold font-mono"
+          :class="localStatus === 'falta' ? 'text-slate-600' : 'text-white drop-shadow-md'">
+        {{ local_num if local_num else num }}
+    </span>
+
+    <div x-show="localStatus === 'repetida'"
+         style="{{ 'display: block;' if status == 'repetida' else 'display: none;' }}"
+         class="absolute -top-2 -right-2 bg-yellow-500 text-slate-900 text-xs font-bold px-1.5 rounded-full border border-slate-900 z-10">
+         x{{ item.qty if item and item.qty else '2' }}
+    </div>
+
+    <div x-show="localStatus === 'wishlist'"
+         style="{{ 'display: block;' if status == 'wishlist' else 'display: none;' }}"
+         class="absolute -top-2 -right-2 text-red-500 animate-pulse z-10 text-lg">
+        ❤️
+    </div>
+    
+    <div class="absolute inset-0 bg-white/5 opacity-0 hover:opacity-10 rounded-lg pointer-events-none"></div>
+</div>

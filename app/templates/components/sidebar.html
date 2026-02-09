@@ -1,0 +1,152 @@
+<aside class="w-full md:w-64 bg-slate-800 rounded-xl border border-slate-700 sticky top-24 shadow-xl flex flex-col h-[calc(100vh-120px)] overflow-hidden transition-all duration-300">
+    
+    <div class="p-4 bg-slate-800 border-b border-slate-700 z-10 flex-shrink-0">
+        <div class="flex items-center gap-3 mb-2">
+            <div class="w-10 h-10 rounded-full bg-gradient-to-br from-yellow-500 to-yellow-700 flex items-center justify-center text-slate-900 font-bold text-lg border border-yellow-400 shadow-md">
+                {{ user.nick[0]|upper }}
+            </div>
+            <div class="overflow-hidden">
+                <h3 class="text-white font-bold truncate">{{ user.nick }}</h3>
+                <p class="text-[10px] text-gray-400 flex items-center gap-1 truncate">
+                    📍 {{ user.province }}
+                </p>
+            </div>
+        </div>
+
+        <div class="flex items-center gap-1 text-xs text-yellow-500 mb-3 bg-slate-900/50 p-1.5 rounded border border-slate-700/50">
+            <span>⭐</span> <span class="font-bold">{{ user.reputation }}</span> <span class="text-gray-500 ml-1">Reputación</span>
+        </div>
+
+        {% if user.is_premium %}
+            <div class="text-xs text-center bg-gradient-to-r from-yellow-900/20 to-yellow-600/20 border border-yellow-700/50 rounded py-1 text-yellow-400 font-bold mb-3 shadow-[0_0_10px_rgba(234,179,8,0.1)]">
+                💎 USUARIO PREMIUM
+            </div>
+        {% endif %}
+
+        <div class="flex gap-2 w-full">
+            <button onclick="document.getElementById('quickLoadModal').showModal()" class="flex-1 bg-blue-900/30 hover:bg-blue-800 text-blue-300 border border-blue-800 text-xs font-bold py-2 rounded transition flex justify-center items-center gap-2">
+                <span>⚡</span> Carga Rápida
+            </button>
+            
+            <button onclick="document.getElementById('quickLoadInfoModal').showModal()" class="w-10 bg-slate-700 hover:bg-slate-600 text-gray-300 border border-slate-600 text-xs font-bold py-2 rounded transition flex justify-center items-center">
+                ℹ️
+            </button>
+        </div>
+    </div>
+
+    <div id="countries-section" class="flex-1 min-h-0 flex flex-col border-b border-slate-700 transition-all duration-300">
+        
+        <button onclick="toggleSection('countries')" class="flex justify-between items-center w-full p-2 bg-slate-800 hover:bg-slate-700 transition cursor-pointer sticky top-0 z-10 select-none group flex-shrink-0">
+            <span class="text-[10px] font-bold text-gray-500 group-hover:text-white uppercase tracking-wider px-2">
+                Índice de Países
+            </span>
+            <span id="countries-arrow" class="text-gray-500 text-xs px-2 transform rotate-180 transition-transform duration-300">▼</span>
+        </button>
+        
+        <div id="countries-list" class="overflow-y-auto custom-scrollbar flex-1 p-2">
+            <div class="space-y-0.5 border-l border-slate-700 ml-2 pl-1 pb-4">
+                {% for code, info in album_structure.items() %}
+                <button 
+                    hx-get="/country/{{ code }}" 
+                    hx-target="#dynamic-content"
+                    hx-swap="innerHTML"
+                    onclick="setActive(this)"
+                    class="country-btn w-full text-left px-3 py-2 rounded text-sm text-gray-300 hover:bg-slate-700 hover:text-white transition flex justify-between items-center group/btn focus:outline-none">
+                    <span class="truncate">{{ info.name }}</span>
+                </button>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+
+    <div id="advanced-section" class="bg-slate-900/50 flex-shrink-0 flex flex-col transition-all duration-300 max-h-[40%]">
+        
+        <button onclick="toggleSection('advanced')" class="flex justify-between items-center w-full p-3 hover:bg-slate-800 transition cursor-pointer select-none group flex-shrink-0 bg-slate-900/80 backdrop-blur-sm z-10">
+            <span class="text-[10px] font-bold text-gray-500 group-hover:text-white uppercase tracking-wider px-2">
+                ⚙️ Funciones Avanzadas
+            </span>
+            <span id="advanced-arrow" class="text-gray-500 text-xs px-2 transform rotate-180 transition-transform duration-300">▼</span>
+        </button>
+        
+        <div id="advanced-list" class="p-2 space-y-1 border-t border-slate-800 overflow-y-auto custom-scrollbar">
+            
+            <button onclick="document.getElementById('profileModal').showModal()" class="w-full text-left px-3 py-2 rounded hover:bg-slate-700 text-xs text-gray-300 flex items-center gap-2 transition">
+                <span>✏️</span> Editar Perfil
+            </button>
+
+            {% if user.is_premium %}
+                <button onclick="document.getElementById('telegramModal').showModal()" class="w-full text-left px-3 py-2 rounded hover:bg-slate-700 text-xs text-blue-400 flex items-center gap-2 transition">
+                    <span>🔔</span> Notificaciones
+                </button>
+            {% else %}
+                <button onclick="document.getElementById('premiumModal').showModal()" class="w-full text-left px-3 py-2 rounded hover:bg-slate-700 text-xs text-gray-500 hover:text-yellow-400 flex items-center justify-between transition group">
+                    <div class="flex items-center gap-2"><span>🔔</span> Notificaciones</div>
+                    <span class="text-[10px] border border-gray-600 rounded px-1 group-hover:border-yellow-500 group-hover:text-yellow-400">🔒 PRO</span>
+                </button>
+            {% endif %}
+            
+            {% if not user.is_premium %}
+            <button onclick="document.getElementById('premiumModal').showModal()" class="w-full text-left px-3 py-2 rounded hover:bg-slate-700 text-xs text-yellow-400 flex items-center gap-2 transition">
+                <span>💎</span> Hacete Premium
+            </button>
+            {% endif %}
+
+            <button onclick="document.getElementById('installModal').showModal()" class="w-full text-left px-3 py-2 rounded hover:bg-slate-700 text-xs text-green-400 flex items-center gap-2 transition">
+                <span>📲</span> Instalar App
+            </button>
+
+            <button onclick="document.getElementById('faqModal').showModal()" class="w-full text-left px-3 py-2 rounded hover:bg-slate-700 text-xs text-purple-400 flex items-center gap-2 transition">
+                <span>❓</span> Preguntas Frecuentes
+            </button>
+
+            <button onclick="document.getElementById('termsModal').showModal()" class="w-full text-left px-3 py-2 rounded hover:bg-slate-700 text-xs text-gray-400 flex items-center gap-2 transition">
+                <span>⚖️</span> Términos y Condiciones
+            </button>
+
+            <form action="/logout" method="post" class="block w-full mt-2 pt-2 border-t border-slate-800">
+                <button type="submit" class="w-full text-left px-3 py-2 rounded hover:bg-red-900/30 hover:text-red-300 text-xs text-red-400 flex items-center gap-2 transition font-bold">
+                    <span>🚪</span> Cerrar Sesión
+                </button>
+            </form>
+        </div>
+    </div>
+</aside>
+
+<script>
+    // Configuración Inicial
+    const state = {
+        countries: true, 
+        advanced: true   
+    };
+
+    function toggleSection(section) {
+        state[section] = !state[section];
+        
+        const isOpen = state[section];
+        const container = document.getElementById(section + '-section');
+        const list = document.getElementById(section + '-list');
+        const arrow = document.getElementById(section + '-arrow');
+
+        if (isOpen) {
+            // ABRIR
+            list.classList.remove('hidden');
+            arrow.classList.add('rotate-180');
+            // Si es 'countries', le permitimos expandirse. Si es 'advanced', su max-h ya lo limita.
+            if (section === 'countries') container.classList.add('flex-1', 'min-h-0');
+        } else {
+            // CERRAR
+            list.classList.add('hidden');
+            arrow.classList.remove('rotate-180'); 
+            if (section === 'countries') container.classList.remove('flex-1', 'min-h-0');
+        }
+    }
+
+    function setActive(btn) {
+        document.querySelectorAll('.country-btn').forEach(b => {
+            b.classList.remove('bg-slate-700', 'text-yellow-400', 'font-bold');
+            b.classList.add('text-gray-300');
+        });
+        btn.classList.remove('text-gray-300');
+        btn.classList.add('bg-slate-700', 'text-yellow-400', 'font-bold');
+    }
+</script>
