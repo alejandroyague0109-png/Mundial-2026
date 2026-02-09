@@ -5,6 +5,8 @@ from fastapi.responses import RedirectResponse
 from contextlib import asynccontextmanager
 from pathlib import Path
 from dotenv import load_dotenv
+import os # Asegurate de tener este import
+import sentry_sdk # Nuevo import
 
 # Imports internos
 from app.database import engine, Base
@@ -26,6 +28,18 @@ async def lifespan(app: FastAPI):
     except Exception as e:
         print(f"⚠️ Error DB: {e}")
     yield
+
+# --- INICIO DE SENTRY (Pegar antes de app = FastAPI) ---
+# Solo iniciamos Sentry si existe la variable de entorno, para no molestar en local
+if os.getenv("SENTRY_DSN"):
+    sentry_sdk.init(
+        dsn=os.getenv("SENTRY_DSN"),
+        # Captura el 100% de los errores para análisis
+        traces_sample_rate=1.0,
+        _experiments={
+            "profiles_sample_rate": 1.0,
+        },
+    )
 
 # Instanciamos FastAPI
 app = FastAPI(title="Figus 26", version="2.0.0", lifespan=lifespan)
