@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, Request, Form, Response
+from fastapi import APIRouter, Depends, Request, Form, Response, BackgroundTasks
 from fastapi.responses import HTMLResponse, RedirectResponse
 from fastapi.templating import Jinja2Templates
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -7,10 +7,13 @@ from pathlib import Path
 
 from app.database import get_db
 from app.models import User, Inventory
-# Necesitamos este archivo (ver abajo)
 from app.data_album import ALBUM_STRUCTURE
 from app.utils import parse_smart_input
 from app.locations import ARGENTINA
+
+# --- NUEVO IMPORT ---
+from app.services.notifications import notify_wishlist_match 
+# --------------------
 
 router = APIRouter(tags=["Album"])
 
@@ -28,55 +31,41 @@ templates.env.globals['format_sticker'] = format_sticker
 
 # --- HELPER: CALCULAR ESTADÍSTICAS ---
 async def calculate_user_stats(user_id: int, db: AsyncSession):
-    """Calcula estadísticas completas: Pegadas, Faltan, Repes y Porcentaje."""
-    
-    # 1. Traemos todos los estados de la DB para este usuario
+    # ... (TU CÓDIGO DE ESTADÍSTICAS SE MANTIENE IGUAL) ...
     result_stats = await db.execute(select(Inventory.status).where(Inventory.user_id == user_id))
     all_statuses = result_stats.scalars().all()
     
-    # 2. Contamos cuántas hay de cada tipo
     count_tengo = all_statuses.count("tengo")
     count_repetida = all_statuses.count("repetida")
     
-    # 3. Lógica de Negocio:
-    # "Pegadas" (en el álbum) son las que tienen estado 'tengo' SUMADO a las 'repetida'.
-    # (Porque si la tenés repetida, se asume que una ya está pegada en el álbum).
     pegadas = count_tengo + count_repetida
-    
-    # 4. Total del álbum (Basado en tu estructura de datos)
     total_stickers = sum(d['count'] for d in ALBUM_STRUCTURE.values())
-    
-    # 5. Faltantes
     faltan = total_stickers - pegadas
-    
-    # Evitar números negativos por si acaso
     if faltan < 0: faltan = 0
 
     return {
-        "tengo": pegadas,            # Se mostrará en "PEGADAS"
-        "repetidas": count_repetida, # Se mostrará en "REPES"
-        "faltan": faltan,            # Se mostrará en "FALTAN"
+        "tengo": pegadas,           
+        "repetidas": count_repetida,
+        "faltan": faltan,           
         "total": total_stickers,
         "porcentaje": int((pegadas / total_stickers) * 100) if total_stickers > 0 else 0
     }
+
 # --- 1. VISTA PRINCIPAL (EL MARCO/SHELL) ---
 @router.get("/album", response_class=HTMLResponse)
 async def view_album(request: Request, db: AsyncSession = Depends(get_db)):
+    # ... (TU CÓDIGO SE MANTIENE IGUAL) ...
     user_id = request.cookies.get("user_id")
     if not user_id: return RedirectResponse(url="/login", status_code=303)
 
     result_user = await db.execute(select(User).where(User.id == int(user_id)))
     user = result_user.scalars().first()
     if not user: 
-        # Si la cookie es inválida, limpiamos y mandamos al login
         response = RedirectResponse(url="/login", status_code=303)
         response.delete_cookie("user_id")
         return response
 
-    # Usamos el helper para cargar las stats iniciales
     stats = await calculate_user_stats(user.id, db)
-
-    # Definimos el primer país para mostrar por defecto (ej: FWC o ARG)
     first_code = list(ALBUM_STRUCTURE.keys())[0]
 
     return templates.TemplateResponse("album.html", {
@@ -92,6 +81,7 @@ async def view_album(request: Request, db: AsyncSession = Depends(get_db)):
 # --- 2. VISTA DE UN PAÍS (GRILLA + TABLA) ---
 @router.get("/country/{country_code}")
 async def get_country_view(request: Request, country_code: str, db: AsyncSession = Depends(get_db)):
+    # ... (TU CÓDIGO SE MANTIENE IGUAL) ...
     user_id = request.cookies.get("user_id")
     if not user_id: return Response(status_code=401)
 
@@ -118,7 +108,7 @@ async def get_country_view(request: Request, country_code: str, db: AsyncSession
         "range": range
     })
 
-# --- 3. CARGA RÁPIDA (CON ACTUALIZACIÓN DE STATS) ---
+# --- 3. CARGA RÁPIDA ---
 @router.post("/quick_load")
 async def process_quick_load(
     request: Request,
@@ -128,6 +118,9 @@ async def process_quick_load(
     wish_txt: str = Form(""),
     db: AsyncSession = Depends(get_db)
 ):
+    # ... (TU CÓDIGO SE MANTIENE IGUAL POR AHORA) ...
+    # Nota: Aquí también podrías agregar notificaciones si alguien carga repes masivamente,
+    # pero para la prueba nos centramos en el clic individual.
     user_id = request.cookies.get("user_id")
     if not user_id: return Response(status_code=401)
     user_id = int(user_id)
@@ -139,7 +132,6 @@ async def process_quick_load(
     count = info["count"]
     end_global = start_global + count - 1
 
-    # Parseamos usando la lógica Local -> Global
     ids_tengo = parse_smart_input(tengo_txt, start_global, count)
     ids_repes = parse_smart_input(repes_txt, start_global, count)
     ids_wish = parse_smart_input(wish_txt, start_global, count)
@@ -147,7 +139,6 @@ async def process_quick_load(
     final_tengo = ids_tengo.union(ids_repes)
     final_wish = ids_wish - final_tengo
 
-    # Transacción DB: Borrar y reescribir (Estrategia simple y segura)
     await db.execute(
         delete(Inventory).where(
             Inventory.user_id == user_id, 
@@ -167,27 +158,35 @@ async def process_quick_load(
     if new_rows: db.add_all(new_rows)
     await db.commit()
 
-    # 1. Obtener vista del país actualizada
     response_html = (await get_country_view(request, country_code, db)).body.decode("utf-8")
     
-    # 2. Obtener Stats actualizadas (OOB Swap)
     stats = await calculate_user_stats(user_id, db)
     stats_html = templates.TemplateResponse("partials/stats_bar.html", {"request": request, "stats": stats, "oob": True}).body.decode("utf-8")
 
-    # 3. Combinar respuesta
     response = HTMLResponse(content=response_html + stats_html)
-    # Disparamos evento para cerrar el modal en el cliente
     response.headers["HX-Trigger"] = "closeModal"
     return response
 
-# --- 4. LÓGICA DE CLICKS (OOB COMPLETO: CARTA + TABLA + STATS) ---
+# --- 4. LÓGICA DE CLICKS (MODIFICADA CON NOTIFICACIÓN) ---
 @router.post("/sticker/{sticker_num}")
-async def toggle_sticker(request: Request, sticker_num: int, db: AsyncSession = Depends(get_db)):
+async def toggle_sticker(
+    request: Request, 
+    sticker_num: int, 
+    # BackgroundTasks: Permite enviar el mensaje sin congelar la pantalla del usuario
+    background_tasks: BackgroundTasks, 
+    db: AsyncSession = Depends(get_db)
+):
     user_id = int(request.cookies.get("user_id"))
     
+    # 1. Recuperamos al Usuario Dueño (Necesario para el nombre en la notificación)
+    user_res = await db.execute(select(User).where(User.id == user_id))
+    current_user = user_res.scalars().first()
+
     # A. Actualizar DB
     result = await db.execute(select(Inventory).where(Inventory.user_id == user_id, Inventory.sticker_num == sticker_num))
     item = result.scalars().first()
+
+    should_notify = False # Bandera para saber si disparamos la alerta
 
     if not item:
         item = Inventory(user_id=user_id, sticker_num=sticker_num, status="tengo", quantity=1)
@@ -195,7 +194,12 @@ async def toggle_sticker(request: Request, sticker_num: int, db: AsyncSession = 
     else:
         # Ciclo de estados: Tengo -> Repetida -> Wishlist -> Nada (Borrar)
         if item.status == "tengo":
-            item.status = "repetida"; item.quantity = 2
+            item.status = "repetida"
+            item.quantity = 2
+            # 🔥 AQUÍ ES EL MOMENTO MÁGICO 🔥
+            # El usuario acaba de marcar que tiene una REPETIDA. ¡Avisemos!
+            should_notify = True
+            
         elif item.status == "repetida":
             item.status = "wishlist"; item.quantity = 0; item.price = 0
         elif item.status == "wishlist":
@@ -204,7 +208,20 @@ async def toggle_sticker(request: Request, sticker_num: int, db: AsyncSession = 
     await db.commit()
     if item: await db.refresh(item)
 
-    # B. Calcular datos del país para obtener el número local
+    # DISPARAR NOTIFICACIÓN EN SEGUNDO PLANO
+    if should_notify and current_user:
+        sticker_name = format_sticker(sticker_num)
+        # Usamos background_tasks para que la UI responda instantáneo
+        # y Telegram se envíe por detrás.
+        background_tasks.add_task(
+            notify_wishlist_match, 
+            db, 
+            sticker_num, 
+            sticker_name, 
+            current_user
+        )
+
+    # B. Calcular datos del país
     country_start = 0
     info = None
     for code, data in ALBUM_STRUCTURE.items():
@@ -215,7 +232,7 @@ async def toggle_sticker(request: Request, sticker_num: int, db: AsyncSession = 
     
     local_num = sticker_num - country_start + 1 if country_start > 0 else sticker_num
 
-    # C. Renderizar CARTA (La figurita individual)
+    # C. Renderizar CARTA
     card_html = templates.TemplateResponse("partials/sticker_card.html", {
         "request": request, "num": sticker_num, 
         "local_num": local_num,
@@ -223,7 +240,7 @@ async def toggle_sticker(request: Request, sticker_num: int, db: AsyncSession = 
         "item": item
     }).body.decode("utf-8")
 
-    # D. Renderizar TABLA DE REPETIDAS (OOB Swap solo si es necesario)
+    # D. Renderizar TABLA DE REPETIDAS
     table_html = ""
     if info:
         result_repes = await db.execute(
@@ -240,7 +257,7 @@ async def toggle_sticker(request: Request, sticker_num: int, db: AsyncSession = 
             "oob": True
         }).body.decode("utf-8")
 
-    # E. Renderizar STATS BAR (OOB Swap)
+    # E. Renderizar STATS BAR
     stats = await calculate_user_stats(user_id, db)
     stats_html = templates.TemplateResponse("partials/stats_bar.html", {
         "request": request, "stats": stats, "oob": True
@@ -248,16 +265,15 @@ async def toggle_sticker(request: Request, sticker_num: int, db: AsyncSession = 
 
     return HTMLResponse(content=card_html + table_html + stats_html)
 
-# --- 5. ACCIONES MASIVAS (MARCAR TODO / BORRAR TODO) ---
+# --- (EL RESTO DEL ARCHIVO SIGUE IGUAL: batch_country_action, update_item_details) ---
 @router.post("/country/{country_code}/{action}")
 async def batch_country_action(request: Request, country_code: str, action: str, db: AsyncSession = Depends(get_db)):
+    # ... (TU CÓDIGO ORIGINAL SIN CAMBIOS) ...
     user_id = int(request.cookies.get("user_id"))
     country_data = ALBUM_STRUCTURE.get(country_code)
-    
     start = country_data["start"]
     end = start + country_data["count"] - 1
     
-    # Borrar estado actual de ese país
     await db.execute(
         delete(Inventory).where(
             Inventory.user_id == user_id, 
@@ -265,28 +281,22 @@ async def batch_country_action(request: Request, country_code: str, action: str,
             Inventory.sticker_num <= end
         )
     )
-    
-    # Si la acción es llenar todo, agregamos inserts
     if action == "all":
         db.add_all([Inventory(user_id=user_id, sticker_num=num, status="tengo", quantity=1) for num in range(start, end + 1)])
-    
     await db.commit()
 
-    # Devolvemos la vista del país completa + Stats
     response_html = (await get_country_view(request, country_code, db)).body.decode("utf-8")
-    
     stats = await calculate_user_stats(user_id, db)
     stats_html = templates.TemplateResponse("partials/stats_bar.html", {"request": request, "stats": stats, "oob": True}).body.decode("utf-8")
-
     return HTMLResponse(content=response_html + stats_html)
 
-# --- 6. ACTUALIZAR ITEM (PRECIO/CANTIDAD DESDE LA TABLA) ---
 @router.post("/update_item/{sticker_num}")
 async def update_item_details(
     request: Request, sticker_num: int, 
     price: int = Form(None), quantity: int = Form(None), 
     db: AsyncSession = Depends(get_db)
 ):
+    # ... (TU CÓDIGO ORIGINAL SIN CAMBIOS) ...
     user_id = int(request.cookies.get("user_id"))
     result = await db.execute(select(Inventory).where(Inventory.user_id == user_id, Inventory.sticker_num == sticker_num))
     item = result.scalars().first()
@@ -297,7 +307,6 @@ async def update_item_details(
         await db.commit()
         await db.refresh(item)
 
-        # Recalculamos local_num para renderizar la carta correctamente (por si el status cambió en otro lado)
         country_start = 0
         for code, data in ALBUM_STRUCTURE.items():
             if data["start"] <= sticker_num < data["start"] + data["count"]:
@@ -305,12 +314,10 @@ async def update_item_details(
                 break
         local_num = sticker_num - country_start + 1
 
-        # Actualizamos la carta visualmente (Badge de cantidad o precio)
         return templates.TemplateResponse("partials/sticker_card.html", {
             "request": request, "num": sticker_num, 
             "local_num": local_num,
             "status": item.status, "item": item,
             "force_oob": True 
         })
-    
     return Response(status_code=200)
