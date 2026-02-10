@@ -1,9 +1,42 @@
 {% extends "base.html" %}
 
 {% block content %}
-<div class="flex flex-col md:flex-row gap-6 items-start min-h-[80vh]">
+<div x-data="{ sidebarOpen: false }" class="flex flex-col md:flex-row md:gap-6 items-start min-h-[80vh] relative">
 
-    {% include "components/sidebar.html" %}
+    <div class="w-full md:hidden mb-4 flex justify-between items-center bg-slate-800 p-3 rounded-lg border border-slate-700 shadow-lg">
+        <span class="font-bold text-yellow-400 flex items-center gap-2">
+            🏆 <span class="text-white text-sm">Países y Filtros</span>
+        </span>
+        <button @click="sidebarOpen = !sidebarOpen" 
+                class="bg-slate-700 hover:bg-slate-600 text-white px-4 py-2 rounded border border-slate-600 text-sm flex items-center gap-2 transition-colors">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-yellow-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16m-7 6h7" />
+            </svg>
+            Filtrar
+        </button>
+    </div>
+
+    <aside class="fixed inset-y-0 left-0 z-50 w-72 bg-slate-900 border-r border-slate-700 transform transition-transform duration-300 ease-in-out md:translate-x-0 md:static md:block md:w-64 md:bg-transparent md:border-0"
+           :class="sidebarOpen ? 'translate-x-0 shadow-2xl' : '-translate-x-full'"
+           x-cloak>
+        
+        <div class="flex justify-between items-center p-4 border-b border-slate-800 md:hidden bg-slate-950">
+            <h3 class="font-bold text-white uppercase tracking-wider text-sm">🏆 Seleccionar País</h3>
+            <button @click="sidebarOpen = false" class="text-gray-400 hover:text-white p-2">
+                ✕
+            </button>
+        </div>
+
+        <div class="h-full overflow-y-auto custom-scrollbar md:h-auto">
+            {% include "components/sidebar.html" %}
+        </div>
+    </aside>
+
+    <div x-show="sidebarOpen" 
+         @click="sidebarOpen = false" 
+         x-transition.opacity
+         class="fixed inset-0 bg-black/80 z-40 md:hidden backdrop-blur-sm">
+    </div>
 
     <main class="flex-1 w-full min-w-0"> 
         
@@ -90,7 +123,7 @@
         const rList = Array.from(repetidas).sort((a,b) => a - b);
 
         // 3. ARMAR MENSAJE
-        let mensaje = `👋 HOLA! Estoy completando el álbum *Figus 26*.\n`;
+        let mensaje = `👋 HOLA! Estoy completando el álbum *Canje AlToque 26*.\n`; // Actualicé el nombre aquí también ;)
         mensaje += `Viendo: *${prefix}*\n`;
         mensaje += `----------------------------------\n`;
 
@@ -109,14 +142,12 @@
         }
 
         mensaje += `----------------------------------\n`;
-        mensaje += `¿Cambiamos? \n\n📲 Generado con figus26.com`;
+        mensaje += `¿Cambiamos? \n\n📲 Generado con CanjeAlToque26`;
 
         const url = `https://wa.me/?text=${encodeURIComponent(mensaje)}`;
         window.open(url, '_blank');
     }
 </script>
-
-{% include "components/modals.html" %}
 
 <script>
     // 1. DEFINICIÓN DEL COMPONENTE DE FIGURITA (UI OPTIMISTA)
@@ -133,7 +164,6 @@
                 else if (this.status === 'wishlist') this.status = 'falta';
                 
                 // 2. La petición HTMX se dispara automáticamente por el evento click del HTML
-                // Nosotros solo nos encargamos de pintar el color YA MISMO.
             },
 
             // Clases dinámicas según el estado
@@ -160,12 +190,5 @@
             }
         }))
     });
-
-    // ... (Tu script existente de shareOnWhatsApp y closeModal sigue aquí igual) ...
-    // Limpieza de formularios al cerrar modal...
-    document.body.addEventListener('closeModal', function(evt){
-        // ...
-    });
-    // ...
 </script>
 {% endblock %}
