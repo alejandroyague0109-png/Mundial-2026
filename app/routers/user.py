@@ -9,6 +9,7 @@ from dotenv import load_dotenv
 from app.database import get_db
 from app.models import User
 from app.locations import ARGENTINA
+from app.auth import get_current_user
 
 # Cargar variables de entorno (MP_ACCESS_TOKEN)
 load_dotenv()
@@ -93,45 +94,48 @@ async def update_telegram(
 # ==============================================================================
 
 # --- 4. CREAR PREFERENCIA (Al hacer clic en "Activar Premium") ---
-@router.post("/create_preference")
-async def create_preference(request: Request, db: AsyncSession = Depends(get_db)):
-    user_id = request.cookies.get("user_id")
-    if not user_id: return Response(status_code=401)
-
-    # Buscar usuario para obtener email (opcional, mejora la UX en MP)
-    result = await db.execute(select(User).where(User.id == int(user_id)))
-    user = result.scalars().first()
-
+@router.get("/create_preference") # Cambiado a GET para facilitar el link
+async def create_preference(
+    request: Request, 
+    db: AsyncSession = Depends(get_db),
+    # Usamos la autenticación real para seguridad, en lugar de leer la cookie a mano
+    current_user: User = Depends(get_current_user) 
+):
     token = os.getenv("MP_ACCESS_TOKEN")
     if not token:
-        return Response(content="<div class='text-red-400 text-xs'>Error: Falta Token MP</div>", status_code=500)
+        return {"error": "Falta Token MP"}
 
     sdk = mercadopago.SDK(token)
     
-    # URL base para el retorno (detecta automáticamente si es localhost o dominio real)
+    # Detecta si estás en localhost o en Railway automáticamente
     base_url = str(request.base_url).rstrip("/") 
 
     preference_data = {
         "items": [
             {
                 "id": "premium_upgrade",
-                "title": "Suscripción Premium - Figus 26",
+                "title": "Suscripción Premium - Canje AlToque 26",
                 "quantity": 1,
                 "currency_id": "ARS",
                 "unit_price": 5000
             }
         ],
         "payer": {
-            "email": user.email if user else "test_user@test.com"
+            "email": current_user.email if current_user.email else "usuario@noemail.com"
         },
         "back_urls": {
-            "success": f"{base_url}/payment_callback",
-            "failure": f"{base_url}/payment_callback",
-            "pending": f"{base_url}/payment_callback"
+            # Ajusta estas rutas si quieres una página de "Gracias" específica
+            "success": f"{base_url}/market?status=success",
+            "failure": f"{base_url}/market?status=failure",
+            "pending": f"{base_url}/market?status=pending"
         },
-        "auto_return": "approved",  # Vuelve solo a tu sitio si se aprueba
-        "notification_url": f"{base_url}/webhook", # Para notificaciones en segundo plano
-        "external_reference": str(user_id), # CLAVE: Aquí viaja el ID del usuario para identificarlo al volver
+        "auto_return": "approved",
+        
+        # IMPORTANTE: Aquí configuramos el Webhook real
+        "notification_url": f"{base_url}/webhook", 
+        
+        # CLAVE: Vinculamos el pago al ID real del usuario logueado
+        "external_reference": str(current_user.id), 
         
         "payment_methods": {
             "excluded_payment_types": [{"id": "ticket"}, {"id": "atm"}]
@@ -142,18 +146,16 @@ async def create_preference(request: Request, db: AsyncSession = Depends(get_db)
         preference_response = sdk.preference().create(preference_data)
         preference = preference_response["response"]
         
-        # Usamos sandbox_init_point para pruebas. Cambiar a init_point en producción.
-        redirect_url = preference["sandbox_init_point"] if "TEST" in token else preference["init_point"]
+        # Selecciona el link correcto (Sandbox o Producción)
+        # init_point = Producción / sandbox_init_point = Pruebas
+        url_pago = preference["sandbox_init_point"] if "TEST" in token else preference["init_point"]
 
-        # Devolvemos script JS para redirigir desde el frontend
-        return Response(
-            content=f"<script>window.location.href = '{redirect_url}';</script>",
-            media_type="text/html"
-        )
+        # Redirección nativa (Código 303 See Other)
+        return RedirectResponse(url=url_pago, status_code=303)
+
     except Exception as e:
-        print(f"Error creando preferencia: {e}")
-        return Response(content="<div class='text-red-400 text-xs'>Error al conectar con Mercado Pago</div>", status_code=500)
-
+        print(f"Error MercadoPago: {e}")
+        return {"error": "No se pudo generar el pago"}
 
 # --- 5. WEBHOOK (Notificación Invisible) ---
 @router.post("/webhook")
