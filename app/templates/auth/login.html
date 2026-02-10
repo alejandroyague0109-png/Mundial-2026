@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Acceso - Figus 26</title>
+    <title>Acceso - Canje AlToque 26</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="//unpkg.com/alpinejs" defer></script>
     <script src="https://unpkg.com/htmx.org@1.9.10"></script>
@@ -33,14 +33,15 @@
     <div class="w-full max-w-md" x-data="authApp()">
         
         <div class="text-center mb-8">
-    <img src="/static/img/logo.png" alt="Logo Canje AlToque" class="w-24 h-24 mx-auto mb-4 object-contain drop-shadow-[0_0_15px_rgba(234,179,8,0.3)] hover:scale-110 transition-transform duration-300">
-    <h2 class="text-3xl font-black text-transparent bg-clip-text bg-gradient-to-r from-yellow-400 to-yellow-600 tracking-tight">
-        Canje AlToque 26
-    </h2>
-    <p class="text-slate-400 text-sm mt-2 font-medium">Control e Intercambio Cerca Tuyo</p>
-</div>
-
-            {% if error %}
+            <div class="flex items-center justify-center gap-4">
+                <img src="/static/img/logo.png" alt="Logo Canje AlToque" class="w-16 h-16 object-contain drop-shadow-[0_0_15px_rgba(234,179,8,0.3)] hover:scale-110 transition-transform duration-300">
+                <h2 class="text-3xl font-black text-transparent bg-clip-text bg-gradient-to-r from-yellow-400 to-yellow-600 tracking-tight text-left leading-none">
+                    Canje<br>AlToque 26
+                </h2>
+            </div>
+            <p class="text-slate-400 text-sm mt-3 font-medium">Control e Intercambio Cerca Tuyo</p>
+        </div>
+        {% if error %}
             <div class="mx-6 mt-4 bg-red-500/10 border border-red-500/50 text-red-200 p-3 rounded-lg text-sm flex items-center gap-2 animate-pulse">
                 <span>⚠️</span> {{ error }}
             </div>
@@ -137,18 +138,23 @@
                             </p>
                         </div>
 
-                        <select name="secret_question" required class="w-full px-3 py-2 bg-slate-900 border border-slate-600 rounded focus:border-yellow-500 focus:outline-none text-xs mb-2 text-white">
-                            <option value="" disabled selected>Pregunta Secreta...</option>
-                            <option>¿Nombre de tu primera mascota?</option>
-                            <option>¿Calle donde vivías de niño?</option>
-                            <option>¿Comida favorita?</option>
-                            <option>¿Primer recital?</option>
-                            <option>¿Equipo de fútbol favorito?</option>
-                        </select>
-                        <input name="secret_answer" type="password" required placeholder="Respuesta secreta" 
-                            class="w-full px-3 py-2 bg-slate-900 border border-slate-600 rounded focus:border-yellow-500 focus:outline-none text-sm text-white">
+                        <div class="grid grid-cols-2 gap-3">
+                            <div>
+                                <select name="secret_question" required class="w-full px-3 py-2 bg-slate-900 border border-slate-600 rounded focus:border-yellow-500 focus:outline-none text-xs text-white">
+                                    <option value="" disabled selected>Pregunta Secreta...</option>
+                                    <option>¿Nombre de tu primera mascota?</option>
+                                    <option>¿Calle donde vivías de niño?</option>
+                                    <option>¿Comida favorita?</option>
+                                    <option>¿Primer recital?</option>
+                                    <option>¿Equipo de fútbol favorito?</option>
+                                </select>
+                            </div>
+                            <div>
+                                <input name="secret_answer" type="password" required placeholder="Respuesta secreta" 
+                                    class="w-full px-3 py-2 bg-slate-900 border border-slate-600 rounded focus:border-yellow-500 focus:outline-none text-sm text-white">
+                            </div>
+                        </div>
                     </div>
-
                     <div class="flex items-start gap-2 pt-2">
                         <input type="checkbox" id="tyc" name="tyc" required class="mt-1 w-4 h-4 bg-slate-900 border-slate-600 rounded text-yellow-500 focus:ring-yellow-500">
                         <label for="tyc" class="text-xs text-gray-400">
@@ -233,7 +239,7 @@
             <div class="bg-slate-900 border-l-4 border-yellow-500 p-3 rounded">
                 <h4 class="font-bold text-yellow-400 mb-1">Declaración de Independencia</h4>
                 <p class="text-xs">
-                    <strong>Figus 26</strong> es una plataforma independiente de intercambio entre particulares y 
+                    <strong>Canje AlToque 26</strong> es una plataforma independiente de intercambio entre particulares y 
                     <strong>no posee vinculación alguna, afiliación, patrocinio ni respaldo de FIFA, Panini, ni sus subsidiarias.</strong> 
                     Todas las marcas registradas mencionadas son propiedad de sus respectivos dueños y se utilizan aquí únicamente con fines descriptivos (Uso Nominativo).
                 </p>
@@ -242,14 +248,14 @@
             <div>
                 <h4 class="font-bold text-white mb-2">1. ACEPTACIÓN DE RIESGOS Y ROL DEL INTERMEDIARIO</h4>
                 <p>
-                    Al utilizar esta aplicación, usted comprende y acepta que <strong>Figus 26</strong> actúa exclusivamente como un proveedor de información de contacto y ubicación (tablón de anuncios digital). 
+                    Al utilizar esta aplicación, usted comprende y acepta que <strong>Canje AlToque 26</strong> actúa exclusivamente como un proveedor de información de contacto y ubicación (tablón de anuncios digital). 
                     La plataforma <strong>no organiza, supervisa, ni garantiza</strong> la seguridad de los intercambios físicos ni las transacciones monetarias.
                 </p>
             </div>
 
             <div>
                 <h4 class="font-bold text-white mb-2">2. DESLINDE DE RESPONSABILIDAD (WAIVER)</h4>
-                <p><strong>Figus 26</strong>, sus desarrolladores, socios y empleados quedan liberados de toda responsabilidad civil o penal derivada de:</p>
+                <p><strong>Canje AlToque 26</strong>, sus desarrolladores, socios y empleados quedan liberados de toda responsabilidad civil o penal derivada de:</p>
                 <ul class="list-disc ml-5 mt-2 space-y-1 text-xs">
                     <li>Lesiones, pérdidas, hurtos o agresiones ocurridas durante los canjes presenciales.</li>
                     <li>Figuritas falsas, dañadas o discrepancias con lo publicado.</li>
@@ -260,7 +266,7 @@
                     El usuario asume la responsabilidad personal, completa y exclusiva por su seguridad e integridad física durante cualquier encuentro pactado a través de la aplicación.
                 </p>
             </div>
-
+            
             <div>
                 <h4 class="font-bold text-white mb-2">3. REGLAS DE SEGURIDAD OBLIGATORIAS</h4>
                 <p>El usuario se compromete a:</p>
@@ -271,7 +277,7 @@
                 </ul>
             </div>
 
-            <div>
+             <div>
                 <h4 class="font-bold text-white mb-2">4. MENORES DE EDAD</h4>
                 <p>
                     El uso de la plataforma por menores de 18 años debe estar supervisado por un padre o tutor legal. 
@@ -301,7 +307,7 @@
 
         <div class="bg-slate-950 p-4 border-t border-slate-700 text-center">
             <p class="text-[10px] text-gray-500 mb-3">
-                Al hacer clic en "Acepto", usted declara ser mayor de 18 años (o tener autorización de tutor) y libera a Figus 26 de toda responsabilidad derivada del uso de la plataforma.
+                Al hacer clic en "Acepto", usted declara ser mayor de 18 años (o tener autorización de tutor) y libera a Canje AlToque 26 de toda responsabilidad derivada del uso de la plataforma.
             </p>
             <button onclick="termsModal.close()" class="w-full bg-blue-600 hover:bg-blue-500 text-white font-bold py-3 rounded-lg transition shadow-lg">
                 Acepto los Términos y Condiciones
