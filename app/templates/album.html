@@ -5,7 +5,7 @@
 
     <div class="w-full md:hidden mb-4 flex justify-between items-center bg-slate-800 p-3 rounded-lg border border-slate-700 shadow-lg">
         <span class="font-bold text-yellow-400 flex items-center gap-2">
-            🏆 <span class="text-white text-sm">Países y Filtros</span>
+            🏆 <span class="text-white text-sm">Países y Funciones</span>
         </span>
         <button @click="sidebarOpen = !sidebarOpen" 
                 class="bg-slate-700 hover:bg-slate-600 text-white px-4 py-2 rounded border border-slate-600 text-sm flex items-center gap-2 transition-colors">
@@ -16,18 +16,20 @@
         </button>
     </div>
 
-    <aside class="fixed inset-y-0 left-0 z-50 w-72 bg-slate-900 border-r border-slate-700 transform transition-transform duration-300 ease-in-out md:translate-x-0 md:static md:block md:w-64 md:bg-transparent md:border-0"
+    <aside class="fixed !top-0 bottom-0 left-0 z-[60] w-72 bg-slate-900 border-r border-slate-700 transform transition-transform duration-300 ease-in-out md:translate-x-0 md:static md:block md:w-64 md:bg-transparent md:border-0 md:z-0 md:!top-auto"
            :class="sidebarOpen ? 'translate-x-0 shadow-2xl' : '-translate-x-full'"
            x-cloak>
         
-        <div class="flex justify-between items-center p-4 border-b border-slate-800 md:hidden bg-slate-950">
-            <h3 class="font-bold text-white uppercase tracking-wider text-sm">🏆 Seleccionar País</h3>
-            <button @click="sidebarOpen = false" class="text-gray-400 hover:text-white p-2">
+        <div class="flex justify-between items-center p-4 border-b border-slate-800 md:hidden bg-slate-950 h-16">
+            <h3 class="font-bold text-white uppercase tracking-wider text-sm flex items-center gap-2">
+                <span class="text-xl">🌍</span> Seleccionar País
+            </h3>
+            <button @click="sidebarOpen = false" class="text-gray-400 hover:text-white p-2 rounded-full hover:bg-slate-800 transition">
                 ✕
             </button>
         </div>
 
-        <div class="h-full overflow-y-auto custom-scrollbar md:h-auto">
+        <div class="h-[calc(100%-4rem)] overflow-y-auto custom-scrollbar md:h-auto">
             {% include "components/sidebar.html" %}
         </div>
     </aside>
