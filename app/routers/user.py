@@ -122,7 +122,8 @@ async def create_preference(
             }
         ],
         "payer": {
-            "email": current_user.email if current_user.email else "usuario@noemail.com"
+            # FIX: Usamos un email genérico porque tu User no tiene campo email
+            "email": "usuario_canje@noemail.com" 
         },
         "back_urls": {
             # Ajusta estas rutas si quieres una página de "Gracias" específica
