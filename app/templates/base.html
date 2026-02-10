@@ -3,7 +3,15 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Figus 26 - Tu Álbum Digital</title>
+    
+    <title>Canje AlToque 26 | Tu Álbum Digital</title>
+    <link rel="icon" type="image/png" href="/static/img/logo.png">
+
+    <meta property="og:title" content="Canje AlToque 26">
+    <meta property="og:description" content="Control e Intercambio de Figuritas Cerca Tuyo. ¡Completá el álbum más rápido!">
+    <meta property="og:image" content="/static/img/logo.png">
+    <meta property="og:type" content="website">
+
     <script src="https://unpkg.com/htmx.org@1.9.10"></script>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="//unpkg.com/alpinejs" defer></script>
@@ -34,10 +42,11 @@
     <header class="fixed top-0 left-0 right-0 z-50 bg-slate-950/95 backdrop-blur-sm border-b border-slate-800 h-16 shadow-lg">
         <div class="max-w-7xl mx-auto px-4 h-full grid grid-cols-3 items-center">
             
-            <div class="flex justify-start items-center gap-2">
-                <span class="text-2xl hidden sm:block">⚽</span>
-                <a href="/" class="text-lg md:text-2xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-yellow-400 to-yellow-600 hover:to-yellow-300 truncate transition">
-                    Figus 26
+            <div class="flex justify-start items-center gap-3">
+                <img src="/static/img/logo.png" alt="Logo Canje AlToque" class="h-10 w-auto object-contain hover:scale-105 transition-transform">
+                
+                <a href="/" class="text-lg md:text-xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-yellow-400 to-yellow-600 hover:to-yellow-300 truncate transition hidden sm:block">
+                    Canje AlToque 26
                 </a>
             </div>
 
@@ -90,15 +99,15 @@
     </div>
 
     <footer class="bg-slate-950 text-slate-500 text-center p-6 mt-8 border-t border-slate-900">
-        <p class="text-sm font-medium text-slate-400">© 2026 Figus 26 - Hecho con 🧉 y FastAPI</p>
+        <p class="text-sm font-medium text-slate-400">© 2026 Canje AlToque - Hecho con 🧉 y Pasión</p>
         <div class="mt-2 text-xs flex justify-center gap-4 text-slate-600 font-mono flex-wrap">
-            <span>📧 soporte@figus26.com</span>
+            <span>📧 hola@canjealtoque.com</span>
             <span class="text-slate-800">|</span>
-            <span>📷 @figus26_oficial</span>
+            <span>📷 @canjealtoque_26</span>
         </div>
     </footer>
 
-<script src="/static/js/htmx.min.js"></script>
+    <script src="/static/js/htmx.min.js"></script>
 
     {% include "components/modals.html" %}
 

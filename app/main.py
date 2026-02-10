@@ -79,8 +79,3 @@ async def health_check():
 @app.get("/")
 async def root():
     return RedirectResponse(url="/login")
-
-# --- BORRAR LUEGO DE PROBAR ---
-@app.get("/sentry-debug")
-async def trigger_error():
-    division_by_zero = 1 / 0
