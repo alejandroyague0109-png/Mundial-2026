@@ -95,69 +95,80 @@ async def update_telegram(
 # ==============================================================================
 
 # --- 4. CREAR PREFERENCIA (Al hacer clic en "Activar Premium") ---
-@router.get("/create_preference") # Cambiado a GET para facilitar el link
+@router.get("/create_preference")
 async def create_preference(
     request: Request, 
     db: AsyncSession = Depends(get_db),
-    # Usamos la autenticación real para seguridad, en lugar de leer la cookie a mano
     current_user: User = Depends(get_current_user) 
 ):
+    print(f"--- 🚀 INTENTO DE PAGO: Usuario {current_user.id} ---")
+
     token = os.getenv("MP_ACCESS_TOKEN")
     if not token:
         return {"error": "Falta Token MP"}
 
     sdk = mercadopago.SDK(token)
-    
-    # Detecta si estás en localhost o en Railway automáticamente
     base_url = str(request.base_url).rstrip("/") 
 
     preference_data = {
         "items": [
             {
                 "id": "premium_upgrade",
-                "title": "Suscripción Premium - Canje AlToque 26",
+                "title": "Suscripción Premium",
                 "quantity": 1,
                 "currency_id": "ARS",
-                "unit_price": 5000
+                "unit_price": 5000.0  # (IMPORTANTE: Float)
             }
         ],
         "payer": {
-            # FIX: Usamos un email genérico porque tu User no tiene campo email
-            "email": "usuario_canje@noemail.com" 
+            # Email hardcodeado válido para pasar la validación
+            "email": "test_user_123@test.com" 
         },
         "back_urls": {
-            # Ajusta estas rutas si quieres una página de "Gracias" específica
-            "success": f"{base_url}/market?status=success",
-            "failure": f"{base_url}/market?status=failure",
-            "pending": f"{base_url}/market?status=pending"
+            "success": f"{base_url}/market",
+            "failure": f"{base_url}/market",
+            "pending": f"{base_url}/market"
         },
         "auto_return": "approved",
-        
-        # IMPORTANTE: Aquí configuramos el Webhook real
-        "notification_url": f"{base_url}/webhook", 
-        
-        # CLAVE: Vinculamos el pago al ID real del usuario logueado
-        "external_reference": str(current_user.id), 
-        
-        "payment_methods": {
-            "excluded_payment_types": [{"id": "ticket"}, {"id": "atm"}]
-        }
+        "external_reference": str(current_user.id),
+        "notification_url": f"{base_url}/webhook" # Debe ser HTTPS real (Railway lo es)
     }
 
     try:
-        preference_response = sdk.preference().create(preference_data)
-        preference = preference_response["response"]
+        # 1. Crear preferencia
+        result = sdk.preference().create(preference_data)
         
-        # Selecciona el link correcto (Sandbox o Producción)
-        # init_point = Producción / sandbox_init_point = Pruebas
-        url_pago = preference["sandbox_init_point"] if "TEST" in token else preference["init_point"]
+        # 2. IMPRIMIR RESPUESTA COMPLETA (Para depuración)
+        print("📥 RESPUESTA DE MERCADO PAGO:", result)
 
-        # Redirección nativa (Código 303 See Other)
-        return RedirectResponse(url=url_pago, status_code=303)
+        response_body = result.get("response", {})
+        status_code = result.get("status")
+
+        # 3. VERIFICAR ÉXITO (HTTP 201 Created)
+        if status_code not in [200, 201]:
+            print(f"❌ ERROR AL CREAR PREFERENCIA: {response_body}")
+            # Devolvemos el error en formato JSON para leerlo en el navegador
+            return {
+                "error": "Mercado Pago rechazó la solicitud",
+                "status_mp": status_code,
+                "detalle": response_body
+            }
+
+        # 4. OBTENER LINK
+        # Si es Test, usamos sandbox. Si es Prod, init_point.
+        # Ajuste de seguridad: Verificamos que la key exista
+        url = response_body.get("init_point")
+        if "TEST" in token:
+            url = response_body.get("sandbox_init_point")
+            
+        if not url:
+            return {"error": "MP no devolvió URL", "body": response_body}
+
+        return RedirectResponse(url=url, status_code=303)
 
     except Exception as e:
-        print(f"Error MercadoPago: {e}")
-        return {"error": "No se pudo generar el pago"}
+        print(f"❌ CRASH INTERNO: {e}")
+        return {"error": f"Error interno: {str(e)}"}
 
 # --- 5. WEBHOOK (Notificación Invisible) ---
 @router.post("/webhook")
