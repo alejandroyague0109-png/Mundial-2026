@@ -28,21 +28,37 @@ templates.env.globals['format_sticker'] = format_sticker
 
 # --- HELPER: CALCULAR ESTADÍSTICAS ---
 async def calculate_user_stats(user_id: int, db: AsyncSession):
-    """Calcula cuántas tiene y el porcentaje total para actualizar la barra."""
+    """Calcula estadísticas completas: Pegadas, Faltan, Repes y Porcentaje."""
+    
+    # 1. Traemos todos los estados de la DB para este usuario
     result_stats = await db.execute(select(Inventory.status).where(Inventory.user_id == user_id))
     all_statuses = result_stats.scalars().all()
     
-    tengo_count = all_statuses.count("tengo") + all_statuses.count("repetida")
+    # 2. Contamos cuántas hay de cada tipo
+    count_tengo = all_statuses.count("tengo")
+    count_repetida = all_statuses.count("repetida")
     
-    # CORRECCIÓN: Usamos 'count' que es lo que tenemos en ALBUM_STRUCTURE
+    # 3. Lógica de Negocio:
+    # "Pegadas" (en el álbum) son las que tienen estado 'tengo' SUMADO a las 'repetida'.
+    # (Porque si la tenés repetida, se asume que una ya está pegada en el álbum).
+    pegadas = count_tengo + count_repetida
+    
+    # 4. Total del álbum (Basado en tu estructura de datos)
     total_stickers = sum(d['count'] for d in ALBUM_STRUCTURE.values())
     
-    return {
-        "tengo": tengo_count,
-        "total": total_stickers,
-        "porcentaje": int((tengo_count / total_stickers) * 100) if total_stickers > 0 else 0
-    }
+    # 5. Faltantes
+    faltan = total_stickers - pegadas
+    
+    # Evitar números negativos por si acaso
+    if faltan < 0: faltan = 0
 
+    return {
+        "tengo": pegadas,            # Se mostrará en "PEGADAS"
+        "repetidas": count_repetida, # Se mostrará en "REPES"
+        "faltan": faltan,            # Se mostrará en "FALTAN"
+        "total": total_stickers,
+        "porcentaje": int((pegadas / total_stickers) * 100) if total_stickers > 0 else 0
+    }
 # --- 1. VISTA PRINCIPAL (EL MARCO/SHELL) ---
 @router.get("/album", response_class=HTMLResponse)
 async def view_album(request: Request, db: AsyncSession = Depends(get_db)):
