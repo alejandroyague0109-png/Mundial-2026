@@ -9,7 +9,8 @@ from dotenv import load_dotenv
 from app.database import get_db
 from app.models import User
 from app.locations import ARGENTINA
-from app.routers.auth import get_current_user
+# Importamos desde el nuevo archivo de dependencias
+from app.dependencies import get_current_user
 
 # Cargar variables de entorno (MP_ACCESS_TOKEN)
 load_dotenv()
