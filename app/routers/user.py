@@ -108,67 +108,64 @@ async def create_preference(
         return {"error": "Falta Token MP"}
 
     sdk = mercadopago.SDK(token)
-    base_url = str(request.base_url).rstrip("/") 
+    
+    # --- CORRECCIÓN FINAL: URL REAL ---
+    # Usamos tu dominio real directamente para asegurar que MP lo acepte.
+    # (Si cambias de dominio en el futuro, recuerda actualizar esto o usar una variable de entorno DOMAIN)
+    base_url = "https://mundial-2026-production.up.railway.app"
 
     preference_data = {
         "items": [
             {
                 "id": "premium_upgrade",
-                "title": "Suscripción Premium",
+                "title": "Suscripción Premium - Canje AlToque 26",
                 "quantity": 1,
                 "currency_id": "ARS",
-                "unit_price": 5000.0  # (IMPORTANTE: Float)
+                "unit_price": 5000.0
             }
         ],
         "payer": {
-            # Email hardcodeado válido para pasar la validación
-            "email": "test_user_123@test.com" 
+            # Email genérico obligatorio
+            "email": "usuario_app@canjealtoque.com" 
         },
         "back_urls": {
-            "success": f"{base_url}/market",
-            "failure": f"{base_url}/market",
-            "pending": f"{base_url}/market"
+            # Definimos explícitamente a dónde volver
+            "success": f"{base_url}/payment_callback",
+            "failure": f"{base_url}/payment_callback",
+            "pending": f"{base_url}/payment_callback"
         },
-        "auto_return": "approved",
+        "auto_return": "approved", # Esto obliga a que back_urls.success exista y sea válido
+        
+        "notification_url": f"{base_url}/webhook", 
         "external_reference": str(current_user.id),
-        "notification_url": f"{base_url}/webhook" # Debe ser HTTPS real (Railway lo es)
+        
+        "payment_methods": {
+            "excluded_payment_types": [{"id": "ticket"}, {"id": "atm"}]
+        }
     }
 
     try:
-        # 1. Crear preferencia
         result = sdk.preference().create(preference_data)
-        
-        # 2. IMPRIMIR RESPUESTA COMPLETA (Para depuración)
-        print("📥 RESPUESTA DE MERCADO PAGO:", result)
-
         response_body = result.get("response", {})
-        status_code = result.get("status")
-
-        # 3. VERIFICAR ÉXITO (HTTP 201 Created)
-        if status_code not in [200, 201]:
-            print(f"❌ ERROR AL CREAR PREFERENCIA: {response_body}")
-            # Devolvemos el error en formato JSON para leerlo en el navegador
+        
+        if result.get("status") not in [200, 201]:
+            print(f"❌ ERROR MP DETALLE: {response_body}")
             return {
-                "error": "Mercado Pago rechazó la solicitud",
-                "status_mp": status_code,
+                "error": "Rechazado por Mercado Pago",
                 "detalle": response_body
             }
 
-        # 4. OBTENER LINK
-        # Si es Test, usamos sandbox. Si es Prod, init_point.
-        # Ajuste de seguridad: Verificamos que la key exista
+        # Elegir link (Sandbox o Prod)
         url = response_body.get("init_point")
         if "TEST" in token:
             url = response_body.get("sandbox_init_point")
             
-        if not url:
-            return {"error": "MP no devolvió URL", "body": response_body}
-
+        print(f"✅ LINK OK: {url}")
         return RedirectResponse(url=url, status_code=303)
 
     except Exception as e:
-        print(f"❌ CRASH INTERNO: {e}")
-        return {"error": f"Error interno: {str(e)}"}
+        print(f"❌ CRASH: {e}")
+        return {"error": str(e)}
 
 # --- 5. WEBHOOK (Notificación Invisible) ---
 @router.post("/webhook")
