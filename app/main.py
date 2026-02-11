@@ -1,7 +1,7 @@
 from fastapi import FastAPI
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
-from fastapi.responses import RedirectResponse
+from fastapi.responses import RedirectResponse, FileResponse
 from contextlib import asynccontextmanager
 from pathlib import Path
 from dotenv import load_dotenv
@@ -72,6 +72,12 @@ def format_sticker(sticker_num):
 templates.env.globals['format_sticker'] = format_sticker
 
 # --- RUTAS GENERALES ---
+@app.get("/.well-known/assetlinks.json")
+async def asset_links():
+    # Ajustamos la ruta usando BASE_DIR para que sea a prueba de errores
+    return FileResponse(BASE_DIR / "static" / "assetlinks.json", media_type="application/json")
+# ------------------------------------
+
 @app.get("/health")
 async def health_check():
     return {"status": "ok", "db": "connected"}

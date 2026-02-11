@@ -1,0 +1,8 @@
+[{
+  "relation": ["delegate_permission/common.handle_all_urls"],
+  "target": {
+    "namespace": "android_app",
+    "package_name": "com.canjealtoque.app",
+    "sha256_cert_fingerprints": ["3F:8D:A8:DA:1F:BA:8E:79:17:A6:3E:88:52:29:04:9F:CF:2F:63:D6:C2:DE:52:D0:DD:29:C9:EC:3D:CD:C5:A4"]
+  }
+}]

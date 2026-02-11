@@ -43,17 +43,15 @@
     <link rel="apple-touch-icon" href="/static/img/logo.png">
 
     <script>
-        // Si hay Service Workers viejos o con caché corrupta, los desregistramos.
-        // Esto forzará al navegador a bajar el HTML nuevo de Railway.
         if ('serviceWorker' in navigator) {
-            navigator.serviceWorker.getRegistrations().then(function(registrations) {
-                for(let registration of registrations) {
-                    registration.unregister();
-                    console.log("🧹 Service Worker desregistrado para limpiar caché.");
-                }
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('/static/sw.js')
+                    .then(reg => console.log('SW registrado:', reg.scope))
+                    .catch(err => console.log('SW error:', err));
             });
         }
     </script>
+
 </head>
 <body class="bg-slate-900 text-gray-200 min-h-screen flex flex-col pt-20 relative z-0">
 
