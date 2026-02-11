@@ -129,16 +129,16 @@
     {% include "partials/toast_renewal.html" %}
 
 <script>
-    window.openModal = function(modalId) {
-        const modal = document.getElementById(modalId);
-        if (modal) {
-            modal.showModal();
-        } else {
-            console.error("❌ Error: No se encontró el modal con ID:", modalId);
-            alert("Error temporal: Recargá la página para abrir esta ventana.");
+        window.openModal = function(modalId) {
+            const modal = document.getElementById(modalId);
+            if (modal) {
+                modal.showModal();
+            } else {
+                console.warn("⚠️ Modal no encontrado:", modalId);
+                // Opcional: alert("Función no disponible en esta pantalla.");
+            }
         }
-    }
-</script>
+    </script>
 
 </body>
 </html>
