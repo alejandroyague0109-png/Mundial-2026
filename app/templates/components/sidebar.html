@@ -24,11 +24,11 @@
         {% endif %}
 
         <div class="flex gap-2 w-full">
-            <button onclick="document.getElementById('quickLoadModal').showModal()" class="flex-1 bg-blue-900/30 hover:bg-blue-800 text-blue-300 border border-blue-800 text-xs font-bold py-2 rounded transition flex justify-center items-center gap-2">
+            <button onclick="openModal('quickLoadModal')" class="flex-1 bg-blue-900/30 hover:bg-blue-800 text-blue-300 border border-blue-800 text-xs font-bold py-2 rounded transition flex justify-center items-center gap-2">
                 <span>⚡</span> Carga Rápida
             </button>
             
-            <button onclick="document.getElementById('quickLoadInfoModal').showModal()" class="w-10 bg-slate-700 hover:bg-slate-600 text-gray-300 border border-slate-600 text-xs font-bold py-2 rounded transition flex justify-center items-center">
+            <button onclick="openModal('quickLoadInfoModal')" class="w-10 bg-slate-700 hover:bg-slate-600 text-gray-300 border border-slate-600 text-xs font-bold py-2 rounded transition flex justify-center items-center">
                 ℹ️
             </button>
         </div>
@@ -70,36 +70,36 @@
         
         <div id="advanced-list" class="p-2 space-y-1 border-t border-slate-800 overflow-y-auto custom-scrollbar">
             
-            <button onclick="document.getElementById('profileModal').showModal()" class="w-full text-left px-3 py-2 rounded hover:bg-slate-700 text-xs text-gray-300 flex items-center gap-2 transition">
+            <button onclick="openModal('profileModal')" class="w-full text-left px-3 py-2 rounded hover:bg-slate-700 text-xs text-gray-300 flex items-center gap-2 transition">
                 <span>✏️</span> Editar Perfil
             </button>
 
             {% if user.is_premium %}
-                <button onclick="document.getElementById('telegramModal').showModal()" class="w-full text-left px-3 py-2 rounded hover:bg-slate-700 text-xs text-blue-400 flex items-center gap-2 transition">
+                <button onclick="openModal('telegramModal')" class="w-full text-left px-3 py-2 rounded hover:bg-slate-700 text-xs text-blue-400 flex items-center gap-2 transition">
                     <span>🔔</span> Notificaciones
                 </button>
             {% else %}
-                <button onclick="document.getElementById('premiumModal').showModal()" class="w-full text-left px-3 py-2 rounded hover:bg-slate-700 text-xs text-gray-500 hover:text-yellow-400 flex items-center justify-between transition group">
+                <button onclick="openModal('premiumModal')" class="w-full text-left px-3 py-2 rounded hover:bg-slate-700 text-xs text-gray-500 hover:text-yellow-400 flex items-center justify-between transition group">
                     <div class="flex items-center gap-2"><span>🔔</span> Notificaciones</div>
                     <span class="text-[10px] border border-gray-600 rounded px-1 group-hover:border-yellow-500 group-hover:text-yellow-400">🔒 PRO</span>
                 </button>
             {% endif %}
             
             {% if not user.is_premium %}
-            <button onclick="document.getElementById('premiumModal').showModal()" class="w-full text-left px-3 py-2 rounded hover:bg-slate-700 text-xs text-yellow-400 flex items-center gap-2 transition">
+            <button onclick="openModal('premiumModal')" class="w-full text-left px-3 py-2 rounded hover:bg-slate-700 text-xs text-yellow-400 flex items-center gap-2 transition">
                 <span>💎</span> Hacete Premium
             </button>
             {% endif %}
 
-            <button onclick="document.getElementById('installModal').showModal()" class="w-full text-left px-3 py-2 rounded hover:bg-slate-700 text-xs text-green-400 flex items-center gap-2 transition">
+            <button onclick="openModal('installModal')" class="w-full text-left px-3 py-2 rounded hover:bg-slate-700 text-xs text-green-400 flex items-center gap-2 transition">
                 <span>📲</span> Instalar App
             </button>
 
-            <button onclick="document.getElementById('faqModal').showModal()" class="w-full text-left px-3 py-2 rounded hover:bg-slate-700 text-xs text-purple-400 flex items-center gap-2 transition">
+            <button onclick="openModal('faqModal')" class="w-full text-left px-3 py-2 rounded hover:bg-slate-700 text-xs text-purple-400 flex items-center gap-2 transition">
                 <span>❓</span> Preguntas Frecuentes
             </button>
 
-            <button onclick="document.getElementById('termsModal').showModal()" class="w-full text-left px-3 py-2 rounded hover:bg-slate-700 text-xs text-gray-400 flex items-center gap-2 transition">
+            <button onclick="openModal('termsModal')" class="w-full text-left px-3 py-2 rounded hover:bg-slate-700 text-xs text-gray-400 flex items-center gap-2 transition">
                 <span>⚖️</span> Términos y Condiciones
             </button>
 
@@ -116,7 +116,7 @@
     // Configuración Inicial
     const state = {
         countries: true, 
-        advanced: true   
+        advanced: true    
     };
 
     function toggleSection(section) {
@@ -131,7 +131,6 @@
             // ABRIR
             list.classList.remove('hidden');
             arrow.classList.add('rotate-180');
-            // Si es 'countries', le permitimos expandirse. Si es 'advanced', su max-h ya lo limita.
             if (section === 'countries') container.classList.add('flex-1', 'min-h-0');
         } else {
             // CERRAR
