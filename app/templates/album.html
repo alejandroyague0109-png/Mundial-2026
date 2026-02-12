@@ -76,12 +76,12 @@
         }
     });
 
-    // --- LÓGICA WHATSAPP MEJORADA ---
+    // --- LÓGICA WHATSAPP DEFINITIVA ---
     function shareOnWhatsApp() {
         const container = document.getElementById('dynamic-content');
         if (!container) return;
 
-        // 1. DETECTAR PREFIJO DEL PAÍS
+        // 1. PREFIX
         let prefix = "FIGUS";
         const titleEl = container.querySelector('h2');
         if (titleEl) {
@@ -93,34 +93,21 @@
         let wishlist = new Set();
         let repetidas = new Set();
 
-        // 2. BUSCAR DIVS DE FIGURITAS
+        // 2. BUSCAR
         const stickers = container.querySelectorAll('div[id^="sticker-"]');
 
         stickers.forEach(el => {
-            // A. Obtener el número
-            // Buscamos el span que tiene la clase 'font-mono' (según tu template)
+            // A. Obtener Número
             const numSpan = el.querySelector('span.font-mono'); 
             if (!numSpan) return;
-            
-            // Limpiamos espacios y posibles textos extra
             const numero = parseInt(numSpan.innerText.trim());
             if (isNaN(numero)) return;
 
-            // B. OBTENER EL ESTADO REAL DESDE ALPINE
-            // CORRECCIÓN: Usamos 'localStatus' que es el nombre en tu x-data
-            let currentStatus = 'falta';
-            
-            try {
-                if (typeof Alpine !== 'undefined' && el.__x) {
-                    currentStatus = Alpine.$data(el).localStatus;
-                }
-            } catch (e) {
-                console.warn("No se pudo leer estado de figurita " + numero);
-            }
+            // B. LEER ESTADO (Ahora es trivial: leemos el atributo HTML)
+            // Si el atributo no existe (ej: carga inicial), usamos el valor por defecto 'falta'
+            const currentStatus = el.getAttribute('data-status') || 'falta';
 
             // C. Clasificar
-            // IMPORTANTE: Asegúrate de escribir 'wishlist' y 'repetida' en minúsculas,
-            // tal como están en tu x-data.
             if (currentStatus === 'wishlist') {
                 wishlist.add(numero);
             } else if (currentStatus === 'repetida') {
@@ -131,7 +118,7 @@
         const wList = Array.from(wishlist).sort((a,b) => a - b);
         const rList = Array.from(repetidas).sort((a,b) => a - b);
 
-        // 3. ARMAR MENSAJE
+        // 3. MENSAJE
         let mensaje = `👋 HOLA! Estoy completando el álbum *Canje AlToque 26*.\n`; 
         mensaje += `Viendo: *${prefix}*\n`;
         mensaje += `----------------------------------\n`;
@@ -140,7 +127,7 @@
             mensaje += `❤️ BUSCO (Wishlist):\n`;
             mensaje += wList.map(n => `${n}`).join(', ') + `\n\n`;
         } else {
-            mensaje += `✅ BUSCO: ¡Nada marcado en esta página!\n\n`;
+            mensaje += `✅ BUSCO: ¡Nada en esta página!\n\n`;
         }
 
         if (rList.length > 0) {
