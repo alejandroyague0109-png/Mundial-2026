@@ -1,0 +1,53 @@
+<div class="fixed bottom-0 left-0 right-0 z-50 bg-slate-950/90 backdrop-blur-md border-t border-slate-800 h-16 shadow-[0_-4px_20px_rgba(0,0,0,0.4)]">
+    
+    <div class="flex items-center gap-2 overflow-x-auto h-full px-4 custom-scrollbar-x snap-x snap-mandatory" id="bottom-nav-list">
+        
+        {% for code, info in album_structure.items() %}
+        <button 
+            hx-get="/country/{{ code }}" 
+            hx-target="#dynamic-content"
+            hx-swap="innerHTML"
+            onclick="setBottomActive(this)"
+            class="bottom-country-btn shrink-0 snap-center flex flex-col items-center justify-center min-w-[4.5rem] h-12 rounded-lg transition-all duration-200 border border-transparent group focus:outline-none
+                   {{ 'bg-slate-800 border-slate-700 text-yellow-400' if loop.first else 'text-gray-400 hover:text-gray-200 hover:bg-slate-800/50' }}">
+            
+            <span class="text-lg leading-none mb-0.5 filter grayscale group-hover:grayscale-0 transition-all duration-300">
+                {{ '🏆' if code == 'FWC' else '⚽' }} 
+            </span>
+            
+            <span class="text-[10px] font-bold uppercase tracking-wider truncate max-w-[4rem]">
+                {{ info.name[:3] }} </span>
+            
+            <div class="active-dot {{ 'opacity-100' if loop.first else 'opacity-0' }} w-1 h-1 bg-yellow-500 rounded-full mt-0.5 shadow-[0_0_5px_rgba(234,179,8,0.8)] transition-opacity"></div>
+        </button>
+        {% endfor %}
+        
+    </div>
+</div>
+
+<style>
+    /* Ocultar scrollbar pero permitir scroll */
+    .custom-scrollbar-x::-webkit-scrollbar { height: 0px; background: transparent; }
+    .custom-scrollbar-x { -ms-overflow-style: none; scrollbar-width: none; }
+</style>
+
+<script>
+    function setBottomActive(btn) {
+        // 1. Resetear todos los botones
+        document.querySelectorAll('.bottom-country-btn').forEach(b => {
+            b.classList.remove('bg-slate-800', 'border-slate-700', 'text-yellow-400');
+            b.classList.add('text-gray-400');
+            b.querySelector('.active-dot').classList.remove('opacity-100');
+            b.querySelector('.active-dot').classList.add('opacity-0');
+        });
+
+        // 2. Activar el clickeado
+        btn.classList.remove('text-gray-400');
+        btn.classList.add('bg-slate-800', 'border-slate-700', 'text-yellow-400');
+        btn.querySelector('.active-dot').classList.remove('opacity-0');
+        btn.querySelector('.active-dot').classList.add('opacity-100');
+
+        // 3. Scroll suave para centrar el botón seleccionado
+        btn.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' });
+    }
+</script>
