@@ -1,11 +1,13 @@
 import urllib.parse
 import httpx
+import os
 from sqlalchemy.future import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from app.models import User, Inventory
-# Asegúrate de importar tu configuración real.
-# Si usas environment variables directo, ajusta esto:
-from app.config import TELEGRAM_BOT_TOKEN 
+
+# --- CORRECCIÓN: Leemos la variable de entorno directamente ---
+TELEGRAM_BOT_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN")
+# --------------------------------------------------------------
 
 async def notify_wishlist_match(sticker_num: int, sticker_name: str, owner: User, db: AsyncSession):
     """
@@ -15,7 +17,6 @@ async def notify_wishlist_match(sticker_num: int, sticker_name: str, owner: User
     """
     
     # 1. BUSCAR INTERESADOS (Optimizado en Base de Datos)
-    # Filtramos directamente por Wishlist + Premium + Telegram + Misma Zona/Provincia
     stmt = (
         select(User)
         .join(Inventory, User.id == Inventory.user_id)
