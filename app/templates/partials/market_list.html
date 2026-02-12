@@ -414,7 +414,7 @@
                 // 2. AGREGAR EL LINK INTELIGENTE AL FINAL
                 text += `\n\n📲 *Ver posibles canjes:* ${deepLink}`;
 
-                return `https://wa.me/${phone}?text=${encodeURIComponent(text)}`;
+                return `https://api.whatsapp.com/send?phone=${phone}&text=${encodeURIComponent(text)}`;
             },
 
             get filteredCards() {
