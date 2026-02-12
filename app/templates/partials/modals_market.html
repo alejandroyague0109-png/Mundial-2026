@@ -206,8 +206,6 @@
             const phoneBridge = String(t.user_C.phone).replace(/\D/g, '');
             
             // DEEP LINK:
-            // Llevamos al usuario al mercado filtrando por la figurita que ÉL QUIERE (Payment Sticker)
-            // Así valida que la figurita está en juego.
             const deepLink = `https://canjealtoque26.com/market?sticker=${encodeURIComponent(t.my_payment_sticker.name)}`;
 
             const msg = `Hola *${t.user_C.nick}*! 👋
@@ -225,8 +223,11 @@ Vi en *Canje AlToque 26* que tenés la *${t.bridge_sticker.name}* y buscás la *
 ${deepLink}`;
 
             const waLink = `https://wa.me/${phoneBridge}?text=${encodeURIComponent(msg)}`;
-            return waLink;
-
+            
+            // --- CORRECCIÓN: Eliminamos el 'return waLink' que cortaba la ejecución ---
+            
+            // Devolvemos el HTML completo
+            return `
             <div class="bg-slate-800 rounded-xl border border-slate-700 p-4 relative overflow-hidden group hover:border-green-500 transition-colors shadow-lg animate-fade-in">
                 <div class="absolute top-0 right-0 bg-slate-700 text-[10px] text-gray-400 px-2 py-0.5 rounded-bl">Opción #${index + 1}</div>
                 
