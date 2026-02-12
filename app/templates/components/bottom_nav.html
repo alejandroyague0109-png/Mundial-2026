@@ -1,4 +1,19 @@
-<div class="fixed bottom-0 left-0 right-0 z-50 bg-slate-950/90 backdrop-blur-md border-t border-slate-800 h-16 shadow-[0_-4px_20px_rgba(0,0,0,0.4)]">
+<div class="fixed bottom-0 left-0 right-0 z-50 bg-slate-950/90 backdrop-blur-md border-t border-slate-800 h-16 shadow-[0_-4px_20px_rgba(0,0,0,0.4)]"
+     x-data="{
+        getFlag(code) {
+            // Mapeo manual de códigos FIFA (3 letras) a ISO (2 letras) para FlagCDN
+            const map = {
+                'ARG': 'ar', 'BRA': 'br', 'URU': 'uy', 'ECU': 'ec', 'PAR': 'py', 'CHI': 'cl', 'BOL': 'bo', 'PER': 'pe', 'COL': 'co', 'VEN': 've',
+                'USA': 'us', 'MEX': 'mx', 'CAN': 'ca', 'CRC': 'cr', 'PAN': 'pa',
+                'FRA': 'fr', 'GER': 'de', 'ESP': 'es', 'ENG': 'gb-eng', 'POR': 'pt', 'NED': 'nl', 'BEL': 'be', 'CRO': 'hr', 'ITA': 'it', 'SUI': 'ch',
+                'MAR': 'ma', 'SEN': 'sn', 'CMR': 'cm', 'GHA': 'gh', 'TUN': 'tn',
+                'JPN': 'jp', 'KOR': 'kr', 'AUS': 'au', 'IRN': 'ir', 'KSA': 'sa', 'QAT': 'qa'
+            };
+            // Si no está en la lista, intenta usar las primeras 2 letras (funciona para muchos)
+            const iso = map[code] || code.substring(0, 2).toLowerCase();
+            return `https://flagcdn.com/w40/${iso}.png`;
+        }
+     }">
     
     <div class="flex items-center gap-2 overflow-x-auto h-full px-4 custom-scrollbar-x snap-x snap-mandatory" id="bottom-nav-list">
         
@@ -11,12 +26,23 @@
             class="bottom-country-btn shrink-0 snap-center flex flex-col items-center justify-center min-w-[4.5rem] h-12 rounded-lg transition-all duration-200 border border-transparent group focus:outline-none
                    {{ 'bg-slate-800 border-slate-700 text-yellow-400' if loop.first else 'text-gray-400 hover:text-gray-200 hover:bg-slate-800/50' }}">
             
-            <span class="text-lg leading-none mb-0.5 filter grayscale group-hover:grayscale-0 transition-all duration-300">
-                {{ '🏆' if code == 'FWC' else '⚽' }} 
-            </span>
+            {% if code == 'FWC' %}
+                <span class="text-xl leading-none mb-0.5 filter drop-shadow-md group-hover:scale-110 transition-transform">
+                    🏆
+                </span>
+            {% else %}
+                <div class="relative w-6 h-4 mb-1 overflow-hidden rounded-[2px] shadow-sm group-hover:scale-110 transition-transform duration-200">
+                     <img :src="getFlag('{{ code }}')" 
+                          alt="{{ code }}" 
+                          class="w-full h-full object-cover"
+                          loading="lazy">
+                     <div class="absolute inset-0 bg-gradient-to-tr from-black/10 to-white/20"></div>
+                </div>
+            {% endif %}
             
             <span class="text-[10px] font-bold uppercase tracking-wider truncate max-w-[4rem]">
-                {{ info.name[:3] }} </span>
+                {{ info.name[:3] }}
+            </span>
             
             <div class="active-dot {{ 'opacity-100' if loop.first else 'opacity-0' }} w-1 h-1 bg-yellow-500 rounded-full mt-0.5 shadow-[0_0_5px_rgba(234,179,8,0.8)] transition-opacity"></div>
         </button>
@@ -37,17 +63,42 @@
         document.querySelectorAll('.bottom-country-btn').forEach(b => {
             b.classList.remove('bg-slate-800', 'border-slate-700', 'text-yellow-400');
             b.classList.add('text-gray-400');
-            b.querySelector('.active-dot').classList.remove('opacity-100');
-            b.querySelector('.active-dot').classList.add('opacity-0');
+            
+            // Apagar puntito
+            const dot = b.querySelector('.active-dot');
+            if(dot) {
+                dot.classList.remove('opacity-100');
+                dot.classList.add('opacity-0');
+            }
+
+            // Quitar saturación a la bandera (opcional, para que se vean grises las inactivas)
+            const img = b.querySelector('img');
+            if(img) img.classList.add('grayscale', 'opacity-70');
         });
 
         // 2. Activar el clickeado
         btn.classList.remove('text-gray-400');
         btn.classList.add('bg-slate-800', 'border-slate-700', 'text-yellow-400');
-        btn.querySelector('.active-dot').classList.remove('opacity-0');
-        btn.querySelector('.active-dot').classList.add('opacity-100');
+        
+        // Encender puntito
+        const dot = btn.querySelector('.active-dot');
+        if(dot) {
+            dot.classList.remove('opacity-0');
+            dot.classList.add('opacity-100');
+        }
 
-        // 3. Scroll suave para centrar el botón seleccionado
+        // Devolver color a la bandera
+        const img = btn.querySelector('img');
+        if(img) img.classList.remove('grayscale', 'opacity-70');
+
+        // 3. Scroll suave
         btn.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' });
     }
+
+    // Inicializar el estado visual de las banderas al cargar (poner grises las inactivas)
+    document.addEventListener('DOMContentLoaded', () => {
+        document.querySelectorAll('.bottom-country-btn:not(.text-yellow-400) img').forEach(img => {
+            img.classList.add('grayscale', 'opacity-70');
+        });
+    });
 </script>

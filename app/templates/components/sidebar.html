@@ -34,118 +34,53 @@
         </div>
     </div>
 
-    <div id="countries-section" class="flex-1 min-h-0 flex flex-col border-b border-slate-700 transition-all duration-300">
+    <div class="flex-1 overflow-y-auto custom-scrollbar bg-slate-900/30 p-2 space-y-1">
         
-        <button onclick="toggleSection('countries')" class="flex justify-between items-center w-full p-2 bg-slate-800 hover:bg-slate-700 transition cursor-pointer sticky top-0 z-10 select-none group flex-shrink-0">
-            <span class="text-[10px] font-bold text-gray-500 group-hover:text-white uppercase tracking-wider px-2">
-                Índice de Países
-            </span>
-            <span id="countries-arrow" class="text-gray-500 text-xs px-2 transform rotate-180 transition-transform duration-300">▼</span>
-        </button>
-        
-        <div id="countries-list" class="overflow-y-auto custom-scrollbar flex-1 p-2">
-            <div class="space-y-0.5 border-l border-slate-700 ml-2 pl-1 pb-4">
-                {% for code, info in album_structure.items() %}
-                <button 
-                    hx-get="/country/{{ code }}" 
-                    hx-target="#dynamic-content"
-                    hx-swap="innerHTML"
-                    onclick="setActive(this)"
-                    class="country-btn w-full text-left px-3 py-2 rounded text-sm text-gray-300 hover:bg-slate-700 hover:text-white transition flex justify-between items-center group/btn focus:outline-none">
-                    <span class="truncate">{{ info.name }}</span>
-                </button>
-                {% endfor %}
-            </div>
+        <div class="px-3 py-2 text-[10px] font-bold text-gray-500 uppercase tracking-wider mb-1">
+            Menú Principal
         </div>
+
+        <button onclick="openModal('profileModal')" class="w-full text-left px-3 py-2 rounded hover:bg-slate-700 text-xs text-gray-300 flex items-center gap-2 transition">
+            <span>✏️</span> Editar Perfil
+        </button>
+
+        {% if user.is_premium %}
+            <button onclick="openModal('telegramModal')" class="w-full text-left px-3 py-2 rounded hover:bg-slate-700 text-xs text-blue-400 flex items-center gap-2 transition">
+                <span>🔔</span> Notificaciones
+            </button>
+        {% else %}
+            <button onclick="openModal('premiumModal')" class="w-full text-left px-3 py-2 rounded hover:bg-slate-700 text-xs text-gray-500 hover:text-yellow-400 flex items-center justify-between transition group">
+                <div class="flex items-center gap-2"><span>🔔</span> Notificaciones</div>
+                <span class="text-[10px] border border-gray-600 rounded px-1 group-hover:border-yellow-500 group-hover:text-yellow-400">🔒 PRO</span>
+            </button>
+        {% endif %}
+        
+        {% if not user.is_premium %}
+        <button onclick="openModal('premiumModal')" class="w-full text-left px-3 py-2 rounded hover:bg-slate-700 text-xs text-yellow-400 flex items-center gap-2 transition">
+            <span>💎</span> Hacete Premium
+        </button>
+        {% endif %}
+
+        <button onclick="openModal('installModal')" class="w-full text-left px-3 py-2 rounded hover:bg-slate-700 text-xs text-green-400 flex items-center gap-2 transition">
+            <span>📲</span> Instalar App
+        </button>
+
+        <button onclick="openModal('faqModal')" class="w-full text-left px-3 py-2 rounded hover:bg-slate-700 text-xs text-purple-400 flex items-center gap-2 transition">
+            <span>❓</span> Preguntas Frecuentes
+        </button>
+
+        <button onclick="openModal('termsModal')" class="w-full text-left px-3 py-2 rounded hover:bg-slate-700 text-xs text-gray-400 flex items-center gap-2 transition">
+            <span>⚖️</span> Términos y Condiciones
+        </button>
+
     </div>
 
-    <div id="advanced-section" class="bg-slate-900/50 flex-shrink-0 flex flex-col transition-all duration-300 max-h-[40%]">
-        
-        <button onclick="toggleSection('advanced')" class="flex justify-between items-center w-full p-3 hover:bg-slate-800 transition cursor-pointer select-none group flex-shrink-0 bg-slate-900/80 backdrop-blur-sm z-10">
-            <span class="text-[10px] font-bold text-gray-500 group-hover:text-white uppercase tracking-wider px-2">
-                ⚙️ Funciones Avanzadas
-            </span>
-            <span id="advanced-arrow" class="text-gray-500 text-xs px-2 transform rotate-180 transition-transform duration-300">▼</span>
-        </button>
-        
-        <div id="advanced-list" class="p-2 space-y-1 border-t border-slate-800 overflow-y-auto custom-scrollbar">
-            
-            <button onclick="openModal('profileModal')" class="w-full text-left px-3 py-2 rounded hover:bg-slate-700 text-xs text-gray-300 flex items-center gap-2 transition">
-                <span>✏️</span> Editar Perfil
+    <div class="p-2 border-t border-slate-700 bg-slate-800/50">
+        <form action="/logout" method="post" class="block w-full">
+            <button type="submit" class="w-full text-left px-3 py-2 rounded hover:bg-red-900/30 hover:text-red-300 text-xs text-red-400 flex items-center gap-2 transition font-bold">
+                <span>🚪</span> Cerrar Sesión
             </button>
-
-            {% if user.is_premium %}
-                <button onclick="openModal('telegramModal')" class="w-full text-left px-3 py-2 rounded hover:bg-slate-700 text-xs text-blue-400 flex items-center gap-2 transition">
-                    <span>🔔</span> Notificaciones
-                </button>
-            {% else %}
-                <button onclick="openModal('premiumModal')" class="w-full text-left px-3 py-2 rounded hover:bg-slate-700 text-xs text-gray-500 hover:text-yellow-400 flex items-center justify-between transition group">
-                    <div class="flex items-center gap-2"><span>🔔</span> Notificaciones</div>
-                    <span class="text-[10px] border border-gray-600 rounded px-1 group-hover:border-yellow-500 group-hover:text-yellow-400">🔒 PRO</span>
-                </button>
-            {% endif %}
-            
-            {% if not user.is_premium %}
-            <button onclick="openModal('premiumModal')" class="w-full text-left px-3 py-2 rounded hover:bg-slate-700 text-xs text-yellow-400 flex items-center gap-2 transition">
-                <span>💎</span> Hacete Premium
-            </button>
-            {% endif %}
-
-            <button onclick="openModal('installModal')" class="w-full text-left px-3 py-2 rounded hover:bg-slate-700 text-xs text-green-400 flex items-center gap-2 transition">
-                <span>📲</span> Instalar App
-            </button>
-
-            <button onclick="openModal('faqModal')" class="w-full text-left px-3 py-2 rounded hover:bg-slate-700 text-xs text-purple-400 flex items-center gap-2 transition">
-                <span>❓</span> Preguntas Frecuentes
-            </button>
-
-            <button onclick="openModal('termsModal')" class="w-full text-left px-3 py-2 rounded hover:bg-slate-700 text-xs text-gray-400 flex items-center gap-2 transition">
-                <span>⚖️</span> Términos y Condiciones
-            </button>
-
-            <form action="/logout" method="post" class="block w-full mt-2 pt-2 border-t border-slate-800">
-                <button type="submit" class="w-full text-left px-3 py-2 rounded hover:bg-red-900/30 hover:text-red-300 text-xs text-red-400 flex items-center gap-2 transition font-bold">
-                    <span>🚪</span> Cerrar Sesión
-                </button>
-            </form>
-        </div>
+        </form>
     </div>
+
 </aside>
-
-<script>
-    // Configuración Inicial
-    const state = {
-        countries: true, 
-        advanced: true    
-    };
-
-    function toggleSection(section) {
-        state[section] = !state[section];
-        
-        const isOpen = state[section];
-        const container = document.getElementById(section + '-section');
-        const list = document.getElementById(section + '-list');
-        const arrow = document.getElementById(section + '-arrow');
-
-        if (isOpen) {
-            // ABRIR
-            list.classList.remove('hidden');
-            arrow.classList.add('rotate-180');
-            if (section === 'countries') container.classList.add('flex-1', 'min-h-0');
-        } else {
-            // CERRAR
-            list.classList.add('hidden');
-            arrow.classList.remove('rotate-180'); 
-            if (section === 'countries') container.classList.remove('flex-1', 'min-h-0');
-        }
-    }
-
-    function setActive(btn) {
-        document.querySelectorAll('.country-btn').forEach(b => {
-            b.classList.remove('bg-slate-700', 'text-yellow-400', 'font-bold');
-            b.classList.add('text-gray-300');
-        });
-        btn.classList.remove('text-gray-300');
-        btn.classList.add('bg-slate-700', 'text-yellow-400', 'font-bold');
-    }
-</script>
