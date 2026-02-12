@@ -1,7 +1,7 @@
-<div class="fixed bottom-0 left-0 right-0 z-50 bg-slate-950/90 backdrop-blur-md border-t border-slate-800 h-16 shadow-[0_-4px_20px_rgba(0,0,0,0.4)]"
+<div id="bottom-nav-container" 
+     class="fixed bottom-0 left-0 right-0 z-50 bg-slate-950/90 backdrop-blur-md border-t border-slate-800 h-16 shadow-[0_-4px_20px_rgba(0,0,0,0.4)] transition-none will-change-transform"
      x-data="{
         getFlag(code) {
-            // Mapeo manual de códigos FIFA (3 letras) a ISO (2 letras) para FlagCDN
             const map = {
                 'ARG': 'ar', 'BRA': 'br', 'URU': 'uy', 'ECU': 'ec', 'PAR': 'py', 'CHI': 'cl', 'BOL': 'bo', 'PER': 'pe', 'COL': 'co', 'VEN': 've',
                 'USA': 'us', 'MEX': 'mx', 'CAN': 'ca', 'CRC': 'cr', 'PAN': 'pa',
@@ -9,7 +9,6 @@
                 'MAR': 'ma', 'SEN': 'sn', 'CMR': 'cm', 'GHA': 'gh', 'TUN': 'tn',
                 'JPN': 'jp', 'KOR': 'kr', 'AUS': 'au', 'IRN': 'ir', 'KSA': 'sa', 'QAT': 'qa'
             };
-            // Si no está en la lista, intenta usar las primeras 2 letras (funciona para muchos)
             const iso = map[code] || code.substring(0, 2).toLowerCase();
             return `https://flagcdn.com/w40/${iso}.png`;
         }
@@ -52,53 +51,58 @@
 </div>
 
 <style>
-    /* Ocultar scrollbar pero permitir scroll */
     .custom-scrollbar-x::-webkit-scrollbar { height: 0px; background: transparent; }
     .custom-scrollbar-x { -ms-overflow-style: none; scrollbar-width: none; }
 </style>
 
 <script>
     function setBottomActive(btn) {
-        // 1. Resetear todos los botones
         document.querySelectorAll('.bottom-country-btn').forEach(b => {
             b.classList.remove('bg-slate-800', 'border-slate-700', 'text-yellow-400');
             b.classList.add('text-gray-400');
-            
-            // Apagar puntito
             const dot = b.querySelector('.active-dot');
-            if(dot) {
-                dot.classList.remove('opacity-100');
-                dot.classList.add('opacity-0');
-            }
-
-            // Quitar saturación a la bandera (opcional, para que se vean grises las inactivas)
+            if(dot) { dot.classList.remove('opacity-100'); dot.classList.add('opacity-0'); }
             const img = b.querySelector('img');
             if(img) img.classList.add('grayscale', 'opacity-70');
         });
 
-        // 2. Activar el clickeado
         btn.classList.remove('text-gray-400');
         btn.classList.add('bg-slate-800', 'border-slate-700', 'text-yellow-400');
         
-        // Encender puntito
         const dot = btn.querySelector('.active-dot');
-        if(dot) {
-            dot.classList.remove('opacity-0');
-            dot.classList.add('opacity-100');
-        }
-
-        // Devolver color a la bandera
+        if(dot) { dot.classList.remove('opacity-0'); dot.classList.add('opacity-100'); }
         const img = btn.querySelector('img');
         if(img) img.classList.remove('grayscale', 'opacity-70');
 
-        // 3. Scroll suave
         btn.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' });
     }
 
-    // Inicializar el estado visual de las banderas al cargar (poner grises las inactivas)
     document.addEventListener('DOMContentLoaded', () => {
         document.querySelectorAll('.bottom-country-btn:not(.text-yellow-400) img').forEach(img => {
             img.classList.add('grayscale', 'opacity-70');
         });
+
+        // --- LÓGICA DE COLISIÓN CON FOOTER ---
+        const navBar = document.getElementById('bottom-nav-container');
+        const footer = document.querySelector('footer');
+
+        if (navBar && footer) {
+            window.addEventListener('scroll', () => {
+                // Calculamos dónde empieza el footer relativo a la ventana
+                const footerRect = footer.getBoundingClientRect();
+                const windowHeight = window.innerHeight;
+
+                // Si el tope del footer entra en la pantalla (es menor al alto de la ventana)
+                if (footerRect.top < windowHeight) {
+                    // Calculamos cuánto se metió (overlap)
+                    const overlap = windowHeight - footerRect.top;
+                    // Empujamos la barra hacia arriba esa misma cantidad
+                    navBar.style.bottom = `${overlap}px`;
+                } else {
+                    // Si no, la barra se queda pegada al piso (0px)
+                    navBar.style.bottom = '0px';
+                }
+            }, { passive: true }); // passive: true mejora el rendimiento del scroll
+        }
     });
 </script>
