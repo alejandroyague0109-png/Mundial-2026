@@ -72,11 +72,12 @@ def format_sticker(sticker_num):
 templates.env.globals['format_sticker'] = format_sticker
 
 # --- RUTAS GENERALES ---
+
 @app.get("/.well-known/assetlinks.json")
 async def asset_links():
-    # Ajustamos la ruta usando BASE_DIR para que sea a prueba de errores
-    return FileResponse(BASE_DIR / "static" / "assetlinks.json", media_type="application/json")
-# ------------------------------------
+    # La ruta física será: app/static/.well-known/assetlinks.json
+    file_path = BASE_DIR / "static" / ".well-known" / "assetlinks.json"
+    return FileResponse(file_path, media_type="application/json")
 
 @app.get("/health")
 async def health_check():
