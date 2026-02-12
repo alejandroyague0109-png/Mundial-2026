@@ -26,7 +26,7 @@
 
         <div class="flex gap-3 w-full">
             <button onclick="openModal('quickLoadModal')" class="flex-1 bg-blue-600 hover:bg-blue-500 text-white border border-blue-500 text-sm font-bold py-3 rounded-xl transition shadow-lg shadow-blue-900/20 flex justify-center items-center gap-2 active:scale-95">
-                <span>⚡</span> Cargar
+                <span>⚡</span> Carga rápida
             </button>
             
             <button onclick="openModal('quickLoadInfoModal')" class="w-14 bg-slate-700 hover:bg-slate-600 text-gray-300 border border-slate-600 font-bold py-3 rounded-xl transition flex justify-center items-center active:scale-95 text-lg">
@@ -82,19 +82,18 @@
 
         <div>
             <div class="text-[11px] font-bold text-gray-500 uppercase tracking-widest mb-3 px-1">Aplicación</div>
-            <div class="space-y-3">
-                <button onclick="openModal('installModal')" class="w-full flex items-center gap-4 p-4 bg-slate-800/50 hover:bg-slate-800 border border-slate-700/50 hover:border-green-500/30 rounded-2xl transition group text-left active:scale-95">
+            <div class="space-y-3 pb-4"> <button onclick="openModal('installModal')" class="w-full flex items-center gap-4 p-4 bg-slate-800/50 hover:bg-slate-800 border border-slate-700/50 hover:border-green-500/30 rounded-2xl transition group text-left active:scale-95">
                     <div class="w-10 h-10 rounded-xl bg-green-900/20 flex items-center justify-center text-xl group-hover:scale-110 transition-transform">📲</div>
                     <div class="flex-1">
                         <div class="text-sm font-bold text-gray-200 group-hover:text-green-400">Instalar App</div>
-                        <div class="text-[11px] text-gray-500 mt-0.5">Acceso directo y mejor rendimiento</div>
+                        <div class="text-[11px] text-gray-500 mt-0.5">Acceso directo</div>
                     </div>
                 </button>
 
                 <button onclick="openModal('faqModal')" class="w-full flex items-center gap-4 p-4 bg-slate-800/50 hover:bg-slate-800 border border-slate-700/50 hover:border-purple-500/30 rounded-2xl transition group text-left active:scale-95">
                     <div class="w-10 h-10 rounded-xl bg-purple-900/20 flex items-center justify-center text-xl group-hover:scale-110 transition-transform">❓</div>
                     <div class="flex-1">
-                        <div class="text-sm font-bold text-gray-200 group-hover:text-purple-400">Ayuda y Soporte</div>
+                        <div class="text-sm font-bold text-gray-200 group-hover:text-purple-400">Ayuda</div>
                         <div class="text-[11px] text-gray-500 mt-0.5">Preguntas Frecuentes</div>
                     </div>
                 </button>
@@ -106,18 +105,20 @@
                         <div class="text-[11px] text-gray-500 mt-0.5">Términos y condiciones</div>
                     </div>
                 </button>
+
+                <form action="/logout" method="post" class="w-full block pt-2">
+                    <button type="submit" class="w-full flex items-center gap-4 p-4 bg-red-900/10 hover:bg-red-900/20 border border-red-900/20 hover:border-red-500/30 rounded-2xl transition group text-left active:scale-95">
+                        <div class="w-10 h-10 rounded-xl bg-red-900/20 flex items-center justify-center text-xl group-hover:scale-110 transition-transform">🚪</div>
+                        <div class="flex-1">
+                            <div class="text-sm font-bold text-red-400 group-hover:text-red-300">Cerrar Sesión</div>
+                            <div class="text-[11px] text-red-400/50 mt-0.5">Cerrar sesión</div>
+                        </div>
+                    </button>
+                </form>
+
             </div>
         </div>
 
     </div>
 
-    <div class="p-4 bg-slate-900 border-t border-slate-800 z-10">
-        <form action="/logout" method="post" class="block w-full">
-            <button type="submit" class="w-full flex items-center justify-center gap-3 p-3.5 rounded-xl bg-red-900/10 hover:bg-red-900/30 border border-red-900/20 hover:border-red-500/30 text-red-400 hover:text-red-300 text-sm font-bold transition group active:scale-95">
-                <span class="text-lg group-hover:-translate-x-1 transition-transform">🚪</span> 
-                Cerrar Sesión
-            </button>
-        </form>
-    </div>
-
-</aside>
+    </aside>

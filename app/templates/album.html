@@ -76,7 +76,7 @@
         }
     });
 
-    // --- LÓGICA WHATSAPP ---
+    // --- LÓGICA WHATSAPP MEJORADA ---
     function shareOnWhatsApp() {
         const container = document.getElementById('dynamic-content');
         if (!container) return;
@@ -86,6 +86,7 @@
         const titleEl = container.querySelector('h2');
         if (titleEl) {
             let text = titleEl.innerText.trim().toUpperCase();
+            // Limpieza para obtener solo las letras (ej: ARG)
             if (text.includes('/')) text = text.split('/')[0].trim();
             prefix = text.substring(0, 3).replace(/[^A-Z]/g, ""); 
         }
@@ -97,18 +98,38 @@
         const stickers = container.querySelectorAll('div[id^="sticker-"]');
 
         stickers.forEach(el => {
-            const numSpan = el.querySelector('span');
-            if (!numSpan) return;
-            const numero = parseInt(numSpan.innerText.trim());
-            if (isNaN(numero)) return;
-
-            const html = el.outerHTML;
-
-            // Detectar estado por clases o iconos
-            if (html.includes('border-red-500') || html.includes('❤️')) { 
-                wishlist.add(numero);
+            // A. Obtener el número visualmente
+            // Buscamos el primer span que tenga un número
+            const spans = el.querySelectorAll('span');
+            let numero = null;
+            
+            // Recorremos los spans para encontrar el que tiene el número
+            for (let span of spans) {
+                const val = parseInt(span.innerText.trim());
+                if (!isNaN(val)) {
+                    numero = val;
+                    break;
+                }
             }
-            else if (html.includes('from-yellow-600') || html.includes('border-yellow-500')) {
+            
+            if (numero === null) return;
+
+            // B. OBTENER EL ESTADO REAL (Magic Fix ✨)
+            // Usamos Alpine.$data(el) para leer la variable 'status' directamente.
+            // Esto es 100% preciso, sin depender de clases CSS.
+            let status = 'falta';
+            try {
+                if (typeof Alpine !== 'undefined') {
+                    status = Alpine.$data(el).status;
+                }
+            } catch (e) {
+                console.error("Error leyendo Alpine en sticker " + numero, e);
+            }
+
+            // C. Clasificar según el estado real
+            if (status === 'wishlist') {
+                wishlist.add(numero);
+            } else if (status === 'repetida') {
                 repetidas.add(numero);
             }
         });
@@ -117,15 +138,15 @@
         const rList = Array.from(repetidas).sort((a,b) => a - b);
 
         // 3. ARMAR MENSAJE
-        let mensaje = `👋 HOLA! Estoy completando el álbum *Canje AlToque 26*.\n`; 
+        let mensaje = `👋 HOLA! Estoy completando el álbum *Canje AlToque 26*.\n`;
         mensaje += `Viendo: *${prefix}*\n`;
         mensaje += `----------------------------------\n`;
 
         if (wList.length > 0) {
-            mensaje += `❌ ME FALTAN:\n`;
+            mensaje += `❌ BUSCO (Wishlist):\n`;
             mensaje += wList.map(n => `${n}`).join(', ') + `\n\n`;
         } else {
-            mensaje += `✅ FALTANTES: ¡Al día por ahora!\n\n`;
+            mensaje += `✅ BUSCO: ¡Nada de esta página!\n\n`;
         }
 
         if (rList.length > 0) {
