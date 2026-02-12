@@ -301,26 +301,51 @@
 </dialog>
 
 <dialog id="installModal" class="bg-slate-800 text-white p-6 rounded-xl border border-slate-600 backdrop:bg-slate-900/80 w-full max-w-sm shadow-2xl">
+    
     <div class="flex justify-between items-start mb-4">
-        <h3 class="text-lg font-bold text-white">📲 Instalar App</h3>
-        <button onclick="document.getElementById('installModal').close()" class="text-gray-400 hover:text-white">✕</button>
+        <div>
+            <h3 class="text-lg font-bold text-white">📲 Instalar App</h3>
+            <p class="text-gray-300 text-sm mt-1">
+                ¡Tené tu álbum siempre a mano y recibí notificaciones!
+            </p>
+        </div>
+        <button onclick="document.getElementById('installModal').close()" class="text-gray-400 hover:text-white p-1">✕</button>
     </div>
 
     <div class="space-y-4">
-        <details class="group bg-slate-900 rounded border border-slate-700">
-            <summary class="p-3 cursor-pointer text-sm font-bold text-green-400 flex justify-between">
-                🤖 Android (Chrome) <span>▼</span>
+        
+        <details class="group bg-slate-900 rounded border border-slate-700" open>
+            <summary class="p-3 cursor-pointer text-sm font-bold text-green-400 flex justify-between items-center select-none">
+                <span>🤖 Android</span>
+                <span class="transition-transform group-open:rotate-180">▼</span>
             </summary>
-            <div class="p-3 pt-0 text-xs text-gray-300 space-y-2 border-t border-slate-800 mt-2">
-                <p>1. Tocá los <strong>3 puntitos (⋮)</strong> arriba.</p>
-                <p>2. Elegí <strong>"Instalar aplicación"</strong> o "Agregar a inicio".</p>
-                <p>3. Confirmá y listo.</p>
+            
+            <div class="p-3 pt-2 text-xs text-gray-300 border-t border-slate-800">
+                
+                <a href="https://play.google.com/store/apps/details?id=com.canjealtoque.app" 
+                   target="_blank"
+                   class="flex items-center justify-center gap-2 w-full bg-green-600 hover:bg-green-500 text-white font-bold py-2.5 rounded-lg mb-3 transition shadow-lg shadow-green-900/20 active:scale-95">
+                   <span>🚀</span> Descargar de Play Store
+                </a>
+
+                <div class="flex items-center gap-2 mb-3 opacity-50">
+                    <div class="h-px bg-gray-500 flex-1"></div>
+                    <span class="text-[10px] font-mono">O MANUALMENTE</span>
+                    <div class="h-px bg-gray-500 flex-1"></div>
+                </div>
+
+                <div class="space-y-2 opacity-80">
+                    <p>1. Tocá los <strong>3 puntitos (⋮)</strong> en Chrome.</p>
+                    <p>2. Elegí <strong>"Instalar aplicación"</strong>.</p>
+                    <p>3. Confirmá y listo.</p>
+                </div>
             </div>
         </details>
 
         <details class="group bg-slate-900 rounded border border-slate-700">
-            <summary class="p-3 cursor-pointer text-sm font-bold text-gray-200 flex justify-between">
-                🍎 iPhone (Safari) <span>▼</span>
+            <summary class="p-3 cursor-pointer text-sm font-bold text-gray-200 flex justify-between items-center select-none">
+                <span>🍎 iPhone (Safari)</span>
+                <span class="transition-transform group-open:rotate-180">▼</span>
             </summary>
             <div class="p-3 pt-0 text-xs text-gray-300 space-y-2 border-t border-slate-800 mt-2">
                 <p>1. Tocá el botón <strong>Compartir</strong> (cuadrado con flecha).</p>
@@ -328,6 +353,7 @@
                 <p>3. Dale a "Agregar".</p>
             </div>
         </details>
+        
     </div>
 </dialog>
 
@@ -463,13 +489,18 @@
         </div>
 
         <div class="border-t border-slate-700 pt-4">
-            <label class="text-xs text-yellow-500 font-bold">PASO 2: Pegá tu ID acá</label>
-            <input type="text" name="telegram_id" value="{{ user.telegram_chat_id or '' }}" placeholder="Ej: 123456789" class="w-full bg-slate-900 border border-slate-700 rounded px-3 py-2 text-sm mt-1 text-white focus:border-yellow-500 outline-none font-mono text-center">
-            <p class="text-[10px] text-gray-400"> </p>            
-            <p class="text-[10px] text-gray-400">Buscá en Telegram <code>@userinfobot</code> y escribile <code>/start</code> para recibir tu ID.</p>
-            <p class="text-[10px] text-gray-400"> </p>
-            <p class="text-[10px] text-gray-400">Asegurate de haber activado las notificaciones de Telegram desde los ajustes de tu celu para que te avise cuando llegue una figu nueva.</p>        
-        </div>
+    <label class="text-xs text-yellow-500 font-bold">PASO 2: Pegá tu ID acá</label>
+    
+    <input type="text" name="telegram_id" value="{{ user.telegram_chat_id or '' }}" placeholder="Ej: 123456789" class="w-full bg-slate-900 border border-slate-700 rounded px-3 py-2 text-sm mt-1 text-white focus:border-yellow-500 outline-none font-mono text-center">
+    
+    <p class="text-[10px] text-gray-400 mt-3">
+        Buscá en Telegram <code class="bg-slate-800 px-1 rounded text-yellow-200">@userinfobot</code> y escribile <code class="bg-slate-800 px-1 rounded text-yellow-200">/start</code> para recibir tu ID.
+    </p>
+    
+    <p class="text-[10px] text-gray-400 mt-2">
+        Asegurate de haber activado las notificaciones de Telegram desde los ajustes de tu celu para que te avise cuando llegue una figu nueva.
+    </p>        
+</div>
 
         <button type="submit" class="w-full bg-slate-700 hover:bg-green-600 hover:text-white text-gray-200 font-bold py-2 rounded text-sm transition shadow-lg">
             💾 Guardar ID

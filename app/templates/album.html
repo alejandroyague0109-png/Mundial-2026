@@ -119,6 +119,7 @@
         const rList = Array.from(repetidas).sort((a,b) => a - b);
 
         // 3. MENSAJE
+        // 3. ARMAR MENSAJE
         let mensaje = `👋 HOLA! Estoy completando el álbum *Canje AlToque 26*.\n`; 
         mensaje += `Viendo: *${prefix}*\n`;
         mensaje += `----------------------------------\n`;
@@ -138,7 +139,14 @@
         }
 
         mensaje += `----------------------------------\n`;
-        mensaje += `¿Cambiamos? \n\n📲 Generado con CanjeAlToque26`;
+        mensaje += `¿Cambiamos? 🙌\n\n`;
+
+        // PIE DE PÁGINA CON LINKS
+        mensaje += `📲 *Android (Descargá la App):*\n`;
+        mensaje += `https://play.google.com/store/apps/details?id=com.canjealtoque.app\n\n`;
+
+        mensaje += `🍏 *iPhone / Web / Ya la instalé:*\n`;
+        mensaje += `https://canjealtoque26.com`;
 
         const url = `https://wa.me/?text=${encodeURIComponent(mensaje)}`;
         window.open(url, '_blank');

@@ -38,18 +38,21 @@ async def notify_wishlist_match(db: AsyncSession, sticker_num: int, sticker_name
     # 2. Enviar mensajes (Asíncrono)
     async with httpx.AsyncClient() as client:
         for user in interested_users:
+            # Construcción del mensaje profesional
             msg = (
                 f"🚨 *¡APARECIÓ UNA DIFÍCIL!*\n\n"
-                f"👤 **{owner.nick}** ({owner.province}) acaba de publicar:\n"
-                f"🏆 **{sticker_name}**\n\n"
-                f"🏃‍♂️ Corré al Mercado para contactarlo antes que te ganen."
+                f"👤 *{owner.nick}* ({owner.province}) acaba de publicar:\n"
+                f"🏆 *{sticker_name}*\n\n"
+                f"🏃‍♂️ Corré al Mercado para contactarlo antes que te ganen.\n\n"
+                f"📲 *Abrir App:* https://canjealtoque26.com"
             )
             
             url = f"https://api.telegram.org/bot{TELEGRAM_BOT_TOKEN}/sendMessage"
             payload = {
                 "chat_id": user.telegram_chat_id,
                 "text": msg,
-                "parse_mode": "Markdown"
+                "parse_mode": "Markdown", # Nota: Telegram "Markdown" clásico usa *negrita* (no doble asterisco)
+                "disable_web_page_preview": True # Opcional: Ponlo en False si quieres que se vea la miniatura de tu web
             }
             
             try:

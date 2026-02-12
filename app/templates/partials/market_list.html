@@ -367,15 +367,12 @@
                 window.open(link, '_blank');
             },
 
-            generateWhatsappLink(card) {
+           generateWhatsappLink(card) {
                 let phone = String(card.owner.phone).replace(/\D/g, '');
                 let text = "";
                 
-                // Usamos códigos seguros (\u...) para los emojis.
-                // Usamos guiones normales (-) para las barras.
-                
-                // Saludo: "Hola Nick! 👋 ..."
-                text += `Hola *${card.owner.nick}*! \uD83D\uDC4B Te vi en Figus 26.\n\n`;
+                // Saludo actualizado con el nombre correcto de la App
+                text += `Hola *${card.owner.nick}*! \uD83D\uDC4B Te vi en Canje AlToque 26.\n\n`;
 
                 if (card.is_sale) {
                     // --- MODO VENTA ---
@@ -400,6 +397,9 @@
                     text += `-----------------------------------\n\n`;
                     text += `¿Te sirve el cambio? \uD83E\uDD14`;
                 }
+
+                // --- LINK DIRECTO A LA APP ---
+                text += `\n\n📲 *Abrir App:* https://canjealtoque26.com`;
 
                 return `https://wa.me/${phone}?text=${encodeURIComponent(text)}`;
             },
