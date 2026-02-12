@@ -86,7 +86,6 @@
         const titleEl = container.querySelector('h2');
         if (titleEl) {
             let text = titleEl.innerText.trim().toUpperCase();
-            // Limpieza para obtener solo las letras (ej: ARG)
             if (text.includes('/')) text = text.split('/')[0].trim();
             prefix = text.substring(0, 3).replace(/[^A-Z]/g, ""); 
         }
@@ -98,38 +97,33 @@
         const stickers = container.querySelectorAll('div[id^="sticker-"]');
 
         stickers.forEach(el => {
-            // A. Obtener el número visualmente
-            // Buscamos el primer span que tenga un número
-            const spans = el.querySelectorAll('span');
-            let numero = null;
+            // A. Obtener el número
+            // Buscamos el span que tiene la clase 'font-mono' (según tu template)
+            const numSpan = el.querySelector('span.font-mono'); 
+            if (!numSpan) return;
             
-            // Recorremos los spans para encontrar el que tiene el número
-            for (let span of spans) {
-                const val = parseInt(span.innerText.trim());
-                if (!isNaN(val)) {
-                    numero = val;
-                    break;
-                }
-            }
-            
-            if (numero === null) return;
+            // Limpiamos espacios y posibles textos extra
+            const numero = parseInt(numSpan.innerText.trim());
+            if (isNaN(numero)) return;
 
-            // B. OBTENER EL ESTADO REAL (Magic Fix ✨)
-            // Usamos Alpine.$data(el) para leer la variable 'status' directamente.
-            // Esto es 100% preciso, sin depender de clases CSS.
-            let status = 'falta';
+            // B. OBTENER EL ESTADO REAL DESDE ALPINE
+            // CORRECCIÓN: Usamos 'localStatus' que es el nombre en tu x-data
+            let currentStatus = 'falta';
+            
             try {
-                if (typeof Alpine !== 'undefined') {
-                    status = Alpine.$data(el).status;
+                if (typeof Alpine !== 'undefined' && el.__x) {
+                    currentStatus = Alpine.$data(el).localStatus;
                 }
             } catch (e) {
-                console.error("Error leyendo Alpine en sticker " + numero, e);
+                console.warn("No se pudo leer estado de figurita " + numero);
             }
 
-            // C. Clasificar según el estado real
-            if (status === 'wishlist') {
+            // C. Clasificar
+            // IMPORTANTE: Asegúrate de escribir 'wishlist' y 'repetida' en minúsculas,
+            // tal como están en tu x-data.
+            if (currentStatus === 'wishlist') {
                 wishlist.add(numero);
-            } else if (status === 'repetida') {
+            } else if (currentStatus === 'repetida') {
                 repetidas.add(numero);
             }
         });
@@ -138,15 +132,15 @@
         const rList = Array.from(repetidas).sort((a,b) => a - b);
 
         // 3. ARMAR MENSAJE
-        let mensaje = `👋 HOLA! Estoy completando el álbum *Canje AlToque 26*.\n`;
+        let mensaje = `👋 HOLA! Estoy completando el álbum *Canje AlToque 26*.\n`; 
         mensaje += `Viendo: *${prefix}*\n`;
         mensaje += `----------------------------------\n`;
 
         if (wList.length > 0) {
-            mensaje += `❌ BUSCO (Wishlist):\n`;
+            mensaje += `❤️ BUSCO (Wishlist):\n`;
             mensaje += wList.map(n => `${n}`).join(', ') + `\n\n`;
         } else {
-            mensaje += `✅ BUSCO: ¡Nada de esta página!\n\n`;
+            mensaje += `✅ BUSCO: ¡Nada marcado en esta página!\n\n`;
         }
 
         if (rList.length > 0) {

@@ -15,20 +15,20 @@
             <table class="w-full text-left text-sm text-gray-300">
                 <thead class="bg-slate-900 text-xs uppercase text-gray-500">
                     <tr>
-                        <th class="px-4 py-3">Figurita</th>
-                        <th class="px-4 py-3">Estado</th>
-                        <th class="px-4 py-3">Precio ($)</th>
-                        <th class="px-4 py-3">Cantidad</th>
+                        <th class="px-3 py-3">Figurita</th>
+                        <th class="px-3 py-3">Estado</th>
+                        <th class="px-3 py-3">Precio ($)</th>
+                        <th class="px-3 py-3">Cantidad</th>
                     </tr>
                 </thead>
                 <tbody class="divide-y divide-slate-700">
                     {% for item in repeated_items %}
                     <tr class="hover:bg-slate-700/30 transition">
-                        <td class="px-4 py-3 font-bold text-white text-lg">
+                        <td class="px-3 py-3 font-bold text-white text-xs">
                             {{ format_sticker(item.sticker_num) }}
                         </td>
                         
-                        <td class="px-4 py-3">
+                        <td class="px-3 py-3">
                             {% if item.price > 0 %}
                                 <span class="text-green-400 font-bold text-xs px-2 py-1 rounded bg-slate-900 border border-slate-700">VENTA</span>
                             {% else %}
@@ -36,7 +36,7 @@
                             {% endif %}
                         </td>
 
-                        <td class="px-4 py-3">
+                        <td class="px-3 py-3">
                             <input type="number" 
                                 name="price" 
                                 value="{{ item.price }}" 
@@ -47,7 +47,7 @@
                                 placeholder="0">
                         </td>
 
-                        <td class="px-4 py-3">
+                        <td class="px-3 py-3">
                             <input type="number" 
                                 name="quantity" 
                                 value="{{ item.quantity }}" 

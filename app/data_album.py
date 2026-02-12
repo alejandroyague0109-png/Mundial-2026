@@ -6,7 +6,7 @@
 
 ALBUM_STRUCTURE = {
     # --- INTRODUCCIÓN ---
-    "FWC": {"name": "Intro / Museos", "start": 1, "count": 18},
+    "FWC": {"name": "Intro", "start": 1, "count": 18},
     
     # --- CABEZAS DE SERIE & ANFITRIONES 2026 ---
     "ARG": {"name": "Argentina 🇦🇷", "start": 19, "count": 20},
