@@ -370,20 +370,28 @@
            generateWhatsappLink(card) {
                 let phone = String(card.owner.phone).replace(/\D/g, '');
                 let text = "";
+                let deepLink = "";
                 
-                // Saludo actualizado con el nombre correcto de la App
+                // 1. GENERAR EL TEXTO DEL MENSAJE
                 text += `Hola *${card.owner.nick}*! \uD83D\uDC4B Te vi en Canje AlToque 26.\n\n`;
 
                 if (card.is_sale) {
-                    // --- MODO VENTA ---
+                    // --- MODO VENTA (Sin cambios) ---
+                    // Lleva al Álbum -> País específico para que el dueño sepa dónde buscarla
                     text += `\uD83D\uDCB0 *COMPRA DE FIGURITA*\n`;
                     text += `-----------------------------------\n`; 
                     text += `Ves: *${card.sticker_name}*\n`;
                     text += `Precio: *$${card.price}*\n`;
                     text += `-----------------------------------\n\n`;
                     text += `¿La tenés disponible hoy? \uD83D\uDCB8`;
+
+                    const countryCode = card.sticker_name.split(' ')[0];
+                    deepLink = `https://canjealtoque26.com/country/${countryCode}`;
+
                 } else {
-                    // --- MODO CANJE ---
+                    // --- MODO CANJE (Modificado) ---
+                    // Lleva al Mercado -> Filtrado SOLO por el usuario (Alias)
+                    // Así se ve todo el "stock" de figuritas que tiene esa persona.
                     text += `\uD83D\uDD04 *PROPUESTA DE CANJE*\n`;
                     text += `-----------------------------------\n`; 
                     text += `\uD83C\uDFAF *Te pido:* ${card.sticker_name}\n`;
@@ -396,10 +404,13 @@
                     }
                     text += `-----------------------------------\n\n`;
                     text += `¿Te sirve el cambio? \uD83E\uDD14`;
+
+                    // LINK: Mercado filtrado solo por Nick
+                    deepLink = `https://canjealtoque26.com/market?nick=${encodeURIComponent(card.owner.nick)}`;
                 }
 
-                // --- LINK DIRECTO A LA APP ---
-                text += `\n\n📲 *Abrir App:* https://canjealtoque26.com`;
+                // 2. AGREGAR EL LINK INTELIGENTE AL FINAL
+                text += `\n\n📲 *Ver tus figuritas:* ${deepLink}`;
 
                 return `https://wa.me/${phone}?text=${encodeURIComponent(text)}`;
             },

@@ -72,7 +72,15 @@ def parse_sticker_query(query_str: str):
 # --- ENDPOINTS ---
 
 @router.get("/market", response_class=HTMLResponse)
-async def market_view(request: Request, db: AsyncSession = Depends(get_db)):
+async def market_view(
+    request: Request,
+    # --- PARÁMETROS DE DEEP LINKING (Opcionales) ---
+    sticker: str | None = None,  # Para filtrar por figurita (ej: "ARG 10")
+    nick: str | None = None,     # Para buscar un usuario específico
+    zone: str | None = None,     # Para filtrar por provincia/zona
+    # -----------------------------------------------
+    db: AsyncSession = Depends(get_db)
+):
     user_id = request.cookies.get("user_id")
     if not user_id: return RedirectResponse(url="/login", status_code=303)
 
@@ -80,7 +88,7 @@ async def market_view(request: Request, db: AsyncSession = Depends(get_db)):
     user = result.scalars().first()
     if not user: return RedirectResponse(url="/login", status_code=303)
 
-    # --- NUEVO: Obtener Wishlist para el modal de Triangulación ---
+    # --- Wishlist para el modal de Triangulación (Se mantiene igual) ---
     wishlist_query = select(Inventory).where(
         Inventory.user_id == user.id,
         Inventory.status == 'wishlist'
@@ -89,7 +97,6 @@ async def market_view(request: Request, db: AsyncSession = Depends(get_db)):
     wishlist_res = await db.execute(wishlist_query)
     wishlist_items = wishlist_res.scalars().all()
 
-    # Formateamos la lista para el HTML: [{num: 10, name: 'ARG 10'}, ...]
     wishlist_formatted = []
     for item in wishlist_items:
         wishlist_formatted.append({
@@ -104,7 +111,13 @@ async def market_view(request: Request, db: AsyncSession = Depends(get_db)):
         "locations": ARGENTINA,
         "active_tab": "market",
         "album_structure": ALBUM_STRUCTURE,
-        "wishlist": wishlist_formatted  # <--- Pasamos la lista al template
+        "wishlist": wishlist_formatted,
+        
+        # --- PASAMOS LOS FILTROS AL FRONTEND ---
+        # Si vienen en la URL, AlpineJS los leerá para auto-completar los inputs
+        "auto_sticker": sticker, 
+        "auto_nick": nick,
+        "auto_zone": zone
     })
 
 @router.get("/market/zones_options")

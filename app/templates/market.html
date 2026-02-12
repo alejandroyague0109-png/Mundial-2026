@@ -1,7 +1,33 @@
 {% extends "base.html" %}
 
 {% block content %}
-<div class="max-w-5xl mx-auto min-h-screen" x-data="{ currentTab: 'canjes' }">
+<div class="max-w-5xl mx-auto min-h-screen" 
+     x-data="{ 
+        currentTab: 'canjes',
+        
+        // Variables para los filtros automáticos
+        autoSticker: '{{ auto_sticker or '' }}',
+        autoNick: '{{ auto_nick or '' }}',
+        autoZone: '{{ auto_zone or '' }}',
+
+        init() {
+            // LÓGICA DE AUTO-FILTRO (Deep Linking)
+            if (this.autoSticker || this.autoNick || this.autoZone) {
+                console.log('🔗 Deep Link detectado:', this.autoSticker, this.autoNick);
+                
+                // Esperamos un poquito a que el DOM esté listo
+                setTimeout(() => {
+                    const btn = document.getElementById('search-trigger-btn');
+                    if (btn) {
+                        // Disparamos la búsqueda automáticamente
+                        btn.click();
+                        // Scroll suave hacia los resultados
+                        document.getElementById('market-results').scrollIntoView({ behavior: 'smooth' });
+                    }
+                }, 300);
+            }
+        }
+     }">
 
     {% if not user.is_premium %}
     <div class="bg-slate-800 rounded-xl border border-slate-700 shadow-lg p-3 mb-4 animate-fade-in">
@@ -86,10 +112,10 @@
                     
                     {% if user.province and user.province in locations %}
                         {% for z in locations[user.province] %}
-                            <option value="{{ z }}" {{ 'selected' if z == user.zone else '' }}>{{ z }}</option>
+                            <option value="{{ z }}" {{ 'selected' if z == (auto_zone if auto_zone else user.zone) else '' }}>{{ z }}</option>
                         {% endfor %}
                     {% else %}
-                        <option value="{{ user.zone }}" selected>{{ user.zone }}</option>
+                         <option value="{{ auto_zone if auto_zone else user.zone }}" selected>{{ auto_zone if auto_zone else user.zone }}</option>
                     {% endif %}
 
                 </select>
@@ -97,14 +123,14 @@
 
             <div>
                 <label class="block text-[10px] font-bold text-gray-500 uppercase mb-1">Usuario (Nick)</label>
-                <input type="text" name="nick" placeholder="Ej: El 10" 
+                <input type="text" name="nick" x-model="autoNick" placeholder="Ej: El 10" 
                        class="w-full bg-slate-900 border border-slate-600 rounded px-3 py-2 text-sm text-white focus:border-yellow-500 outline-none placeholder-gray-600">
             </div>
 
             <div>
                 <label class="block text-[10px] font-bold text-gray-500 uppercase mb-1">N° Figurita</label>
                 <div class="flex gap-2">
-                    <input type="text" name="sticker_num" placeholder="Ej: ARG 10" 
+                    <input type="text" name="sticker_num" x-model="autoSticker" placeholder="Ej: ARG 10" 
                            class="w-full bg-slate-900 border border-slate-600 rounded px-3 py-2 text-sm text-white focus:border-yellow-500 outline-none placeholder-gray-600">
                     
                     <button type="submit" id="search-trigger-btn" class="bg-yellow-600 hover:bg-yellow-500 text-white p-2 rounded transition shadow-lg">
