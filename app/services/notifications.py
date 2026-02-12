@@ -5,11 +5,13 @@ from sqlalchemy.future import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from app.models import User, Inventory
 
-# --- CORRECCIÓN: Leemos la variable de entorno directamente ---
+# --- Leemos la variable de entorno ---
 TELEGRAM_BOT_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN")
-# --------------------------------------------------------------
+# -------------------------------------
 
-async def notify_wishlist_match(sticker_num: int, sticker_name: str, owner: User, db: AsyncSession):
+# CORRECCIÓN AQUÍ: Cambiamos el orden de los parámetros para coincidir con album.py
+# Orden recibido: (db, sticker_num, sticker_name, owner)
+async def notify_wishlist_match(db: AsyncSession, sticker_num: int, sticker_name: str, owner: User):
     """
     Busca usuarios Premium que tengan esta figurita en su Wishlist,
     tengan configurado Telegram y vivan en la MISMA ZONA que el dueño.

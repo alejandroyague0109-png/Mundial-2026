@@ -2,6 +2,7 @@
     window.incomingMarketData = {{ cards_json | safe }};
     // INYECCIÓN DE REPETIDAS DEL USUARIO
     window.myDuplicatesData = {{ my_duplicates_json | safe }};
+    window.currentUserNick = "{{ user.nick }}";
     document.dispatchEvent(new CustomEvent('data-ready'));
 </script>
 
@@ -376,8 +377,7 @@
                 text += `Hola *${card.owner.nick}*! \uD83D\uDC4B Te vi en Canje AlToque 26.\n\n`;
 
                 if (card.is_sale) {
-                    // --- MODO VENTA (Sin cambios) ---
-                    // Lleva al Álbum -> País específico para que el dueño sepa dónde buscarla
+                    // --- MODO VENTA ---
                     text += `\uD83D\uDCB0 *COMPRA DE FIGURITA*\n`;
                     text += `-----------------------------------\n`; 
                     text += `Ves: *${card.sticker_name}*\n`;
@@ -386,12 +386,10 @@
                     text += `¿La tenés disponible hoy? \uD83D\uDCB8`;
 
                     const countryCode = card.sticker_name.split(' ')[0];
-                    deepLink = `https://canjealtoque26.com/country/${countryCode}`;
+                    deepLink = `https://canjealtoque26.com/album/country/${countryCode}`;
 
                 } else {
-                    // --- MODO CANJE (Modificado) ---
-                    // Lleva al Mercado -> Filtrado SOLO por el usuario (Alias)
-                    // Así se ve todo el "stock" de figuritas que tiene esa persona.
+                    // --- MODO CANJE ---
                     text += `\uD83D\uDD04 *PROPUESTA DE CANJE*\n`;
                     text += `-----------------------------------\n`; 
                     text += `\uD83C\uDFAF *Te pido:* ${card.sticker_name}\n`;
@@ -405,12 +403,16 @@
                     text += `-----------------------------------\n\n`;
                     text += `¿Te sirve el cambio? \uD83E\uDD14`;
 
-                    // LINK: Mercado filtrado solo por Nick
-                    deepLink = `https://canjealtoque26.com/market?nick=${encodeURIComponent(card.owner.nick)}`;
+                    // --- CORRECCIÓN AQUÍ ---
+                    // Usamos la variable global que definimos arriba.
+                    // Si por alguna razón falla, no ponemos filtro de nick.
+                    const myNick = window.currentUserNick || "";
+                    
+                    deepLink = `https://canjealtoque26.com/market?nick=${encodeURIComponent(myNick)}`;
                 }
 
                 // 2. AGREGAR EL LINK INTELIGENTE AL FINAL
-                text += `\n\n📲 *Ver tus figuritas:* ${deepLink}`;
+                text += `\n\n📲 *Ver posibles canjes:* ${deepLink}`;
 
                 return `https://wa.me/${phone}?text=${encodeURIComponent(text)}`;
             },
