@@ -26,7 +26,7 @@
             <label class="block text-[10px] font-bold text-gray-400 uppercase mb-1">Provincia</label>
             <select x-model="filters.provincia" @change="updateLocalidades(); fetchSpots()" class="w-full bg-slate-900 border border-slate-600 rounded-lg px-3 py-2 text-sm text-white focus:border-emerald-500 outline-none transition">
                 <template x-for="prov in Object.keys(locationsDb)" :key="prov">
-                    <option :value="prov" x-text="prov"></option>
+                    <option :value="prov" x-text="prov" :selected="prov === filters.provincia"></option>
                 </template>
             </select>
         </div>
@@ -35,7 +35,7 @@
             <label class="block text-[10px] font-bold text-gray-400 uppercase mb-1">Localidad</label>
             <select x-model="filters.localidad" @change="fetchSpots()" class="w-full bg-slate-900 border border-slate-600 rounded-lg px-3 py-2 text-sm text-white focus:border-emerald-500 outline-none transition disabled:opacity-50" :disabled="localidadesDisponibles.length === 0">
                 <template x-for="loc in localidadesDisponibles" :key="loc">
-                    <option :value="loc" x-text="loc"></option>
+                    <option :value="loc" x-text="loc" :selected="loc === filters.localidad"></option>
                 </template>
             </select>
         </div>
@@ -108,8 +108,8 @@
             return {
                 locationsDb: window.LOCATIONS_DB || {},
                 filters: {
-                    provincia: userProv,
-                    localidad: userLoc,
+                    provincia: '',
+                    localidad: '',
                     categoria: ''
                 },
                 localidadesDisponibles: [],
@@ -119,27 +119,28 @@
                 init() {
                     const provs = Object.keys(this.locationsDb);
                     
-                    // 1. Fuerza una provincia válida (Prioriza la del usuario, luego Mendoza, o la primera de la lista)
-                    if (!this.filters.provincia || !provs.includes(this.filters.provincia)) {
-                        this.filters.provincia = provs.includes('Mendoza') ? 'Mendoza' : (provs[0] || '');
+                    // 1. Asignar provincia validando que exista
+                    if (!userProv || !provs.includes(userProv)) {
+                        userProv = provs.includes('Mendoza') ? 'Mendoza' : (provs[0] || '');
                     }
+                    this.filters.provincia = userProv;
                     
-                    // 2. Carga las localidades de la provincia seleccionada
+                    // 2. Cargar localidades de esa provincia
                     this.localidadesDisponibles = this.locationsDb[this.filters.provincia] || [];
                     
-                    // 3. Fuerza una localidad válida (Si la del usuario no coincide con la provincia, agarra la primera)
-                    if (!this.filters.localidad || !this.localidadesDisponibles.includes(this.filters.localidad)) {
-                        this.filters.localidad = this.localidadesDisponibles[0] || '';
+                    // 3. Asignar localidad validando que pertenezca a la provincia
+                    if (!userLoc || !this.localidadesDisponibles.includes(userLoc)) {
+                        userLoc = this.localidadesDisponibles[0] || '';
                     }
+                    this.filters.localidad = userLoc;
 
-                    // 4. Retrasamos la búsqueda 1 ciclo para que Alpine termine de renderizar los <select> y los sincronice visualmente
+                    // 4. Retrasamos la búsqueda para que el HTML se sincronice con estos valores
                     this.$nextTick(() => {
                         this.fetchSpots();
                     });
                 },
 
                 updateLocalidades() {
-                    // Al cambiar provincia, actualizamos la lista y forzamos seleccionar la PRIMERA localidad disponible
                     this.localidadesDisponibles = this.locationsDb[this.filters.provincia] || [];
                     this.filters.localidad = this.localidadesDisponibles[0] || '';
                 },
@@ -157,7 +158,15 @@
                         const data = await response.json();
                         
                         if (response.ok && data.spots) {
-                            this.spots = data.spots;
+                            // ORDENAMIENTO: Primero por categoría, luego por nombre
+                            this.spots = data.spots.sort((a, b) => {
+                                // Compara categoría
+                                const catCompare = (a.categoria || '').localeCompare(b.categoria || '');
+                                if (catCompare !== 0) return catCompare;
+                                
+                                // Si son la misma categoría, compara por nombre
+                                return (a.nombre || '').localeCompare(b.nombre || '');
+                            });
                         } else {
                             this.spots = [];
                         }
