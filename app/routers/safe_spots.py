@@ -55,20 +55,39 @@ async def search_safe_spots(
 ):
     stmt = select(PuntoSeguro)
     
-    # Aplicar filtros
-    if provincia:
+    # Aplicar filtros (ignoramos vacíos y la palabra "None" de Python)
+    if provincia and provincia != "None":
         stmt = stmt.where(PuntoSeguro.provincia == provincia)
-    if localidad:
+        
+    if localidad and localidad != "None":
         stmt = stmt.where(PuntoSeguro.departamento == localidad)
-    if categoria:
+        
+    if categoria and categoria != "None":
         stmt = stmt.where(PuntoSeguro.categoria == categoria)
         
     result = await db.execute(stmt)
     spots = result.scalars().all()
     
-    # Formatear la respuesta
-    spots_data = []
+    # --- FILTRO TEMPORAL: Máximo 3 por categoría ---
+    spots_filtrados = []
+    contador_categorias = {}
+    
     for s in spots:
+        cat = s.categoria or "otros"
+        
+        # Inicializamos el contador de esta categoría si no existe
+        if cat not in contador_categorias:
+            contador_categorias[cat] = 0
+            
+        # Solo agregamos el local si hay menos de 3 de este rubro
+        if contador_categorias[cat] < 3:
+            spots_filtrados.append(s)
+            contador_categorias[cat] += 1
+    # -----------------------------------------------
+    
+    # Formatear la respuesta usando la nueva lista filtrada
+    spots_data = []
+    for s in spots_filtrados:
         spots_data.append({
             "id": str(s.id),
             "nombre": s.nombre,
