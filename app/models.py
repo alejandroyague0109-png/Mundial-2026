@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, Boolean, ForeignKey, DateTime, Date
+from sqlalchemy import Column, Integer, String, Boolean, Float, ForeignKey, DateTime, Date
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
 from app.database import Base
@@ -48,7 +48,7 @@ class Inventory(Base):
     # Relación: Un item pertenece a un usuario
     owner = relationship("User", back_populates="inventory_items")
 
-# --- NUEVA CLASE PARA GESTIONAR TRANSACCIONES/PENDIENTES ---
+# --- CLASE PARA GESTIONAR TRANSACCIONES/PENDIENTES ---
 class ContactLog(Base):
     __tablename__ = "contact_logs"
 
@@ -67,3 +67,22 @@ class ContactLog(Base):
     initiator = relationship("User", foreign_keys=[user_id])
     target = relationship("User", foreign_keys=[target_id])
     item = relationship("Inventory")
+
+# --- NUEVA CLASE: PUNTOS SEGUROS ---
+class PuntoSeguro(Base):
+    __tablename__ = "puntos_seguros"
+
+    id = Column(String, primary_key=True, index=True)
+    nombre = Column(String)
+    categoria = Column(String)
+    provincia = Column(String)
+    departamento = Column(String)
+    distrito = Column(String, nullable=True)
+    direccion = Column(String, nullable=True)
+    telefono = Column(String, nullable=True)
+    latitud = Column(Float)
+    longitud = Column(Float)
+    verificado = Column(Boolean, default=False)
+    created_at = Column(DateTime, nullable=True)
+    telefono_wa = Column(String, nullable=True)
+    estado_limpieza = Column(String, nullable=True)

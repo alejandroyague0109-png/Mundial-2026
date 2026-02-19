@@ -1,38 +1,153 @@
-from fastapi import APIRouter, Depends, Request
-from fastapi.responses import HTMLResponse, RedirectResponse
-from fastapi.templating import Jinja2Templates
-from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select
-from pathlib import Path
+{% extends "base.html" %}
 
-from app.database import get_db
-from app.models import User
-from app.data_album import ALBUM_STRUCTURE  # <--- IMPORTANTE AGREGAR ESTO
-
-router = APIRouter(tags=["Safe Spots"])
-
-BASE_DIR = Path(__file__).resolve().parent.parent
-templates = Jinja2Templates(directory=str(BASE_DIR / "templates"))
-
-@router.get("/safe-spots", response_class=HTMLResponse)
-async def view_safe_spots(request: Request, db: AsyncSession = Depends(get_db)):
-    # 1. Validar que el usuario esté logueado
-    user_id = request.cookies.get("user_id")
-    if not user_id: 
-        return RedirectResponse(url="/login", status_code=303)
-
-    result_user = await db.execute(select(User).where(User.id == int(user_id)))
-    user = result_user.scalars().first()
+{% block content %}
+<div class="p-4 md:p-8 max-w-6xl mx-auto animate-fade-in"
+     x-data="safeSpotsManager('{{ user.province }}', '{{ user.zone }}')">
     
-    if not user: 
-        response = RedirectResponse(url="/login", status_code=303)
-        response.delete_cookie("user_id")
-        return response
+    <div class="mb-8 border-b border-slate-700 pb-4">
+        <h1 class="text-3xl font-black text-white flex items-center gap-3">
+            <span>🛡️</span> Puntos Seguros
+        </h1>
+        <p class="text-gray-400 mt-2 text-sm">
+            Lugares públicos y vigilados recomendados para realizar tus intercambios de forma segura.
+        </p>
+    </div>
 
-    # 2. Renderizar la nueva plantilla
-    return templates.TemplateResponse("safe_spots.html", {
-        "request": request,
-        "user": user,
-        "active_tab": "safe_spots",
-        "album_structure": ALBUM_STRUCTURE  # <--- PASAR LA VARIABLE AQUÍ
-    })
+    <div class="bg-slate-800 p-4 rounded-xl border border-slate-700 mb-6 grid grid-cols-1 md:grid-cols-3 gap-4 shadow-lg">
+        
+        <div>
+            <label class="block text-[10px] font-bold text-gray-400 uppercase mb-1">Provincia</label>
+            <select x-model="filters.provincia" @change="updateLocalidades(); fetchSpots()" class="w-full bg-slate-900 border border-slate-600 rounded-lg px-3 py-2 text-sm text-white focus:border-emerald-500 outline-none transition">
+                <option value="">Todas las provincias</option>
+                <template x-for="prov in Object.keys(locationsDb)" :key="prov">
+                    <option :value="prov" x-text="prov"></option>
+                </template>
+            </select>
+        </div>
+        
+        <div>
+            <label class="block text-[10px] font-bold text-gray-400 uppercase mb-1">Localidad</label>
+            <select x-model="filters.localidad" @change="fetchSpots()" class="w-full bg-slate-900 border border-slate-600 rounded-lg px-3 py-2 text-sm text-white focus:border-emerald-500 outline-none transition disabled:opacity-50" :disabled="!filters.provincia">
+                <option value="">Todas las localidades</option>
+                <template x-for="loc in localidadesDisponibles" :key="loc">
+                    <option :value="loc" x-text="loc"></option>
+                </template>
+            </select>
+        </div>
+
+        <div>
+            <label class="block text-[10px] font-bold text-gray-400 uppercase mb-1">Rubro del local</label>
+            <select x-model="filters.categoria" @change="fetchSpots()" class="w-full bg-slate-900 border border-slate-600 rounded-lg px-3 py-2 text-sm text-white focus:border-emerald-500 outline-none transition">
+                <option value="">Cualquier rubro</option>
+                {% for cat in categorias %}
+                    <option value="{{ cat }}">{{ cat | capitalize }}</option>
+                {% endfor %}
+            </select>
+        </div>
+    </div>
+
+    <div class="relative min-h-[300px]">
+        
+        <div x-show="loading" class="absolute inset-0 flex justify-center items-start pt-10 z-10 bg-slate-900/50 backdrop-blur-sm rounded-xl">
+            <div class="animate-spin text-emerald-500 text-4xl mt-10">🔄</div>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            <template x-for="spot in spots" :key="spot.id">
+                <div class="bg-slate-800 rounded-xl border border-slate-700 p-5 flex flex-col justify-between hover:border-emerald-500 transition-colors shadow-lg group">
+                    <div>
+                        <div class="flex justify-between items-start mb-2 gap-2">
+                            <h3 class="text-lg font-bold text-white leading-tight" x-text="spot.nombre"></h3>
+                            <template x-if="spot.verificado === true || spot.verificado === 'true'">
+                                <span class="bg-emerald-900/30 text-emerald-400 text-[9px] px-2 py-0.5 rounded border border-emerald-500/50 font-bold whitespace-nowrap">✅ OFICIAL</span>
+                            </template>
+                        </div>
+                        
+                        <p class="text-[10px] text-emerald-400 font-mono uppercase mb-3 bg-emerald-900/10 inline-block px-2 py-1 rounded" x-text="spot.categoria"></p>
+                        
+                        <div class="flex items-start gap-1.5 text-xs text-gray-400 mb-1">
+                            <span>📍</span> 
+                            <span class="leading-tight"><span x-text="spot.departamento"></span>, <span x-text="spot.provincia"></span></span>
+                        </div>
+                    </div>
+                    
+                    <a :href="'https://www.google.com/maps/search/?api=1&query=' + spot.latitud + ',' + spot.longitud" target="_blank" 
+                       class="mt-4 w-full bg-slate-700 hover:bg-emerald-600 text-white font-bold py-2.5 rounded-lg transition-colors flex items-center justify-center gap-2 text-sm shadow">
+                        <span>🗺️</span> Ver en Mapa
+                    </a>
+                </div>
+            </template>
+        </div>
+
+        <div x-show="!loading && spots.length === 0" class="flex flex-col items-center justify-center p-12 bg-slate-800/50 rounded-xl border border-slate-700 border-dashed mt-4">
+            <div class="text-5xl mb-3 grayscale opacity-50">🏝️</div>
+            <p class="text-gray-300 font-bold">No encontramos puntos seguros aquí.</p>
+            <p class="text-xs text-gray-500 mt-1 text-center">Modificá los filtros para buscar en zonas cercanas.</p>
+        </div>
+    </div>
+
+</div>
+
+<script>
+    window.LOCATIONS_DB = {{ locations_json | safe }};
+</script>
+
+<script>
+    document.addEventListener('alpine:init', () => {
+        Alpine.data('safeSpotsManager', (userProv, userLoc) => ({
+            locationsDb: window.LOCATIONS_DB || {},
+            filters: {
+                provincia: userProv || '',
+                localidad: userLoc || '',
+                categoria: ''
+            },
+            localidadesDisponibles: [],
+            spots: [],
+            loading: false,
+
+            init() {
+                // Al entrar a la página, seteamos las localidades de su provincia
+                if (this.filters.provincia && this.locationsDb[this.filters.provincia]) {
+                    this.localidadesDisponibles = this.locationsDb[this.filters.provincia];
+                }
+                // Hacemos la primera búsqueda automáticamente
+                this.fetchSpots();
+            },
+
+            updateLocalidades() {
+                this.filters.localidad = ''; 
+                if (this.filters.provincia && this.locationsDb[this.filters.provincia]) {
+                    this.localidadesDisponibles = this.locationsDb[this.filters.provincia];
+                } else {
+                    this.localidadesDisponibles = [];
+                }
+            },
+
+            async fetchSpots() {
+                this.loading = true;
+                try {
+                    const params = new URLSearchParams({
+                        provincia: this.filters.provincia,
+                        localidad: this.filters.localidad,
+                        categoria: this.filters.categoria
+                    });
+                    
+                    const response = await fetch(`/safe-spots/search?${params.toString()}`);
+                    const data = await response.json();
+                    
+                    if (response.ok) {
+                        this.spots = data.spots;
+                    } else {
+                        this.spots = [];
+                    }
+                } catch (error) {
+                    console.error("Error al buscar:", error);
+                    this.spots = [];
+                } finally {
+                    this.loading = false;
+                }
+            }
+        }));
+    });
+</script>
+{% endblock %}
