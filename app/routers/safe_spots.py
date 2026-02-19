@@ -55,7 +55,7 @@ async def search_safe_spots(
 ):
     stmt = select(PuntoSeguro)
     
-    # Aplicar filtros (ignoramos vacíos y la palabra "None" de Python)
+    # Aplicar filtros
     if provincia and provincia != "None":
         stmt = stmt.where(PuntoSeguro.provincia == provincia)
         
@@ -68,24 +68,28 @@ async def search_safe_spots(
     result = await db.execute(stmt)
     spots = result.scalars().all()
     
-    # --- FILTRO TEMPORAL: Máximo 3 por categoría ---
+    # --- FILTRO TEMPORAL: Máximo 3 en total por búsqueda ---
     spots_filtrados = []
-    contador_categorias = {}
+    categorias_vistas = set()
     
+    # 1. Priorizamos buscar 3 locales de categorías distintas
     for s in spots:
-        cat = s.categoria or "otros"
-        
-        # Inicializamos el contador de esta categoría si no existe
-        if cat not in contador_categorias:
-            contador_categorias[cat] = 0
-            
-        # Solo agregamos el local si hay menos de 3 de este rubro
-        if contador_categorias[cat] < 3:
+        if len(spots_filtrados) >= 3:
+            break
+        if s.categoria not in categorias_vistas:
             spots_filtrados.append(s)
-            contador_categorias[cat] += 1
-    # -----------------------------------------------
+            categorias_vistas.add(s.categoria)
+            
+    # 2. Si no juntamos 3 (ej: porque todos en el pueblo son "kiosco"), 
+    # rellenamos con los restantes hasta llegar a 3.
+    for s in spots:
+        if len(spots_filtrados) >= 3:
+            break
+        if s not in spots_filtrados:
+            spots_filtrados.append(s)
+    # -------------------------------------------------------
     
-    # Formatear la respuesta usando la nueva lista filtrada
+    # Formatear la respuesta usando la lista filtrada
     spots_data = []
     for s in spots_filtrados:
         spots_data.append({
@@ -99,4 +103,4 @@ async def search_safe_spots(
             "verificado": s.verificado
         })
         
-    return JSONResponse(content={"spots": spots_data})
+    return JSONResponse(content={"spots": spots_data}))
