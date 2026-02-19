@@ -103,4 +103,4 @@ async def search_safe_spots(
             "verificado": s.verificado
         })
         
-    return JSONResponse(content={"spots": spots_data}))
+    return JSONResponse(content={"spots": spots_data})
