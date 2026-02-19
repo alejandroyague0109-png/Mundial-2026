@@ -48,7 +48,7 @@ ARGENTINA = {
         "General Güemes", "Independencia", "Libertad", "Libertador General San Martín", "Maipú",
         "Mayor Luis Jorge Fontana", "Nueve de Julio", "O'Higgins", "Presidencia de la Plaza",
         "Primero de Mayo", "Quitilipi", "San Fernando", "San Lorenzo", "Sargento Cabral",
-        "Tapenagá", "Veinticinco de Mayo"
+        "Tapenagá", "Veinticinco de Mayo", "Resistencia"
     ],
     "Chubut": [
         "Biedma", "Cushamen", "Escalante", "Florentino Ameghino", "Futaleufú", "Gaiman",
@@ -80,7 +80,7 @@ ARGENTINA = {
     ],
     "Jujuy": [
         "Cochinoca", "Dr. Manuel Belgrano", "El Carmen", "Humahuaca", "Ledesma", "Palpalá",
-        "Rinconada", "San Antonio", "San Pedro", "Santa Bárbara", "Santa Catalina", "Susques",
+        "Rinconada", "San Antonio", "San Pedro", "San Salvador de Jujuy", "Santa Bárbara", "Santa Catalina", "Susques",
         "Tilcara", "Tumbaya", "Valle Grande", "Yavi"
     ],
     "La Pampa": [
@@ -113,7 +113,7 @@ ARGENTINA = {
     "Río Negro": [
         "Adolfo Alsina", "Avellaneda", "Bariloche", "Conesa", "El Cuy", "General Roca",
         "Nueve de Julio", "Ñorquinco", "Pichi Mahuida", "Pilcaniyeu", "San Antonio",
-        "Valcheta", "Veinticinco de Mayo"
+        "Valcheta", "Veinticinco de Mayo", "Viedma"
     ],
     "Salta": [
         "Anta", "Cachi", "Cafayate", "Capital (Salta)", "Cerrillos", "Chicoana", "General Güemes",
@@ -128,11 +128,12 @@ ARGENTINA = {
     ],
     "San Luis": [
         "Ayacucho", "Belgrano", "Chacabuco", "Coronel Pringles", "General Pedernera",
-        "Gobernador Dupuy", "Junín", "Juan Martín de Pueyrredón (Capital)", "Libertador Gral. San Martín"
+        "Gobernador Dupuy", "Junín", "Juan Martín de Pueyrredón", "Libertador Gral. San Martín",
+        "San Luis (Capital)"
     ],
     "Santa Cruz": [
         "Corpen Aike", "Deseado", "Güer Aike", "Lago Argentino", "Lago Buenos Aires",
-        "Magallanes", "Río Chico"
+        "Magallanes", "Río Chico", "Rio Gallegos"
     ],
     "Santa Fe": [
         "Belgrano", "Caseros", "Castellanos", "Constitución", "Garay", "General López",

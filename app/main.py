@@ -10,7 +10,7 @@ import sentry_sdk # Nuevo import
 
 # Imports internos
 from app.database import engine, Base
-from app.routers import auth, album, user, market, triangulation
+from app.routers import auth, album, user, market, triangulation, safe_spots
 from app import models 
 from app.data_album import ALBUM_STRUCTURE # Necesario para el helper
 
@@ -50,6 +50,7 @@ app.include_router(album.router)
 app.include_router(user.router)
 app.include_router(market.router)
 app.include_router(triangulation.router)
+app.include_router(safe_spots.router)
 
 # --- CONFIGURACIÓN DE RUTAS ---
 BASE_DIR = Path(__file__).resolve().parent
