@@ -414,6 +414,9 @@
                 // 2. AGREGAR EL LINK INTELIGENTE AL FINAL
                 text += `\n\n📲 *Ver posibles canjes:* ${deepLink}`;
 
+                // --- NUEVO: AGREGAR EL LINK DE PUNTOS SEGUROS ---
+                text += `\n\n🛡️ *Puntos de canje recomendados:*\nhttps://canjealtoque26.com/safe-spots`;
+
                 return `https://api.whatsapp.com/send?phone=${phone}&text=${encodeURIComponent(text)}`;
             },
 

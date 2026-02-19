@@ -207,6 +207,7 @@
             
             // DEEP LINK:
             const deepLink = `https://canjealtoque26.com/market?sticker=${encodeURIComponent(t.my_payment_sticker.name)}`;
+            const safeSpotsLink = `https://canjealtoque26.com/safe-spots`;
 
             const msg = `Hola *${t.user_C.nick}*! 👋
 Vi en *Canje AlToque 26* que tenés la *${t.bridge_sticker.name}* y buscás la *${t.my_payment_sticker.name}*.
@@ -221,6 +222,9 @@ Vi en *Canje AlToque 26* que tenés la *${t.bridge_sticker.name}* y buscás la *
 
 📲 *Ver figurita en la App:*
 ${deepLink}`;
+
+🛡️ *Puntos de canje recomendados:*
+${safeSpotsLink}`;
 
             const waLink = `https://api.whatsapp.com/send?phone=${phoneBridge}&text=${encodeURIComponent(msg)}`;
             
