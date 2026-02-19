@@ -4,7 +4,7 @@
 <div class="p-4 md:p-8 max-w-6xl mx-auto animate-fade-in"
      x-data="safeSpotsManager('{{ user.province }}', '{{ user.zone }}')">
     
-    <div class="mb-8 border-b border-slate-700 pb-4">
+    <div class="mb-6 border-b border-slate-700 pb-4">
         <h1 class="text-3xl font-black text-white flex items-center gap-3">
             <span>🛡️</span> Puntos Seguros
         </h1>
@@ -13,12 +13,18 @@
         </p>
     </div>
 
+    <div class="bg-yellow-900/20 border border-yellow-700/50 rounded-xl p-4 mb-6 flex items-start gap-3 shadow-lg">
+        <div class="text-2xl mt-0.5">⚠️</div>
+        <p class="text-xs text-yellow-200/80 leading-relaxed">
+            <strong>Aviso de la comunidad:</strong> Verificamos que estos locales tengan reseñas de más de 4 estrellas y contactamos a cada uno de ellos. Sin embargo, no podemos hacernos responsables por los sucesos que en ellos ocurran.
+        </p>
+    </div>
+
     <div class="bg-slate-800 p-4 rounded-xl border border-slate-700 mb-6 grid grid-cols-1 md:grid-cols-3 gap-4 shadow-lg">
         
         <div>
             <label class="block text-[10px] font-bold text-gray-400 uppercase mb-1">Provincia</label>
             <select x-model="filters.provincia" @change="updateLocalidades(); fetchSpots()" class="w-full bg-slate-900 border border-slate-600 rounded-lg px-3 py-2 text-sm text-white focus:border-emerald-500 outline-none transition">
-                <option value="">Todas las provincias</option>
                 <template x-for="prov in Object.keys(locationsDb)" :key="prov">
                     <option :value="prov" x-text="prov"></option>
                 </template>
@@ -27,8 +33,7 @@
         
         <div>
             <label class="block text-[10px] font-bold text-gray-400 uppercase mb-1">Localidad</label>
-            <select x-model="filters.localidad" @change="fetchSpots()" class="w-full bg-slate-900 border border-slate-600 rounded-lg px-3 py-2 text-sm text-white focus:border-emerald-500 outline-none transition disabled:opacity-50" :disabled="!filters.provincia">
-                <option value="">Todas las localidades</option>
+            <select x-model="filters.localidad" @change="fetchSpots()" class="w-full bg-slate-900 border border-slate-600 rounded-lg px-3 py-2 text-sm text-white focus:border-emerald-500 outline-none transition disabled:opacity-50" :disabled="localidadesDisponibles.length === 0">
                 <template x-for="loc in localidadesDisponibles" :key="loc">
                     <option :value="loc" x-text="loc"></option>
                 </template>
@@ -82,7 +87,7 @@
         <div x-show="!loading && spots.length === 0" class="flex flex-col items-center justify-center p-12 bg-slate-800/50 rounded-xl border border-slate-700 border-dashed mt-4">
             <div class="text-5xl mb-3 grayscale opacity-50">🏝️</div>
             <p class="text-gray-300 font-bold">No encontramos puntos seguros aquí.</p>
-            <p class="text-xs text-gray-500 mt-1 text-center">Modificá los filtros para buscar en zonas cercanas.</p>
+            <p class="text-xs text-gray-500 mt-1 text-center">Elegí otra localidad o provincia cercana para ver opciones.</p>
         </div>
     </div>
 
@@ -94,60 +99,77 @@
 
 <script>
     document.addEventListener('alpine:init', () => {
-        Alpine.data('safeSpotsManager', (userProv, userLoc) => ({
-            locationsDb: window.LOCATIONS_DB || {},
-            filters: {
-                provincia: userProv || '',
-                localidad: userLoc || '',
-                categoria: ''
-            },
-            localidadesDisponibles: [],
-            spots: [],
-            loading: false,
+        Alpine.data('safeSpotsManager', (rawProv, rawLoc) => {
+            
+            // Limpieza de datos iniciales
+            let userProv = (rawProv === 'None' || !rawProv) ? '' : rawProv.trim();
+            let userLoc = (rawLoc === 'None' || !rawLoc) ? '' : rawLoc.trim();
 
-            init() {
-                // Al entrar a la página, seteamos las localidades de su provincia
-                if (this.filters.provincia && this.locationsDb[this.filters.provincia]) {
-                    this.localidadesDisponibles = this.locationsDb[this.filters.provincia];
-                }
-                // Hacemos la primera búsqueda automáticamente
-                this.fetchSpots();
-            },
+            return {
+                locationsDb: window.LOCATIONS_DB || {},
+                filters: {
+                    provincia: userProv,
+                    localidad: userLoc,
+                    categoria: ''
+                },
+                localidadesDisponibles: [],
+                spots: [],
+                loading: false,
 
-            updateLocalidades() {
-                this.filters.localidad = ''; 
-                if (this.filters.provincia && this.locationsDb[this.filters.provincia]) {
-                    this.localidadesDisponibles = this.locationsDb[this.filters.provincia];
-                } else {
-                    this.localidadesDisponibles = [];
-                }
-            },
-
-            async fetchSpots() {
-                this.loading = true;
-                try {
-                    const params = new URLSearchParams({
-                        provincia: this.filters.provincia,
-                        localidad: this.filters.localidad,
-                        categoria: this.filters.categoria
-                    });
+                init() {
+                    const provs = Object.keys(this.locationsDb);
                     
-                    const response = await fetch(`/safe-spots/search?${params.toString()}`);
-                    const data = await response.json();
-                    
-                    if (response.ok) {
-                        this.spots = data.spots;
-                    } else {
-                        this.spots = [];
+                    // 1. Fuerza una provincia válida (Prioriza la del usuario, luego Mendoza, o la primera de la lista)
+                    if (!this.filters.provincia || !provs.includes(this.filters.provincia)) {
+                        this.filters.provincia = provs.includes('Mendoza') ? 'Mendoza' : (provs[0] || '');
                     }
-                } catch (error) {
-                    console.error("Error al buscar:", error);
-                    this.spots = [];
-                } finally {
-                    this.loading = false;
+                    
+                    // 2. Carga las localidades de la provincia seleccionada
+                    this.localidadesDisponibles = this.locationsDb[this.filters.provincia] || [];
+                    
+                    // 3. Fuerza una localidad válida (Si la del usuario no coincide con la provincia, agarra la primera)
+                    if (!this.filters.localidad || !this.localidadesDisponibles.includes(this.filters.localidad)) {
+                        this.filters.localidad = this.localidadesDisponibles[0] || '';
+                    }
+
+                    // 4. Retrasamos la búsqueda 1 ciclo para que Alpine termine de renderizar los <select> y los sincronice visualmente
+                    this.$nextTick(() => {
+                        this.fetchSpots();
+                    });
+                },
+
+                updateLocalidades() {
+                    // Al cambiar provincia, actualizamos la lista y forzamos seleccionar la PRIMERA localidad disponible
+                    this.localidadesDisponibles = this.locationsDb[this.filters.provincia] || [];
+                    this.filters.localidad = this.localidadesDisponibles[0] || '';
+                },
+
+                async fetchSpots() {
+                    this.loading = true;
+                    try {
+                        const params = new URLSearchParams({
+                            provincia: this.filters.provincia,
+                            localidad: this.filters.localidad,
+                            categoria: this.filters.categoria
+                        });
+                        
+                        const response = await fetch(`/safe-spots/search?${params.toString()}`);
+                        const data = await response.json();
+                        
+                        if (response.ok && data.spots) {
+                            this.spots = data.spots;
+                        } else {
+                            this.spots = [];
+                        }
+                    } catch (error) {
+                        console.error("Error al buscar:", error);
+                        this.spots = [];
+                    } finally {
+                        this.loading = false;
+                    }
                 }
             }
-        }));
+        });
     });
 </script>
 {% endblock %}
