@@ -100,3 +100,5 @@ async def search_safe_spots(
         })
         
     return JSONResponse(content={"spots": spots_data})
+
+    # pa probar
