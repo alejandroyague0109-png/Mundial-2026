@@ -39,11 +39,12 @@ async def view_safe_spots(request: Request, db: AsyncSession = Depends(get_db)):
         "user": user,
         "active_tab": "safe_spots",
         "album_structure": ALBUM_STRUCTURE,
-        "locations_json": json.dumps(ARGENTINA), # Para el Javascript de los filtros
+        "locations": ARGENTINA,  # <--- CORRECCIÓN AQUÍ (Para los modales)
+        "locations_json": json.dumps(ARGENTINA), # Para el Javascript
         "categorias": categorias
     })
 
-# 2. API DE BÚSQUEDA (El Javascript consulta aquí al cambiar los filtros)
+# 2. API DE BÚSQUEDA
 @router.get("/safe-spots/search")
 async def search_safe_spots(
     request: Request,
@@ -54,7 +55,7 @@ async def search_safe_spots(
 ):
     stmt = select(PuntoSeguro)
     
-    # Aplicar filtros solo si el usuario seleccionó algo
+    # Aplicar filtros
     if provincia:
         stmt = stmt.where(PuntoSeguro.provincia == provincia)
     if localidad:
