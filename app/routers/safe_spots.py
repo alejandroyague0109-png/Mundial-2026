@@ -70,7 +70,7 @@ async def search_safe_spots(
     spots_data = []
     for s in spots:
         spots_data.append({
-            "id": s.id,
+            "id": str(s.id),
             "nombre": s.nombre,
             "categoria": s.categoria,
             "provincia": s.provincia,
