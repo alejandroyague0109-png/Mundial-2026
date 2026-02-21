@@ -319,7 +319,7 @@ async def receive_webhook_b2b(request: Request, db: AsyncSession = Depends(get_d
                 # Usamos SQL puro para actualizar Supabase sin necesidad de modelos de SQLAlchemy
                 query = text("""
                     UPDATE puntos_seguros 
-                    SET verificado = true, estado_limpieza = 'pagado_confirmado' 
+                    SET verificado = true 
                     WHERE id = :local_id
                 """)
                 await db.execute(query, {"local_id": external_ref})
