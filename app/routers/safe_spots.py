@@ -65,6 +65,11 @@ async def search_safe_spots(
     if categoria and categoria != "None":
         stmt = stmt.where(PuntoSeguro.categoria == categoria)
         
+    # --- LA MAGIA ESTÁ AQUÍ ---
+    # Ordenamos para que los verificados (True) vengan siempre primero
+    stmt = stmt.order_by(PuntoSeguro.verificado.desc())
+    # --------------------------
+
     result = await db.execute(stmt)
     spots = result.scalars().all()
     
