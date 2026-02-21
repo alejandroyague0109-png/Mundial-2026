@@ -3,7 +3,7 @@ import mercadopago
 from fastapi import APIRouter, Depends, Request, Form, Response
 from fastapi.responses import RedirectResponse
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import update, select, delete
+from sqlalchemy import update, select, delete, text
 from dotenv import load_dotenv
 
 from app.database import get_db
@@ -290,7 +290,49 @@ async def validate_payment(
         print(f"Error MP: {e}")
         return Response(content="<div class='text-xs text-red-400 mt-2'>❌ Error de conexión.</div>", media_type="text/html")
 
-# --- 8. ELIMINAR CUENTA (DANGER ZONE) ---
+# ==============================================================================
+#   8. WEBHOOK B2B (EXCLUSIVO PARA EL BOT DE WHATSAPP B2B)
+# ==============================================================================
+@router.post("/webhook_b2b")
+async def receive_webhook_b2b(request: Request, db: AsyncSession = Depends(get_db)):
+    try:
+        params = request.query_params
+        topic = params.get("topic") or params.get("type")
+        payment_id = params.get("id") or params.get("data.id")
+
+        if topic == "payment" and payment_id:
+            # ⚠️ CLAVE: Usamos una variable de entorno DIFERENTE para el token del Bot
+            token_b2b = os.getenv("MP_ACCESS_TOKEN_B2B")
+            
+            if not token_b2b:
+                print("❌ Error: Falta configurar MP_ACCESS_TOKEN_B2B en Railway")
+                return Response(status_code=500)
+
+            sdk = mercadopago.SDK(token_b2b)
+            payment_info = sdk.payment().get(payment_id)
+            payment = payment_info.get("response", {})
+
+            status = payment.get("status")
+            external_ref = payment.get("external_reference") # Este será el UUID del comercio
+
+            if status == "approved" and external_ref:
+                # Usamos SQL puro para actualizar Supabase sin necesidad de modelos de SQLAlchemy
+                query = text("""
+                    UPDATE puntos_seguros 
+                    SET verificado = true, estado_limpieza = 'pagado_confirmado' 
+                    WHERE id = :local_id
+                """)
+                await db.execute(query, {"local_id": external_ref})
+                await db.commit()
+                
+                print(f"✅ Webhook B2B: ¡PAGO RECIBIDO! Local {external_ref} ahora está Verificado.")
+        
+        return Response(status_code=200)
+    except Exception as e:
+        print(f"❌ Error Crítico en Webhook B2B: {e}")
+        return Response(status_code=500)
+
+# --- 9. ELIMINAR CUENTA (DANGER ZONE) ---
 @router.post("/delete_account")
 async def delete_account(request: Request, db: AsyncSession = Depends(get_db)):
     user_id = request.cookies.get("user_id")
