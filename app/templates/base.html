@@ -66,27 +66,39 @@
                 </a>
             </div>
 
-            <nav class="flex justify-center items-center h-full gap-1 md:gap-8">
-                <a href="/album" 
-                   class="relative h-full flex items-center px-2 md:px-4 font-bold text-xs md:text-sm uppercase tracking-wider transition-colors
-                   {{ 'text-yellow-400' if active_tab == 'album' else 'text-gray-400 hover:text-gray-200' }}">
-                    <span>📖 <span class="hidden md:inline">Mi Álbum</span></span>
-                    
-                    {% if active_tab == 'album' %}
-                    <div class="absolute bottom-0 left-0 w-full h-1 bg-yellow-500 rounded-t-full shadow-[0_-2px_10px_rgba(234,179,8,0.5)] animate-fade-in"></div>
-                    {% endif %}
-                </a>
+            <nav class="flex justify-center items-center h-full gap-2 md:gap-8">
+    <a href="/album" 
+       class="relative h-full flex items-center px-4 md:px-4 font-bold text-xs md:text-sm uppercase tracking-wider transition-colors group
+       {{ 'text-yellow-400' if active_tab == 'album' else 'text-gray-400 hover:text-gray-200' }}">
+       
+        <div class="flex items-center gap-2">
+            <span class="text-2xl md:text-lg transition-all duration-300 {{ 'scale-110 drop-shadow-[0_0_10px_rgba(234,179,8,0.8)]' if active_tab == 'album' else 'opacity-60 group-hover:opacity-100 group-hover:scale-105' }}">
+                📖
+            </span>
+            <span class="hidden md:inline">Mi Álbum</span>
+        </div>
+        
+        {% if active_tab == 'album' %}
+        <div class="absolute bottom-0 left-0 w-full h-1 bg-yellow-500 rounded-t-full shadow-[0_-2px_10px_rgba(234,179,8,0.5)] animate-fade-in"></div>
+        {% endif %}
+    </a>
 
-                <a href="/market" 
-                   class="relative h-full flex items-center px-2 md:px-4 font-bold text-xs md:text-sm uppercase tracking-wider transition-colors
-                   {{ 'text-yellow-400' if active_tab == 'market' else 'text-gray-400 hover:text-gray-200' }}">
-                    <span>⚖️ <span class="hidden md:inline">Mercado</span></span>
-                    
-                    {% if active_tab == 'market' %}
-                    <div class="absolute bottom-0 left-0 w-full h-1 bg-yellow-500 rounded-t-full shadow-[0_-2px_10px_rgba(234,179,8,0.5)] animate-fade-in"></div>
-                    {% endif %}
-                </a>
-            </nav>
+    <a href="/market" 
+       class="relative h-full flex items-center px-4 md:px-4 font-bold text-xs md:text-sm uppercase tracking-wider transition-colors group
+       {{ 'text-yellow-400' if active_tab == 'market' else 'text-gray-400 hover:text-gray-200' }}">
+       
+        <div class="flex items-center gap-2">
+            <span class="text-2xl md:text-lg transition-all duration-300 {{ 'scale-110 drop-shadow-[0_0_10px_rgba(234,179,8,0.8)]' if active_tab == 'market' else 'opacity-60 group-hover:opacity-100 group-hover:scale-105' }}">
+                ⚖️
+            </span>
+            <span class="hidden md:inline">Mercado</span>
+        </div>
+        
+        {% if active_tab == 'market' %}
+        <div class="absolute bottom-0 left-0 w-full h-1 bg-yellow-500 rounded-t-full shadow-[0_-2px_10px_rgba(234,179,8,0.5)] animate-fade-in"></div>
+        {% endif %}
+    </a>
+</nav>
 
             <div class="flex justify-end items-center gap-3">
                 {% if user %}
