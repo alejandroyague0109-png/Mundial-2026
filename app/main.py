@@ -87,3 +87,36 @@ async def health_check():
 @app.get("/")
 async def root():
     return RedirectResponse(url="/login")
+
+@router.get("/delete-data-info")
+async def delete_data_info_page():
+    html_content = """
+    <html>
+        <head>
+            <title>Eliminación de Datos - Canje AlToque 26</title>
+            <meta name="viewport" content="width=device-width, initial-scale=1.0">
+            <script src="https://cdn.tailwindcss.com"></script>
+        </head>
+        <body class="bg-slate-900 text-white font-sans p-8">
+            <div class="max-w-2xl mx-auto bg-slate-800 p-6 rounded-2xl border border-slate-700 shadow-xl">
+                <h1 class="text-2xl font-bold text-yellow-500 mb-4">Solicitud de Eliminación de Datos</h1>
+                <p class="mb-4 text-gray-300">En <strong>Canje AlToque 26</strong>, respetamos tu privacidad. Tienes dos formas de eliminar tu cuenta y todos o añgunos de tus datos asociados:</p>
+                
+                <div class="space-y-6">
+                    <div class="bg-slate-700 p-4 rounded-lg">
+                        <h2 class="font-bold text-lg mb-2">1. Desde la App (Recomendado)</h2>
+                        <p class="text-sm text-gray-400">Ingresa a tu perfil, ve a la sección "Zona de Peligro" y presiona el botón <strong>"Eliminar mi cuenta"</strong>. Esto borrará instantáneamente tu inventario, chats y perfil de forma permanente.</p>
+                    </div>
+
+                    <div class="bg-slate-700 p-4 rounded-lg">
+                        <h2 class="font-bold text-lg mb-2">2. Solicitud vía Web/Email</h2>
+                        <p class="text-sm text-gray-400">Si no puedes acceder a la app, envía un correo a <span class="text-yellow-400">canjealtoque@gmail.com</span> con tu número de teléfono y Nick, o contáctanos por WhatsApp indicando tu deseo de darte de baja o con los datos que desees eliminar.</p>
+                    </div>
+                </div>
+
+                <p class="mt-8 text-xs text-gray-500 text-center italic">Nota: Al eliminar tu cuenta, se pierden todos los beneficios Premium y no podrán ser recuperados.</p>
+            </div>
+        </body>
+    </html>
+    """
+    return HTMLResponse(content=html_content)
