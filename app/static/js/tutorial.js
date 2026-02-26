@@ -70,7 +70,7 @@ window.startTutorial = function() {
                 },
                 {
                     element: elementoAiluminar, // Usamos la variable inteligente que no falla
-                    popover: { title: 'Tus Repetidas 💰', description: 'Si dejás el precio en 0, es solo para <b>CANJE</b>. Si le ponés un valor, pasa a <b>VENTA</b> automáticamente. Desde acá también cambias cuantas veces la tenés repetida.', side: "top", align: 'center' }
+                    popover: { title: 'Tus Repetidas 💰', description: 'Si dejás el precio en 0, es solo para <b>CANJE</b>. Si le ponés un valor, pasa a <b>VENTA</b> automáticamente. Desde acá también indicás la <b>CANTIDAD</b> de veces que la tenés repetida.', side: "top", align: 'center' }
                 },
                 {
                     element: '#bottom-nav-container',
@@ -78,7 +78,7 @@ window.startTutorial = function() {
                 },
                 {
                     element: '#btn-menu-tutorial',
-                    popover: { title: 'Tu Panel de Control ⚙️', description: 'Acá entrás y editás tu perfil, usas la <b>Carga rápida</b>, descubrís los <b>Puntos Seguros</b>, configurás las <b>Alertas</b> y recibís ayuda.', side: "bottom", align: 'end' }
+                    popover: { title: 'Tu Panel de Control ⚙️', description: 'Acá entrás y editás tu <b>PERFIL</b>, usas la <b>CARGA RÁPIDA</b>, descubrís los <b>PUNTOS SEGUROS</b>, configurás las <b>ALERTAS</b> y recibís <b>AYUDA</b>.', side: "bottom", align: 'end' }
                 },
                 {
                     element: 'a[href="/market"]',
