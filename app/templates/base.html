@@ -221,5 +221,78 @@
         document.addEventListener('DOMContentLoaded', showIosPrompt);
     </script>
 
+<script>
+        window.openModal = function(modalId) {
+            const modal = document.getElementById(modalId);
+            if (modal) {
+                modal.showModal();
+            } else {
+                console.warn("⚠️ Modal no encontrado:", modalId);
+            }
+        }
+    </script>
+
+    <script src="/static/js/tutorial.js?v=6.1"></script>
+
+    <dialog id="updateRequiredModal" class="bg-slate-900 text-white p-8 rounded-2xl border-2 border-red-500 backdrop:bg-slate-950/95 w-full max-w-sm shadow-2xl m-auto text-center" style="pointer-events: auto; z-index: 9999;">
+        <div class="text-6xl mb-4 animate-bounce">🚀</div>
+        <h3 class="text-xl font-black text-yellow-400 mb-2">¡Nueva Versión Disponible!</h3>
+        <p class="text-sm text-gray-300 mb-6 leading-relaxed">
+            Agregamos nuevas funciones y mejoras. Necesitás actualizar para seguir canjeando sin problemas.
+        </p>
+        <button onclick="forceAppUpdate()" class="w-full bg-yellow-600 hover:bg-yellow-500 text-white font-bold py-3 px-4 rounded-xl shadow-lg shadow-yellow-900/50 transform active:scale-95 transition text-lg">
+            Actualizar Ahora 🔄
+        </button>
+    </dialog>
+
+    <script>
+        // 1. LA VERSIÓN ACTUAL DE ESTE HTML
+        // (Aumentá este número en el HTML y en Python cuando subas un cambio grande)
+        const CURRENT_FRONTEND_VERSION = 1; 
+
+        async function checkAppVersion() {
+            try {
+                const res = await fetch('/api/version');
+                if (!res.ok) return;
+                const data = await res.json();
+
+                // Si el servidor exige una versión mayor a la que tenemos, bloqueamos.
+                if (data.min_version > CURRENT_FRONTEND_VERSION) {
+                    const modal = document.getElementById('updateRequiredModal');
+                    if (modal && !modal.open) {
+                        modal.showModal();
+                    }
+                }
+            } catch (error) {
+                // Si hay error (ej: no hay internet), no hacemos nada
+                console.log("Validación de versión omitida (sin red).");
+            }
+        }
+
+        // 2. FUNCIÓN PARA FORZAR LA ACTUALIZACIÓN
+        function forceAppUpdate() {
+            // Rompemos el Service Worker y forzamos recarga
+            if ('serviceWorker' in navigator) {
+                navigator.serviceWorker.getRegistrations().then(function(registrations) {
+                    for(let registration of registrations) {
+                        registration.unregister();
+                    }
+                });
+            }
+            window.location.reload(true); 
+        }
+
+        // 3. ¿CUÁNDO REVISAMOS?
+        document.addEventListener('DOMContentLoaded', checkAppVersion);
+        
+        document.addEventListener('visibilitychange', () => {
+            if (document.visibilityState === 'visible') {
+                checkAppVersion();
+            }
+        });
+    </script>
+    </body>
+</html>
+
 </body>
 </html>

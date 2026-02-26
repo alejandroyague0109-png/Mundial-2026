@@ -121,3 +121,11 @@ async def health_check():
 @app.get("/")
 async def root():
     return RedirectResponse(url="/login")
+
+# Definís la versión mínima requerida al principio de tu archivo o en tus variables
+APP_MIN_VERSION = 2
+
+# Agregás la ruta para que el frontend pregunte
+@app.get("/api/version", include_in_schema=False)
+async def check_version():
+    return {"min_version": APP_MIN_VERSION}
