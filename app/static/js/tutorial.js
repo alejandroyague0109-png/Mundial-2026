@@ -75,7 +75,7 @@ window.startTutorial = function() {
             steps: [
                 {
                     element: primerSticker, 
-                    popover: { title: '¡Presioná la figu! 🎯', description: 'Un toque = <b>La tengo</b>.<br>Dos toques = <b>Repetida</b>.<br>Tres = <b>Wishlist</b>.<br>¡Con el cuarto toque la volvés a vaciar!', side: "bottom", align: 'start' }
+                    popover: { title: '¡Presioná la figu! 🎯', description: 'Un toque = <b>La tengo</b>.<br>Dos toques = <b>Repetida</b>.<br>Tres = <b>Wishlist</b> (La quiero).<br>¡Con el cuarto toque la volvés a vaciar!', side: "bottom", align: 'start' }
                 },
                 {
                     element: elementoAiluminar,
