@@ -3,6 +3,6 @@
   "target": {
     "namespace": "android_app",
     "package_name": "com.canjealtoque.app",
-    "sha256_cert_fingerprints": ["3F:8D:A8:DA:1F:BA:8E:79:17:A6:3E:88:52:29:04:9F:CF:2F:63:D6:C2:DE:52:D0:DD:29:C9:EC:3D:CD:C5:A4"]
+    "sha256_cert_fingerprints": ["FA:55:C4:7D:52:29:51:DC:C7:FD:7E:B0:85:05:9D:AF:16:6A:B6:74:BC:DE:E3:50:D7:91:36:89:9A:15:C9:89"]
   }
 }]
