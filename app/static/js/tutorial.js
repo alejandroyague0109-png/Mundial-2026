@@ -1,3 +1,6 @@
+// ==========================================
+// 1. TUTORIAL DEL ÁLBUM
+// ==========================================
 window.startTutorial = function() {
     if (!window.driver || !window.driver.js) {
         alert("El tutorial está terminando de cargar. Intentá de nuevo en un segundo ⏱️");
@@ -12,19 +15,15 @@ window.startTutorial = function() {
         return;
     }
 
-    // --- EL ESCUDO DEFINITIVO: Intercepta clics en el aire ---
     function bloqueadorDeClicks(e) {
-        // Permitimos el clic SOLAMENTE si es adentro de la caja blanca del tutorial
         if (!e.target.closest('.driver-popover')) {
-            e.stopPropagation(); // Evita que HTMX o Alpine se enteren del clic
-            e.preventDefault();  // Cancela cualquier acción nativa del botón
+            e.stopPropagation(); 
+            e.preventDefault();  
         }
     }
     
-    // Activamos el escudo en fase de "captura" (true), que ocurre antes del clic real
     document.addEventListener('click', bloqueadorDeClicks, true);
 
-    // --- CORRECCIÓN UX 2.0: LA TABLA FANTASMA ---
     let contenedorRepetidas = document.querySelector('#repeated-table-container');
     let tablaReal = contenedorRepetidas ? contenedorRepetidas.querySelector('table') : null;
     let tablaFantasma = null;
@@ -59,20 +58,16 @@ window.startTutorial = function() {
         const driverObj = driver({
             showProgress: true,
             animate: true,
-            allowClose: false, // Obliga a usar los botones de "Siguiente"
+            allowClose: false, 
             nextBtnText: 'Siguiente ➔',
             prevBtnText: '⬅ Atrás',
             doneBtnText: '¡Entendido! 🙌',
             
             onDestroyStarted: () => {
-                // 1. Borramos la tabla fantasma
                 if (tablaFantasma && tablaFantasma.parentNode) {
                     tablaFantasma.parentNode.removeChild(tablaFantasma);
                 }
-                
-                // 2. APAGAMOS EL ESCUDO PARA QUE LA APP VUELVA A FUNCIONAR
                 document.removeEventListener('click', bloqueadorDeClicks, true);
-                
                 driverObj.destroy();
             },
 
@@ -104,41 +99,20 @@ window.startTutorial = function() {
         
     } catch (error) {
         console.error("Error DriverJS:", error);
-        // Si hay un error catastrofico, nos aseguramos de apagar el escudo
         document.removeEventListener('click', bloqueadorDeClicks, true);
     }
 };
 
-// Lógica Automática
-document.body.addEventListener('htmx:afterSettle', function(evt) {
-    if (evt.target.id === 'dynamic-content' || (evt.detail && evt.detail.target.id === 'dynamic-content')) {
-        const tutorialVisto = localStorage.getItem('tutorial_visto');
-        const isAlbumPage = document.getElementById('btn-menu-tutorial');
-        
-        if (isAlbumPage && !tutorialVisto) {
-            setTimeout(() => {
-                window.startTutorial();
-                localStorage.setItem('tutorial_visto', 'true');
-            }, 500);
-        }
-    }
-});
-
 // ==========================================
-// 2. TUTORIAL DEL MERCADO (¡NUEVO!)
+// 2. TUTORIAL DEL MERCADO 
 // ==========================================
 window.startMarketTutorial = function() {
     if (!window.driver || !window.driver.js) return;
     const driver = window.driver.js.driver;
+    const marketResults = document.getElementById('market-results');
+    if (!marketResults) return;
 
-    // Escudo de clics (reutilizado)
-    let styleLock = document.getElementById('tutorial-lock-css');
-    if (!styleLock) {
-        styleLock = document.createElement('style');
-        styleLock.id = 'tutorial-lock-css';
-        styleLock.innerHTML = `.driver-active-element { pointer-events: none !important; }`;
-        document.head.appendChild(styleLock);
-    }
+    if (marketResults.innerHTML.includes('Cargando')) return;
 
     function bloqueadorDeClicks(e) {
         if (!e.target.closest('.driver-popover')) {
@@ -147,20 +121,19 @@ window.startMarketTutorial = function() {
     }
     document.addEventListener('click', bloqueadorDeClicks, true);
 
-    // Identificamos los elementos del mercado
     const filtrosForm = document.querySelector('form[hx-get="/market/search"]');
-    const triangulacionSection = document.querySelector('section.border-indigo-500\\/30'); 
-    const pestanasContainer = document.querySelector('button[@click*="currentTab"]').parentElement;
-    const marketResults = document.getElementById('market-results');
+    // Selector seguro para la sección de triangulación
+    const btnTriangulacion = document.querySelector('button[onclick*="triangulationInputModal"]');
+    const triangulacionSection = btnTriangulacion ? btnTriangulacion.closest('section') : null;
+    // Selector seguro para las pestañas (Agarra el div justo arriba de los resultados)
+    const pestanasContainer = marketResults.previousElementSibling; 
 
-    // Tarjeta Fantasma del Mercado
     let tarjetaFantasma = null;
     let elementoAiluminarTarjeta = null;
     
-    // Si los resultados están vacíos o dicen "Cargando", metemos una tarjeta falsa
-    if (marketResults && (marketResults.innerHTML.includes('Cargando') || marketResults.children.length === 0)) {
+    if (marketResults.children.length === 0 || marketResults.innerHTML.includes('No se encontraron') || marketResults.innerHTML.includes('No hay figuritas')) {
         tarjetaFantasma = document.createElement('div');
-        tarjetaFantasma.className = 'bg-slate-800 rounded-xl p-4 border-2 border-green-500 border-dashed animate-pulse mb-4 shadow-lg';
+        tarjetaFantasma.className = 'bg-slate-800 rounded-xl p-4 border-2 border-green-500 border-dashed animate-pulse mb-4 mt-4 shadow-lg';
         tarjetaFantasma.innerHTML = `
             <div class="flex justify-between items-center mb-2">
                 <span class="font-bold text-white flex items-center gap-2"><span>👤</span> Usuario_Demo</span>
@@ -171,12 +144,10 @@ window.startMarketTutorial = function() {
                 <span>💬</span> Contactar por WhatsApp
             </button>
         `;
-        // Limpiamos el "Cargando" y ponemos la tarjeta
         marketResults.innerHTML = '';
         marketResults.appendChild(tarjetaFantasma);
         elementoAiluminarTarjeta = tarjetaFantasma;
     } else {
-        // Si hay resultados reales, iluminamos el primero
         elementoAiluminarTarjeta = marketResults.firstElementChild;
     }
 
@@ -185,16 +156,11 @@ window.startMarketTutorial = function() {
             showProgress: true, animate: true, allowClose: false,
             nextBtnText: 'Siguiente ➔', prevBtnText: '⬅ Atrás', doneBtnText: '¡A Canjear! 🙌',
             onDestroyStarted: () => {
-                // Limpieza
                 if (tarjetaFantasma && tarjetaFantasma.parentNode) {
                     tarjetaFantasma.parentNode.removeChild(tarjetaFantasma);
-                    // Devolvemos el cartelito de cargando por si acaso
-                    marketResults.innerHTML = '<div class="text-center p-8 text-gray-500">Volviendo al mercado real...</div>';
-                    // Forzamos la recarga de los resultados reales apretando el botón de buscar
                     document.getElementById('search-trigger-btn')?.click();
                 }
                 document.removeEventListener('click', bloqueadorDeClicks, true);
-                if (styleLock) styleLock.remove();
                 driverObj.destroy();
             },
             steps: [
@@ -217,7 +183,9 @@ window.startMarketTutorial = function() {
             ]
         });
         driverObj.drive();
-    } catch (error) { document.removeEventListener('click', bloqueadorDeClicks, true); }
+    } catch (error) { 
+        document.removeEventListener('click', bloqueadorDeClicks, true); 
+    }
 };
 
 // ==========================================
@@ -228,7 +196,7 @@ document.body.addEventListener('htmx:afterSettle', function(evt) {
     // CASO 1: Cargó el contenido del Álbum
     if (evt.target.id === 'dynamic-content' || (evt.detail && evt.detail.target.id === 'dynamic-content')) {
         const tutorialVisto = localStorage.getItem('tutorial_visto');
-        const isAlbumPage = document.getElementById('btn-menu-tutorial'); // Solo existe en el album
+        const isAlbumPage = document.getElementById('btn-menu-tutorial'); 
         
         if (isAlbumPage && !tutorialVisto) {
             setTimeout(() => {
@@ -241,14 +209,16 @@ document.body.addEventListener('htmx:afterSettle', function(evt) {
     // CASO 2: Cargaron los resultados del Mercado
     if (evt.target.id === 'market-results' || (evt.detail && evt.detail.target.id === 'market-results')) {
         const tutorialMercadoVisto = localStorage.getItem('tutorial_mercado_visto');
-        const isMarketPage = document.querySelector('form[hx-get="/market/search"]'); // Solo existe en el mercado
+        const isMarketPage = document.querySelector('form[hx-get="/market/search"]'); 
         
         if (isMarketPage && !tutorialMercadoVisto) {
-            // Le damos 1 segundito para que se acomoden bien las tarjetas de HTMX
-            setTimeout(() => {
-                window.startMarketTutorial();
-                localStorage.setItem('tutorial_mercado_visto', 'true');
-            }, 1000);
+            const resultsContainer = document.getElementById('market-results');
+            if (resultsContainer && !resultsContainer.innerHTML.includes('Cargando')) {
+                setTimeout(() => {
+                    window.startMarketTutorial();
+                    localStorage.setItem('tutorial_mercado_visto', 'true');
+                }, 500);
+            }
         }
     }
 });
