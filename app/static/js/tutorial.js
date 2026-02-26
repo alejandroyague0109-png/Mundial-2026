@@ -12,16 +12,19 @@ window.startTutorial = function() {
         return;
     }
 
-    // --- BLOQUEO DE CLICS (Escudo para que el usuario no rompa HTMX) ---
-    let styleLock = document.getElementById('tutorial-lock-css');
-    if (!styleLock) {
-        styleLock = document.createElement('style');
-        styleLock.id = 'tutorial-lock-css';
-        styleLock.innerHTML = `.driver-active-element { pointer-events: none !important; }`;
-        document.head.appendChild(styleLock);
+    // --- EL ESCUDO DEFINITIVO: Intercepta clics en el aire ---
+    function bloqueadorDeClicks(e) {
+        // Permitimos el clic SOLAMENTE si es adentro de la caja blanca del tutorial
+        if (!e.target.closest('.driver-popover')) {
+            e.stopPropagation(); // Evita que HTMX o Alpine se enteren del clic
+            e.preventDefault();  // Cancela cualquier acción nativa del botón
+        }
     }
+    
+    // Activamos el escudo en fase de "captura" (true), que ocurre antes del clic real
+    document.addEventListener('click', bloqueadorDeClicks, true);
 
-    // --- CORRECCIÓN UX 2.0: LA TABLA FANTASMA A PRUEBA DE BALAS ---
+    // --- CORRECCIÓN UX 2.0: LA TABLA FANTASMA ---
     let contenedorRepetidas = document.querySelector('#repeated-table-container');
     let tablaReal = contenedorRepetidas ? contenedorRepetidas.querySelector('table') : null;
     let tablaFantasma = null;
@@ -56,26 +59,27 @@ window.startTutorial = function() {
         const driverObj = driver({
             showProgress: true,
             animate: true,
-            allowClose: false, // Obliga al usuario a usar los botones "Siguiente"
+            allowClose: false, // Obliga a usar los botones de "Siguiente"
             nextBtnText: 'Siguiente ➔',
             prevBtnText: '⬅ Atrás',
             doneBtnText: '¡Entendido! 🙌',
             
             onDestroyStarted: () => {
-                // Limpieza total: Borramos la tabla y desactivamos el escudo de clics
+                // 1. Borramos la tabla fantasma
                 if (tablaFantasma && tablaFantasma.parentNode) {
                     tablaFantasma.parentNode.removeChild(tablaFantasma);
                 }
-                if (styleLock) {
-                    styleLock.remove();
-                }
+                
+                // 2. APAGAMOS EL ESCUDO PARA QUE LA APP VUELVA A FUNCIONAR
+                document.removeEventListener('click', bloqueadorDeClicks, true);
+                
                 driverObj.destroy();
             },
 
             steps: [
                 {
                     element: primerSticker, 
-                    popover: { title: '¡Presioná la figu! 🎯', description: 'Un toque = <b>La tengo</b>.<br>Dos toques = <b>Repetida</b>.<br>Tres = <b>Wishlist</b> (La quiero).<br>¡Con el cuarto toque la volvés a vaciar!', side: "bottom", align: 'start' }
+                    popover: { title: '¡Presioná la figu! 🎯', description: 'Un toque = <b>La tengo</b>.<br>Dos toques = <b>Repetida</b>.<br>Tres = <b>Wishlist</b> (la quiero).<br>¡Con el cuarto toque la volvés a vaciar!', side: "bottom", align: 'start' }
                 },
                 {
                     element: elementoAiluminar,
@@ -100,6 +104,8 @@ window.startTutorial = function() {
         
     } catch (error) {
         console.error("Error DriverJS:", error);
+        // Si hay un error catastrofico, nos aseguramos de apagar el escudo
+        document.removeEventListener('click', bloqueadorDeClicks, true);
     }
 };
 
