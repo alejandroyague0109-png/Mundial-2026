@@ -1,8 +1,8 @@
-// Definimos la función en el objeto window para que el botón HTML la encuentre
+// Definimos la función para que el botón HTML la encuentre
 window.startTutorial = function() {
-    // 1. Verificamos que la librería Driver existe
+    // 1. Verificamos que la librería Driver haya cargado
     if (!window.driver || !window.driver.js) {
-        alert("Falla técnica: No cargó la librería del tutorial.");
+        alert("El tutorial está terminando de cargar. Intentá de nuevo en un segundo ⏱️");
         return;
     }
 
@@ -11,9 +11,9 @@ window.startTutorial = function() {
     // 2. Buscamos la primera figurita que haya en pantalla
     const primerSticker = document.querySelector('div[id^="sticker-"]');
     
-    // Si todavía no hay figuritas (porque están cargando), abortamos y avisamos
+    // Si todavía no hay figuritas (porque están cargando por HTMX)
     if (!primerSticker) {
-        alert("Esperá un segundito a que carguen las figuritas para iniciar el tutorial ⏱️");
+        alert("Esperá a que carguen las figuritas para iniciar el tutorial ⏱️");
         return;
     }
 
@@ -26,7 +26,6 @@ window.startTutorial = function() {
             doneBtnText: '¡Entendido! 🙌',
             steps: [
                 {
-                    // Pasamos el elemento HTML directo que encontramos
                     element: primerSticker, 
                     popover: { title: '¡Tocá la figu! 🎯', description: 'Un toque = <b>La tengo</b>.<br>Dos toques = <b>Repetida</b>.<br>Tres = <b>Wishlist</b> (la busco).', side: "bottom", align: 'start' }
                 },
@@ -58,15 +57,12 @@ window.startTutorial = function() {
 
 // 3. Lógica Automática: HTMX nos avisa cuando terminó de dibujar
 document.body.addEventListener('htmx:afterSettle', function(evt) {
-    // Verificamos si lo que se acaba de cargar es el contenedor de las figuritas
     if (evt.target.id === 'dynamic-content' || (evt.detail && evt.detail.target.id === 'dynamic-content')) {
         
         const tutorialVisto = localStorage.getItem('tutorial_visto');
         const isAlbumPage = document.getElementById('btn-menu-tutorial');
         
-        // Si estamos en el álbum y no lo vio, disparamos
         if (isAlbumPage && !tutorialVisto) {
-            // Un micro-retraso de medio segundo para que el ojo del usuario se acomode
             setTimeout(() => {
                 window.startTutorial();
                 localStorage.setItem('tutorial_visto', 'true');
