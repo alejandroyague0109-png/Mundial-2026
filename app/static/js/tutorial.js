@@ -1,4 +1,52 @@
 // ==========================================
+// CONFIGURACIÓN VISUAL (MODO OSCURO)
+// ==========================================
+// Inyectamos el CSS personalizado para el tutorial
+const driverStyles = document.createElement('style');
+driverStyles.innerHTML = `
+    .driver-popover.altoque-theme {
+        background-color: #1e293b !important; /* slate-800 */
+        color: #e2e8f0 !important; /* gray-200 */
+        border: 1px solid #334155 !important; /* slate-700 */
+        border-radius: 0.75rem !important;
+        box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.5) !important;
+    }
+    .driver-popover.altoque-theme .driver-popover-title {
+        color: #facc15 !important; /* yellow-400 */
+        font-weight: bold !important;
+        font-size: 1.1rem !important;
+    }
+    .driver-popover.altoque-theme .driver-popover-description {
+        color: #cbd5e1 !important; /* slate-300 */
+    }
+    .driver-popover.altoque-theme .driver-popover-footer button {
+        background-color: #334155 !important; /* slate-700 */
+        color: #f8fafc !important;
+        border: 1px solid #475569 !important; /* slate-600 */
+        text-shadow: none !important;
+        border-radius: 0.5rem !important;
+        padding: 5px 10px !important;
+    }
+    .driver-popover.altoque-theme .driver-popover-footer button:hover {
+        background-color: #475569 !important; /* slate-600 */
+    }
+    .driver-popover.altoque-theme .driver-popover-footer .driver-popover-next-btn {
+        background-color: #ca8a04 !important; /* yellow-600 */
+        color: white !important;
+        border-color: #eab308 !important; /* yellow-500 */
+    }
+    .driver-popover.altoque-theme .driver-popover-footer .driver-popover-next-btn:hover {
+        background-color: #eab308 !important; /* yellow-500 */
+    }
+    .driver-popover.altoque-theme .driver-popover-arrow::before {
+        border-color: #1e293b !important; /* Triangulito del mismo color del fondo */
+    }
+    /* Escudo de clics */
+    .driver-active-element { pointer-events: none !important; }
+`;
+document.head.appendChild(driverStyles);
+
+// ==========================================
 // 1. EL "ENRUTADOR" INTELIGENTE DEL BOTÓN
 // ==========================================
 window.startTutorial = function() {
@@ -26,18 +74,9 @@ window.startAlbumTutorial = function() {
         return;
     }
 
-    let styleLock = document.getElementById('tutorial-lock-css');
-    if (!styleLock) {
-        styleLock = document.createElement('style');
-        styleLock.id = 'tutorial-lock-css';
-        styleLock.innerHTML = `.driver-active-element { pointer-events: none !important; }`;
-        document.head.appendChild(styleLock);
-    }
-
     function bloqueadorDeClicks(e) {
         if (!e.target.closest('.driver-popover')) {
-            e.stopPropagation(); 
-            e.preventDefault();  
+            e.stopPropagation(); e.preventDefault();  
         }
     }
     document.addEventListener('click', bloqueadorDeClicks, true);
@@ -71,12 +110,12 @@ window.startAlbumTutorial = function() {
 
     try {
         const driverObj = driver({
+            popoverClass: 'altoque-theme', // APLICAMOS EL TEMA OSCURO
             showProgress: true, animate: true, allowClose: false, 
             nextBtnText: 'Siguiente ➔', prevBtnText: '⬅ Atrás', doneBtnText: '¡Entendido! 🙌',
             onDestroyStarted: () => {
                 if (tablaFantasma && tablaFantasma.parentNode) tablaFantasma.parentNode.removeChild(tablaFantasma);
                 document.removeEventListener('click', bloqueadorDeClicks, true);
-                if (styleLock) styleLock.remove();
                 driverObj.destroy();
             },
             steps: [
@@ -90,7 +129,6 @@ window.startAlbumTutorial = function() {
         driverObj.drive();
     } catch (error) { 
         document.removeEventListener('click', bloqueadorDeClicks, true); 
-        if (styleLock) styleLock.remove();
     }
 };
 
@@ -102,23 +140,14 @@ window.startMarketTutorial = function() {
     const driver = window.driver.js.driver;
     const marketResults = document.getElementById('market-results');
     
-    // Abortamos si el mercado no existe o está en estado de "Cargando"
     if (!marketResults || marketResults.innerText.includes('Cargando')) return;
 
-    // MAGIA: Secuestramos el Modal de Seguridad temporalmente
+    // Secuestramos el Modal de Seguridad temporalmente
     const modalSeguridad = document.getElementById('securityModal');
     if (modalSeguridad) {
         modalSeguridad.close(); 
         modalSeguridad.funcionOriginal = modalSeguridad.showModal;
         modalSeguridad.showModal = function() {}; 
-    }
-
-    let styleLock = document.getElementById('tutorial-lock-css');
-    if (!styleLock) {
-        styleLock = document.createElement('style');
-        styleLock.id = 'tutorial-lock-css';
-        styleLock.innerHTML = `.driver-active-element { pointer-events: none !important; }`;
-        document.head.appendChild(styleLock);
     }
 
     function bloqueadorDeClicks(e) {
@@ -133,17 +162,16 @@ window.startMarketTutorial = function() {
     const triangulacionSection = btnTriangulacion ? btnTriangulacion.closest('section') : null;
     const pestanasContainer = marketResults.previousElementSibling; 
 
-    // Búsqueda con Láser: Buscamos una tarjeta real generada por AlpineJS
-    let tarjetaReal = marketResults.querySelector('.grid > div.group');
+    // BÚSQUEDA INFALIBLE DE LA TARJETA
+    // Busca cualquier elemento dentro de market-results que tenga la clase 'group' (que es la de tus tarjetas)
+    let tarjetaReal = marketResults.querySelector('.group');
     
     let tarjetaFantasma = null;
     let elementoAiluminarTarjeta = null;
     let nodosOcultos = []; 
     
-    // Si no hay tarjeta real O aparece el texto de vacío
     if (!tarjetaReal || marketResults.innerText.includes('No hay nada por aquí')) {
         
-        // Ocultamos todos los hijos del mercado para no romper Alpine
         Array.from(marketResults.children).forEach(node => {
             nodosOcultos.push({ node: node, display: node.style.display });
             node.style.display = 'none';
@@ -163,27 +191,22 @@ window.startMarketTutorial = function() {
         marketResults.appendChild(tarjetaFantasma);
         elementoAiluminarTarjeta = tarjetaFantasma;
     } else {
-        // Si hay una tarjeta real, iluminamos esa
         elementoAiluminarTarjeta = tarjetaReal;
     }
 
     try {
         const driverObj = driver({
+            popoverClass: 'altoque-theme', // APLICAMOS EL TEMA OSCURO AL MERCADO TAMBIÉN
             showProgress: true, animate: true, allowClose: false,
             nextBtnText: 'Siguiente ➔', prevBtnText: '⬅ Atrás', doneBtnText: '¡A Canjear! 🙌',
             onDestroyStarted: () => {
-                // Limpieza de la tarjeta fantasma
                 if (tarjetaFantasma && tarjetaFantasma.parentNode) {
                     tarjetaFantasma.parentNode.removeChild(tarjetaFantasma);
                 }
                 
-                // Devolvemos la visibilidad a los nodos originales de AlpineJS
                 nodosOcultos.forEach(item => item.node.style.display = item.display);
-                
                 document.removeEventListener('click', bloqueadorDeClicks, true);
-                if (styleLock) styleLock.remove();
                 
-                // Devolvemos el Modal de Seguridad
                 if (modalSeguridad && modalSeguridad.funcionOriginal) {
                     modalSeguridad.showModal = modalSeguridad.funcionOriginal;
                     const shouldSkip = localStorage.getItem('skipSecurityModal') === 'true';
@@ -193,7 +216,7 @@ window.startMarketTutorial = function() {
                 driverObj.destroy();
             },
             steps: [
-                { element: filtrosForm, popover: { title: 'Filtros de Búsqueda 🔍', description: 'Encontrá las figuritas que buscas filtrando por <b>Provincia</b>, <b>Zona</b>, <b>Usuario</b> o buscando por <b>número</b>.', side: "bottom", align: 'center' } },
+                { element: filtrosForm, popover: { title: 'Filtros de Búsqueda 🔍', description: 'Encontrá las figuritas que buscas filtrando por <b>Provincia</b>, <b>Zona</b>, <b>Usuario</b> o buscando por <b>Número</b>.', side: "bottom", align: 'center' } },
                 { element: triangulacionSection, popover: { title: 'La Magia: Triangulación 📐', description: '¿Nadie tiene la que buscás? El sistema busca "puentes" entre 3 personas para que todos consigan destrabar sus canjes.', side: "bottom", align: 'center' } },
                 { element: pestanasContainer, popover: { title: 'Organización 📁', description: 'Navegá entre las figuritas disponibles para <b>Canjear</b>, las que están a la <b>Venta</b>, y revisá tus contactos <b>Pendientes</b> para cerrar operaciones.', side: "bottom", align: 'center' } },
                 { element: elementoAiluminarTarjeta, popover: { title: '¡A Negociar! 🤝', description: 'Acá verás los posibles intercambios. Tocá el botón de <b>Negociar</b> para contactarlos y cerrar el trato.', side: "top", align: 'center' } }
@@ -202,7 +225,6 @@ window.startMarketTutorial = function() {
         driverObj.drive();
     } catch (error) { 
         document.removeEventListener('click', bloqueadorDeClicks, true); 
-        if (styleLock) styleLock.remove();
     }
 };
 
