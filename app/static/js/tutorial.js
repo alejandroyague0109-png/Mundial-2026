@@ -67,7 +67,7 @@ window.startTutorial = function() {
                 },
                 {
                     element: '#btn-menu-tutorial',
-                    popover: { title: 'Tu Panel de Control ⚙️', description: 'Acá entrás y editás tu perfil, usas la <b>Carga rápida</b>, descubrís los <b>Puntos Seguros</b> y recibís ayuda.', side: "bottom", align: 'end' }
+                    popover: { title: 'Tu Panel de Control ⚙️', description: 'Acá entrás y editás tu perfil, usas la <b>Carga rápida</b>, descubrís los <b>Puntos Seguros</b>, configurás las <b>Alertas</b> y recibís ayuda.', side: "bottom", align: 'end' }
                 },
                 {
                     element: 'a[href="/market"]',
