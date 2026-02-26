@@ -156,7 +156,80 @@
         }
     </script>
 
-<script src="/static/js/tutorial.js?v=3.5"></script>
+<script src="/static/js/tutorial.js?v=3.7"></script>
+
+<div id="ios-install-prompt" class="fixed bottom-4 left-4 right-4 z-[100] bg-slate-800 border-2 border-slate-600 rounded-2xl shadow-[0_10px_40px_rgba(0,0,0,0.8)] p-4 transform translate-y-[150%] transition-transform duration-500 hidden">
+        <div class="flex items-start gap-4">
+            <div class="text-4xl drop-shadow-md">🍏</div>
+            <div class="flex-1">
+                <h3 class="text-white font-bold text-sm mb-1 text-yellow-400">¡Instalá la App!</h3>
+                <p class="text-gray-300 text-xs leading-relaxed">
+                    Para la mejor experiencia en tu iPhone, tocá el ícono de compartir 
+                    <svg class="inline w-4 h-4 text-blue-400 mx-1 mb-1" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
+                    </svg> 
+                    y elegí <strong class="text-white">"Agregar a inicio"</strong>.
+                </p>
+            </div>
+            <button onclick="dismissIosPrompt()" class="text-gray-400 hover:text-white bg-slate-700 hover:bg-slate-600 w-6 h-6 rounded-full flex items-center justify-center transition">✕</button>
+        </div>
+        <div class="mt-2 flex justify-center text-lg text-blue-400 animate-bounce">
+            ⬇️
+        </div>
+    </div>
+
+    <script>
+        // Lógica para detectar iPhone y mostrar el cartel
+        function isIos() {
+            const userAgent = window.navigator.userAgent.toLowerCase();
+            return /iphone|ipad|ipod/.test(userAgent);
+        }
+
+        function isInStandaloneMode() {
+            // Verifica si la app ya está instalada en la pantalla de inicio (PWA)
+            return ('standalone' in window.navigator) && (window.navigator.standalone);
+        }
+
+        function showIosPrompt() {
+            // Solo mostramos si: Es iOS, NO está instalada, y NO la cerró antes
+            if (isIos() && !isInStandaloneMode() && !localStorage.getItem('ios_prompt_dismissed')) {
+                const prompt = document.getElementById('ios-install-prompt');
+                prompt.classList.remove('hidden');
+                
+                // Pequeño delay para que la animación de entrada funcione
+                setTimeout(() => {
+                    prompt.classList.remove('translate-y-[150%]');
+                    prompt.classList.add('translate-y-0');
+                }, 500); // Aparece medio segundo después de entrar a la web
+            }
+        }
+
+        function dismissIosPrompt() {
+            const prompt = document.getElementById('ios-install-prompt');
+            prompt.classList.remove('translate-y-0');
+            prompt.classList.add('translate-y-[150%]'); // Lo deslizamos hacia abajo
+            
+            // Lo ocultamos por completo después de la animación
+            setTimeout(() => prompt.classList.add('hidden'), 500);
+            
+            // Guardamos que ya no lo quiere ver más
+            localStorage.setItem('ios_prompt_dismissed', 'true');
+        }
+
+        // Ejecutamos cuando cargue la página
+        document.addEventListener('DOMContentLoaded', showIosPrompt);
+    </script>
+    ```
+
+### ¿Qué hace esta maravilla?
+1. Tiene una función `isIos()` que lee el navegador del usuario y detecta si es un dispositivo Apple.
+2. Tiene una función clave `isInStandaloneMode()`: Esta magia sabe si el usuario **ya la tiene instalada**. Si la está abriendo desde el ícono de su pantalla de inicio, el cartel **no** aparece para no molestar.
+3. Si el usuario toca la cruz (`✕`), se guarda en la memoria del celular (`localStorage`) para no volver a insistirle nunca más.
+4. El cartel flota por encima de todo (`z-[100]`) y tiene una flechita azul animada apuntando hacia abajo, que es justo donde Safari pone el botón de compartir.
+
+Para probarlo, guardalo, hacé `git push`, y si tenés un iPhone, abrilo en Safari (acordate de vaciar caché o abrir pestaña de incógnito). Si estás en tu compu, podés engañar a Chrome abriendo la consola (F12) -> Tocando el ícono de celular (Toggle device toolbar) -> Eligiendo "iPhone 14 PRO" -> y recargando la página.
+
+¡Decime cómo se ve!
 
 </body>
 </html>

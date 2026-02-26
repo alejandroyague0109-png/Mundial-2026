@@ -119,7 +119,7 @@ window.startAlbumTutorial = function() {
                 driverObj.destroy();
             },
             steps: [
-                { element: primerSticker, popover: { title: '¡Presioná la figu! 🎯', description: 'Un toque = <b>La tengo</b>.<br>Dos toques = <b>Repetida</b>.<br>Tres = <b>Wishlist</b> (la quiero).<br>Con el cuarto toque la volvés a vaciar.<br> ¡Andá al <b>botón de info</b> al lado de Compartir Wishlist para enterarte las ventajas que tiene marcar las que querés!', side: "bottom", align: 'start' } },
+                { element: primerSticker, popover: { title: '¡Presioná la figu! 🎯', description: 'Un toque = <b>La tengo</b>.<br>Dos toques = <b>Repetida</b>.<br>Tres = <b>Wishlist</b> (la quiero).<br>Con el cuarto toque la volvés a vaciar.<br> ¡Andá al <b>botón de info</b> al lado de Compartir Wishlist para enterarte las <b>ventajas que tiene marcar las que querés!</b>', side: "bottom", align: 'start' } },
                 { element: elementoAiluminar, popover: { title: 'Tus Repetidas 💰', description: 'Si dejás el precio en 0, es solo para <b>CANJE</b>. Si le ponés un valor, pasa a <b>VENTA</b>. Desde acá también indicás la <b>CANTIDAD</b>.', side: "top", align: 'center' } },
                 { element: '#bottom-nav-container', popover: { title: 'Navegá por el álbum 📖', description: 'Deslizá esta barra y seleccioná para moverte entre los países y secciones.', side: "top", align: 'center' } },
                 { element: '#btn-menu-tutorial', popover: { title: 'Tu Panel de Control ⚙️', description: 'Acá entrás y editás tu <b>PERFIL</b>, usas la <b>CARGA RÁPIDA</b>, descubrís los <b>PUNTOS SEGUROS</b> y configurás las <b>ALERTAS</b>.', side: "bottom", align: 'end' } },
