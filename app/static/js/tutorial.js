@@ -12,26 +12,39 @@ window.startTutorial = function() {
         return;
     }
 
-    // --- MAGIA UX: LA TABLA FANTASMA ---
-    // Buscamos si ya existe la tabla real
-    let tablaRepetidas = document.querySelector('#repeated-table-container');
-    let esTablaFalsa = false;
+    // --- CORRECCIÓN UX 2.0: LA TABLA FANTASMA A PRUEBA DE BALAS ---
+    let contenedorRepetidas = document.querySelector('#repeated-table-container');
+    let tablaReal = contenedorRepetidas ? contenedorRepetidas.querySelector('table') : null;
+    let tablaFantasma = null;
+    let elementoAiluminar = null;
 
-    // Si el usuario es nuevo y no tiene la tabla, le creamos una ilustrativa temporal
-    if (!tablaRepetidas) {
-        tablaRepetidas = document.createElement('div');
-        tablaRepetidas.id = 'tutorial-fake-table'; 
-        tablaRepetidas.className = 'bg-slate-800/80 border-2 border-slate-600 border-dashed rounded-xl p-6 mb-10 mt-8 text-center animate-pulse';
-        tablaRepetidas.innerHTML = `
-            <div>
-                <h3 class="text-lg font-bold text-yellow-400 opacity-50">💰 Gestión de Repetidas</h3>
-                <p class="text-sm text-gray-400 mt-2">¡Acá aparecerá tu tabla mágicamente cuando marques tu primera figurita como repetida!</p>
-            </div>`;
-        
-        // La metemos en la pantalla justo debajo de las figuritas
-        const container = document.getElementById('dynamic-content');
-        if (container) container.appendChild(tablaRepetidas);
-        esTablaFalsa = true; // Marcamos que es falsa para borrarla después
+    // Si ya hay una tabla real, simplemente iluminamos esa
+    if (tablaReal) {
+        elementoAiluminar = contenedorRepetidas;
+    } else {
+        // Si no hay tabla real, fabricamos la fantasma
+        tablaFantasma = document.createElement('div');
+        tablaFantasma.id = 'tutorial-fake-table';
+        tablaFantasma.className = 'bg-slate-800 border-2 border-slate-600 border-dashed rounded-xl p-6 mb-8 mt-4 text-center animate-pulse';
+        tablaFantasma.innerHTML = `
+            <h3 class="text-lg font-bold text-yellow-400 opacity-50">💰 Gestión de Repetidas</h3>
+            <p class="text-sm text-gray-400 mt-2">¡Acá aparecerá tu tabla mágicamente cuando marques tu primera figurita como repetida!</p>
+        `;
+
+        // ¿Existe el contenedor vacío? La metemos ahí. 
+        if (contenedorRepetidas) {
+            contenedorRepetidas.appendChild(tablaFantasma);
+            elementoAiluminar = contenedorRepetidas;
+        } else {
+            // ¿No existe en absoluto? La inyectamos al final de la página actual
+            const areaDinamica = document.getElementById('dynamic-content');
+            if (areaDinamica) {
+                areaDinamica.appendChild(tablaFantasma);
+            } else {
+                document.body.appendChild(tablaFantasma); // Fallback de emergencia
+            }
+            elementoAiluminar = tablaFantasma; // Iluminamos la caja inyectada
+        }
     }
 
     try {
@@ -42,11 +55,10 @@ window.startTutorial = function() {
             prevBtnText: '⬅ Atrás',
             doneBtnText: '¡Entendido! 🙌',
             
-            // Cuando se cierra el tutorial (ya sea por terminar o porque tocó afuera)
             onDestroyStarted: () => {
-                // Borramos la tabla fantasma para dejar todo limpio
-                if (esTablaFalsa && tablaRepetidas.parentNode) {
-                    tablaRepetidas.parentNode.removeChild(tablaRepetidas);
+                // Limpieza total: Si creamos la tabla fantasma, la borramos sin dejar rastro
+                if (tablaFantasma && tablaFantasma.parentNode) {
+                    tablaFantasma.parentNode.removeChild(tablaFantasma);
                 }
                 driverObj.destroy();
             },
@@ -54,12 +66,11 @@ window.startTutorial = function() {
             steps: [
                 {
                     element: primerSticker, 
-                    popover: { title: '¡Presioná la figu! 🎯', description: 'Un toque = <b>La tengo</b>.<br>Dos toques = <b>Repetida</b>.<br>Tres = <b>Wishlist</b> (la quiero).<br>¡Con el cuarto toque la volvés a vaciar!', side: "bottom", align: 'start' }
+                    popover: { title: '¡Presioná la figu! 🎯', description: 'Un toque = <b>La tengo</b>.<br>Dos toques = <b>Repetida</b>.<br>Tres = <b>Wishlist</b>.<br>¡Con el cuarto toque la volvés a vaciar!', side: "bottom", align: 'start' }
                 },
                 {
-                    // Le pasamos el elemento directamente (sea el real o el fantasma)
-                    element: tablaRepetidas,
-                    popover: { title: 'Tus Repetidas 💰', description: 'Si dejás el precio en 0, es solo para <b>CANJE</b>. Si le ponés un valor, pasa a <b>VENTA</b> automáticamente. Desde acá también cambias la cantidad.', side: "top", align: 'center' }
+                    element: elementoAiluminar, // Usamos la variable inteligente que no falla
+                    popover: { title: 'Tus Repetidas 💰', description: 'Si dejás el precio en 0, es solo para <b>CANJE</b>. Si le ponés un valor, pasa a <b>VENTA</b> automáticamente. Desde acá también cambias cuantas veces la tenés repetida.', side: "top", align: 'center' }
                 },
                 {
                     element: '#bottom-nav-container',
@@ -83,6 +94,7 @@ window.startTutorial = function() {
     }
 };
 
+// Lógica Automática
 document.body.addEventListener('htmx:afterSettle', function(evt) {
     if (evt.target.id === 'dynamic-content' || (evt.detail && evt.detail.target.id === 'dynamic-content')) {
         const tutorialVisto = localStorage.getItem('tutorial_visto');
