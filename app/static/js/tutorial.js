@@ -12,17 +12,24 @@ window.startTutorial = function() {
         return;
     }
 
+    // --- BLOQUEO DE CLICS (Escudo para que el usuario no rompa HTMX) ---
+    let styleLock = document.getElementById('tutorial-lock-css');
+    if (!styleLock) {
+        styleLock = document.createElement('style');
+        styleLock.id = 'tutorial-lock-css';
+        styleLock.innerHTML = `.driver-active-element { pointer-events: none !important; }`;
+        document.head.appendChild(styleLock);
+    }
+
     // --- CORRECCIÓN UX 2.0: LA TABLA FANTASMA A PRUEBA DE BALAS ---
     let contenedorRepetidas = document.querySelector('#repeated-table-container');
     let tablaReal = contenedorRepetidas ? contenedorRepetidas.querySelector('table') : null;
     let tablaFantasma = null;
     let elementoAiluminar = null;
 
-    // Si ya hay una tabla real, simplemente iluminamos esa
     if (tablaReal) {
         elementoAiluminar = contenedorRepetidas;
     } else {
-        // Si no hay tabla real, fabricamos la fantasma
         tablaFantasma = document.createElement('div');
         tablaFantasma.id = 'tutorial-fake-table';
         tablaFantasma.className = 'bg-slate-800 border-2 border-slate-600 border-dashed rounded-xl p-6 mb-8 mt-4 text-center animate-pulse';
@@ -31,19 +38,17 @@ window.startTutorial = function() {
             <p class="text-sm text-gray-400 mt-2">¡Acá aparecerá tu tabla mágicamente cuando marques tu primera figurita como repetida!</p>
         `;
 
-        // ¿Existe el contenedor vacío? La metemos ahí. 
         if (contenedorRepetidas) {
             contenedorRepetidas.appendChild(tablaFantasma);
             elementoAiluminar = contenedorRepetidas;
         } else {
-            // ¿No existe en absoluto? La inyectamos al final de la página actual
             const areaDinamica = document.getElementById('dynamic-content');
             if (areaDinamica) {
                 areaDinamica.appendChild(tablaFantasma);
             } else {
-                document.body.appendChild(tablaFantasma); // Fallback de emergencia
+                document.body.appendChild(tablaFantasma);
             }
-            elementoAiluminar = tablaFantasma; // Iluminamos la caja inyectada
+            elementoAiluminar = tablaFantasma;
         }
     }
 
@@ -51,14 +56,18 @@ window.startTutorial = function() {
         const driverObj = driver({
             showProgress: true,
             animate: true,
+            allowClose: false, // Obliga al usuario a usar los botones "Siguiente"
             nextBtnText: 'Siguiente ➔',
             prevBtnText: '⬅ Atrás',
             doneBtnText: '¡Entendido! 🙌',
             
             onDestroyStarted: () => {
-                // Limpieza total: Si creamos la tabla fantasma, la borramos sin dejar rastro
+                // Limpieza total: Borramos la tabla y desactivamos el escudo de clics
                 if (tablaFantasma && tablaFantasma.parentNode) {
                     tablaFantasma.parentNode.removeChild(tablaFantasma);
+                }
+                if (styleLock) {
+                    styleLock.remove();
                 }
                 driverObj.destroy();
             },
@@ -69,7 +78,7 @@ window.startTutorial = function() {
                     popover: { title: '¡Presioná la figu! 🎯', description: 'Un toque = <b>La tengo</b>.<br>Dos toques = <b>Repetida</b>.<br>Tres = <b>Wishlist</b>.<br>¡Con el cuarto toque la volvés a vaciar!', side: "bottom", align: 'start' }
                 },
                 {
-                    element: elementoAiluminar, // Usamos la variable inteligente que no falla
+                    element: elementoAiluminar,
                     popover: { title: 'Tus Repetidas 💰', description: 'Si dejás el precio en 0, es solo para <b>CANJE</b>. Si le ponés un valor, pasa a <b>VENTA</b> automáticamente. Desde acá también indicás la <b>CANTIDAD</b> de veces que la tenés repetida.', side: "top", align: 'center' }
                 },
                 {
