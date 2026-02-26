@@ -123,7 +123,7 @@ async def root():
     return RedirectResponse(url="/login")
 
 # Definís la versión mínima requerida al principio de tu archivo o en tus variables
-APP_MIN_VERSION = 2
+APP_MIN_VERSION = 1
 
 # Agregás la ruta para que el frontend pregunte
 @app.get("/api/version", include_in_schema=False)
