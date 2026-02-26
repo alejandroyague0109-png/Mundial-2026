@@ -1,74 +1,63 @@
-const driver = window.driver.js.driver;
-
-function startTutorial() {
-    const driverObj = driver({
-        showProgress: true,
-        animate: true,
-        nextBtnText: 'Siguiente ➔',
-        prevBtnText: '⬅ Atrás',
-        doneBtnText: '¡Entendido! 🙌',
-        steps: [
-            {
-                // 1. Figuritas (Agarra la primera que encuentre)
-                element: 'div[id^="sticker-"]', 
-                popover: {
-                    title: '¡Tocá la figu! 🎯',
-                    description: 'Un toque = <b>La tengo</b>.<br>Dos toques = <b>Repetida</b>.<br>Tres = <b>Wishlist</b> (la busco).<br>¡Con el cuarto toque la volvés a vaciar!',
-                    side: "bottom", align: 'start'
-                }
-            },
-            {
-                // 2. Tabla de Repetidas
-                element: '#repeated-table-container',
-                popover: {
-                    title: 'Tus Repetidas 💰',
-                    description: 'Acá decidís qué hacer: si dejás el precio en 0, es solo para <b>CANJE</b>. Si le ponés un valor, pasa a <b>VENTA</b> automáticamente.',
-                    side: "top", align: 'center'
-                }
-            },
-            {
-                // 3. Paginación
-                element: '#bottom-nav-container',
-                popover: {
-                    title: 'Navegá por el álbum 📖',
-                    description: 'Deslizá esta barra para moverte entre los diferentes países y secciones del Mundial.',
-                    side: "top", align: 'center'
-                }
-            },
-            {
-                // 4. Menú Principal
-                element: '#btn-menu-tutorial',
-                popover: {
-                    title: 'Tu Panel de Control ⚙️',
-                    description: 'Acá entrás a tu perfil, configurás tus alertas de WhatsApp y descubrís los Puntos Seguros.',
-                    side: "bottom", align: 'end'
-                }
-            },
-            {
-                // 5. Mercado
-                element: 'a[href="/market"]',
-                popover: {
-                    title: '¡Al Mercado! ⚖️',
-                    description: 'Acá ocurre la magia: buscás triangulaciones, comprás figus difíciles y cerrás los canjes. ¡A completar ese álbum!',
-                    side: "bottom", align: 'center'
-                }
-            }
-        ]
-    });
-
-    driverObj.drive();
+// Verificamos si la librería cargó bien en el HTML
+if (typeof window.driver === 'undefined') {
+    console.error("FALTA LA LIBRERÍA: No te olvides de poner el <script> de Driver.js en tu base.html");
 }
 
-// Lógica de "Única Vez" automática
+const driver = window.driver ? window.driver.js.driver : null;
+
+function startTutorial() {
+    if (!driver) {
+        alert("Falta cargar la librería del tutorial en el HTML.");
+        return;
+    }
+
+    try {
+        const driverObj = driver({
+            showProgress: true,
+            animate: true,
+            nextBtnText: 'Siguiente ➔',
+            prevBtnText: '⬅ Atrás',
+            doneBtnText: '¡Entendido! 🙌',
+            steps: [
+                {
+                    element: 'div[id^="sticker-"]', 
+                    popover: { title: '¡Tocá la figu! 🎯', description: 'Un toque = <b>La tengo</b>.<br>Dos toques = <b>Repetida</b>.<br>Tres = <b>Wishlist</b> (la busco).', side: "bottom", align: 'start' }
+                },
+                {
+                    element: '#repeated-table-container',
+                    popover: { title: 'Tus Repetidas 💰', description: 'Si dejás el precio en 0, es solo para <b>CANJE</b>. Si le ponés un valor, pasa a <b>VENTA</b> automáticamente.', side: "top", align: 'center' }
+                },
+                {
+                    element: '#bottom-nav-container',
+                    popover: { title: 'Navegá por el álbum 📖', description: 'Deslizá esta barra para moverte entre los diferentes países.', side: "top", align: 'center' }
+                },
+                {
+                    element: '#btn-menu-tutorial',
+                    popover: { title: 'Tu Panel de Control ⚙️', description: 'Acá entrás a tu perfil y descubrís los Puntos Seguros.', side: "bottom", align: 'end' }
+                },
+                {
+                    // ACA ESTÁ LA MAGIA: Busca si es un link <a> o un botón de HTMX
+                    element: '[hx-get="/market"], a[href="/market"]',
+                    popover: { title: '¡Al Mercado! ⚖️', description: 'Acá ocurre la magia: buscás triangulaciones y cerrás los canjes.', side: "bottom", align: 'center' }
+                }
+            ]
+        });
+
+        driverObj.drive();
+        
+    } catch (error) {
+        console.error("Falla al iniciar el tutorial:", error);
+        alert("Ups, no encontró un botón en la pantalla. Abrí la consola (F12) para ver cuál falta.");
+    }
+}
+
 document.addEventListener('DOMContentLoaded', () => {
-    // Revisamos si ya vio el tutorial
     const tutorialVisto = localStorage.getItem('tutorial_visto');
-    
-    // Si no lo vio, lo disparamos después de 1.5 segundos para que cargue bien HTMX
     if (!tutorialVisto) {
+        // Le damos 2 segunditos para asegurar que HTMX traiga las figuritas
         setTimeout(() => {
             startTutorial();
-            localStorage.setItem('tutorial_visto', 'true'); // Lo marcamos como visto
-        }, 1500); 
+            localStorage.setItem('tutorial_visto', 'true');
+        }, 2000); 
     }
 });
