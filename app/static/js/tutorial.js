@@ -2,7 +2,6 @@
 // 1. EL "ENRUTADOR" INTELIGENTE DEL BOTÓN
 // ==========================================
 window.startTutorial = function() {
-    // Esta función detecta dónde estás y lanza el tutorial correcto
     if (document.querySelector('form[hx-get="/market/search"]')) {
         window.startMarketTutorial();
     } else {
@@ -77,6 +76,7 @@ window.startAlbumTutorial = function() {
             onDestroyStarted: () => {
                 if (tablaFantasma && tablaFantasma.parentNode) tablaFantasma.parentNode.removeChild(tablaFantasma);
                 document.removeEventListener('click', bloqueadorDeClicks, true);
+                if (styleLock) styleLock.remove();
                 driverObj.destroy();
             },
             steps: [
@@ -88,7 +88,10 @@ window.startAlbumTutorial = function() {
             ]
         });
         driverObj.drive();
-    } catch (error) { document.removeEventListener('click', bloqueadorDeClicks, true); }
+    } catch (error) { 
+        document.removeEventListener('click', bloqueadorDeClicks, true); 
+        if (styleLock) styleLock.remove();
+    }
 };
 
 // ==========================================
@@ -98,14 +101,16 @@ window.startMarketTutorial = function() {
     if (!window.driver || !window.driver.js) return;
     const driver = window.driver.js.driver;
     const marketResults = document.getElementById('market-results');
+    
+    // Abortamos si el mercado no existe o está en estado de "Cargando"
     if (!marketResults || marketResults.innerText.includes('Cargando')) return;
 
     // MAGIA: Secuestramos el Modal de Seguridad temporalmente
     const modalSeguridad = document.getElementById('securityModal');
     if (modalSeguridad) {
-        modalSeguridad.close(); // Lo cerramos por las dudas
+        modalSeguridad.close(); 
         modalSeguridad.funcionOriginal = modalSeguridad.showModal;
-        modalSeguridad.showModal = function() {}; // Lo anulamos temporalmente
+        modalSeguridad.showModal = function() {}; 
     }
 
     let styleLock = document.getElementById('tutorial-lock-css');
@@ -128,14 +133,17 @@ window.startMarketTutorial = function() {
     const triangulacionSection = btnTriangulacion ? btnTriangulacion.closest('section') : null;
     const pestanasContainer = marketResults.previousElementSibling; 
 
+    // Búsqueda con Láser: Buscamos una tarjeta real generada por AlpineJS
+    let tarjetaReal = marketResults.querySelector('.grid > div.group');
+    
     let tarjetaFantasma = null;
     let elementoAiluminarTarjeta = null;
-    let nodosOcultos = []; // Guardamos los nodos originales para no romper Alpine
+    let nodosOcultos = []; 
     
-    // Si no hay tarjetas reales
-    if (marketResults.children.length === 0 || marketResults.innerText.includes('No se encontraron') || marketResults.innerText.includes('No hay figuritas')) {
+    // Si no hay tarjeta real O aparece el texto de vacío
+    if (!tarjetaReal || marketResults.innerText.includes('No hay nada por aquí')) {
         
-        // Ocultamos los mensajes sin borrarlos del DOM
+        // Ocultamos todos los hijos del mercado para no romper Alpine
         Array.from(marketResults.children).forEach(node => {
             nodosOcultos.push({ node: node, display: node.style.display });
             node.style.display = 'none';
@@ -143,19 +151,20 @@ window.startMarketTutorial = function() {
 
         tarjetaFantasma = document.createElement('div');
         tarjetaFantasma.id = 'tutorial-fake-card';
-        tarjetaFantasma.className = 'bg-slate-800 rounded-xl p-4 border-2 border-green-500 border-dashed animate-pulse mb-4 mt-4 shadow-lg';
+        tarjetaFantasma.className = 'bg-slate-800 rounded-xl p-4 border-2 border-green-500 border-dashed animate-pulse mb-4 mt-4 shadow-lg w-full max-w-sm mx-auto';
         tarjetaFantasma.innerHTML = `
             <div class="flex justify-between items-center mb-2">
                 <span class="font-bold text-white flex items-center gap-2"><span>👤</span> Usuario_Demo</span>
                 <span class="text-[10px] bg-green-900 text-green-400 font-bold px-2 py-1 rounded border border-green-700">CANJE</span>
             </div>
             <p class="text-sm text-gray-400 mb-3">Tiene lo que buscás y busca lo que tenés.</p>
-            <div class="w-full bg-green-600 text-white font-bold py-2 rounded flex justify-center items-center gap-2"><span>💬</span> Contactar por WhatsApp</div>
+            <div class="w-full bg-green-600 text-white font-bold py-2 rounded flex justify-center items-center gap-2"><span>💬</span> Negociar</div>
         `;
         marketResults.appendChild(tarjetaFantasma);
         elementoAiluminarTarjeta = tarjetaFantasma;
     } else {
-        elementoAiluminarTarjeta = marketResults.firstElementChild;
+        // Si hay una tarjeta real, iluminamos esa
+        elementoAiluminarTarjeta = tarjetaReal;
     }
 
     try {
@@ -163,16 +172,18 @@ window.startMarketTutorial = function() {
             showProgress: true, animate: true, allowClose: false,
             nextBtnText: 'Siguiente ➔', prevBtnText: '⬅ Atrás', doneBtnText: '¡A Canjear! 🙌',
             onDestroyStarted: () => {
-                // Limpieza de la tarjeta
+                // Limpieza de la tarjeta fantasma
                 if (tarjetaFantasma && tarjetaFantasma.parentNode) {
                     tarjetaFantasma.parentNode.removeChild(tarjetaFantasma);
                 }
+                
                 // Devolvemos la visibilidad a los nodos originales de AlpineJS
                 nodosOcultos.forEach(item => item.node.style.display = item.display);
                 
                 document.removeEventListener('click', bloqueadorDeClicks, true);
+                if (styleLock) styleLock.remove();
                 
-                // Le devolvemos la vida al Modal de Seguridad y lo abrimos!
+                // Devolvemos el Modal de Seguridad
                 if (modalSeguridad && modalSeguridad.funcionOriginal) {
                     modalSeguridad.showModal = modalSeguridad.funcionOriginal;
                     const shouldSkip = localStorage.getItem('skipSecurityModal') === 'true';
@@ -182,15 +193,16 @@ window.startMarketTutorial = function() {
                 driverObj.destroy();
             },
             steps: [
-                { element: filtrosForm, popover: { title: 'Filtros de Búsqueda 🔍', description: 'Encontrá a la persona ideal filtrando por <b>Provincia</b>, <b>Zona</b>, o buscando un número de <b>Figurita</b>.', side: "bottom", align: 'center' } },
-                { element: triangulacionSection, popover: { title: 'Magia: Triangulación 📐', description: '¿Nadie tiene la que buscás? El sistema busca "puentes" entre 3 personas para que todos consigan destrabar sus canjes.', side: "bottom", align: 'center' } },
-                { element: pestanasContainer, popover: { title: 'Organización 📁', description: 'Navegá entre las figuritas disponibles para <b>Canjear</b>, las que están a la <b>Venta</b>, y revisá tus contactos <b>Pendientes</b>.', side: "bottom", align: 'center' } },
-                { element: elementoAiluminarTarjeta, popover: { title: '¡A Negociar! 🤝', description: 'Acá verás las coincidencias. Tocá el botón de <b>WhatsApp</b> para contactarlos y cerrar el trato.', side: "top", align: 'center' } }
+                { element: filtrosForm, popover: { title: 'Filtros de Búsqueda 🔍', description: 'Encontrá las figuritas que buscas filtrando por <b>Provincia</b>, <b>Zona</b>, <b>Usuario</b> o buscando por <b>número</b>.', side: "bottom", align: 'center' } },
+                { element: triangulacionSection, popover: { title: 'La Magia: Triangulación 📐', description: '¿Nadie tiene la que buscás? El sistema busca "puentes" entre 3 personas para que todos consigan destrabar sus canjes.', side: "bottom", align: 'center' } },
+                { element: pestanasContainer, popover: { title: 'Organización 📁', description: 'Navegá entre las figuritas disponibles para <b>Canjear</b>, las que están a la <b>Venta</b>, y revisá tus contactos <b>Pendientes</b> para cerrar operaciones.', side: "bottom", align: 'center' } },
+                { element: elementoAiluminarTarjeta, popover: { title: '¡A Negociar! 🤝', description: 'Acá verás los posibles intercambios. Tocá el botón de <b>Negociar</b> para contactarlos y cerrar el trato.', side: "top", align: 'center' } }
             ]
         });
         driverObj.drive();
     } catch (error) { 
         document.removeEventListener('click', bloqueadorDeClicks, true); 
+        if (styleLock) styleLock.remove();
     }
 };
 
