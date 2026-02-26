@@ -123,3 +123,132 @@ document.body.addEventListener('htmx:afterSettle', function(evt) {
         }
     }
 });
+
+// ==========================================
+// 2. TUTORIAL DEL MERCADO (¡NUEVO!)
+// ==========================================
+window.startMarketTutorial = function() {
+    if (!window.driver || !window.driver.js) return;
+    const driver = window.driver.js.driver;
+
+    // Escudo de clics (reutilizado)
+    let styleLock = document.getElementById('tutorial-lock-css');
+    if (!styleLock) {
+        styleLock = document.createElement('style');
+        styleLock.id = 'tutorial-lock-css';
+        styleLock.innerHTML = `.driver-active-element { pointer-events: none !important; }`;
+        document.head.appendChild(styleLock);
+    }
+
+    function bloqueadorDeClicks(e) {
+        if (!e.target.closest('.driver-popover')) {
+            e.stopPropagation(); e.preventDefault();
+        }
+    }
+    document.addEventListener('click', bloqueadorDeClicks, true);
+
+    // Identificamos los elementos del mercado
+    const filtrosForm = document.querySelector('form[hx-get="/market/search"]');
+    const triangulacionSection = document.querySelector('section.border-indigo-500\\/30'); 
+    const pestanasContainer = document.querySelector('button[@click*="currentTab"]').parentElement;
+    const marketResults = document.getElementById('market-results');
+
+    // Tarjeta Fantasma del Mercado
+    let tarjetaFantasma = null;
+    let elementoAiluminarTarjeta = null;
+    
+    // Si los resultados están vacíos o dicen "Cargando", metemos una tarjeta falsa
+    if (marketResults && (marketResults.innerHTML.includes('Cargando') || marketResults.children.length === 0)) {
+        tarjetaFantasma = document.createElement('div');
+        tarjetaFantasma.className = 'bg-slate-800 rounded-xl p-4 border-2 border-green-500 border-dashed animate-pulse mb-4 shadow-lg';
+        tarjetaFantasma.innerHTML = `
+            <div class="flex justify-between items-center mb-2">
+                <span class="font-bold text-white flex items-center gap-2"><span>👤</span> Usuario_Demo</span>
+                <span class="text-[10px] bg-green-900 text-green-400 font-bold px-2 py-1 rounded border border-green-700">CANJE</span>
+            </div>
+            <p class="text-sm text-gray-400 mb-3">Tiene lo que buscás y busca lo que tenés.</p>
+            <button class="w-full bg-green-600 text-white font-bold py-2 rounded flex justify-center items-center gap-2">
+                <span>💬</span> Contactar por WhatsApp
+            </button>
+        `;
+        // Limpiamos el "Cargando" y ponemos la tarjeta
+        marketResults.innerHTML = '';
+        marketResults.appendChild(tarjetaFantasma);
+        elementoAiluminarTarjeta = tarjetaFantasma;
+    } else {
+        // Si hay resultados reales, iluminamos el primero
+        elementoAiluminarTarjeta = marketResults.firstElementChild;
+    }
+
+    try {
+        const driverObj = driver({
+            showProgress: true, animate: true, allowClose: false,
+            nextBtnText: 'Siguiente ➔', prevBtnText: '⬅ Atrás', doneBtnText: '¡A Canjear! 🙌',
+            onDestroyStarted: () => {
+                // Limpieza
+                if (tarjetaFantasma && tarjetaFantasma.parentNode) {
+                    tarjetaFantasma.parentNode.removeChild(tarjetaFantasma);
+                    // Devolvemos el cartelito de cargando por si acaso
+                    marketResults.innerHTML = '<div class="text-center p-8 text-gray-500">Volviendo al mercado real...</div>';
+                    // Forzamos la recarga de los resultados reales apretando el botón de buscar
+                    document.getElementById('search-trigger-btn')?.click();
+                }
+                document.removeEventListener('click', bloqueadorDeClicks, true);
+                if (styleLock) styleLock.remove();
+                driverObj.destroy();
+            },
+            steps: [
+                {
+                    element: filtrosForm,
+                    popover: { title: 'Filtros de Búsqueda 🔍', description: 'Encontrá a la persona ideal filtrando por <b>Provincia</b>, <b>Zona</b>, o andá directo al grano buscando un número de <b>Figurita</b> específico.', side: "bottom", align: 'center' }
+                },
+                {
+                    element: triangulacionSection,
+                    popover: { title: 'Magia: Triangulación 📐', description: '¿Nadie tiene la que buscás? El sistema busca "puentes" entre 3 personas para que todos consigan destrabar sus canjes.', side: "bottom", align: 'center' }
+                },
+                {
+                    element: pestanasContainer,
+                    popover: { title: 'Organización 📁', description: 'Navegá entre las figuritas disponibles para <b>Canjear</b>, las que están a la <b>Venta</b>, y revisá tus contactos <b>Pendientes</b>.', side: "bottom", align: 'center' }
+                },
+                {
+                    element: elementoAiluminarTarjeta,
+                    popover: { title: '¡A Negociar! 🤝', description: 'Acá verás las coincidencias. Tocá el botón de <b>WhatsApp</b> para contactarlos y cerrar el trato.', side: "top", align: 'center' }
+                }
+            ]
+        });
+        driverObj.drive();
+    } catch (error) { document.removeEventListener('click', bloqueadorDeClicks, true); }
+};
+
+// ==========================================
+// 3. CEREBRO CENTRAL (El escuchador de HTMX)
+// ==========================================
+document.body.addEventListener('htmx:afterSettle', function(evt) {
+    
+    // CASO 1: Cargó el contenido del Álbum
+    if (evt.target.id === 'dynamic-content' || (evt.detail && evt.detail.target.id === 'dynamic-content')) {
+        const tutorialVisto = localStorage.getItem('tutorial_visto');
+        const isAlbumPage = document.getElementById('btn-menu-tutorial'); // Solo existe en el album
+        
+        if (isAlbumPage && !tutorialVisto) {
+            setTimeout(() => {
+                window.startTutorial();
+                localStorage.setItem('tutorial_visto', 'true');
+            }, 500);
+        }
+    }
+
+    // CASO 2: Cargaron los resultados del Mercado
+    if (evt.target.id === 'market-results' || (evt.detail && evt.detail.target.id === 'market-results')) {
+        const tutorialMercadoVisto = localStorage.getItem('tutorial_mercado_visto');
+        const isMarketPage = document.querySelector('form[hx-get="/market/search"]'); // Solo existe en el mercado
+        
+        if (isMarketPage && !tutorialMercadoVisto) {
+            // Le damos 1 segundito para que se acomoden bien las tarjetas de HTMX
+            setTimeout(() => {
+                window.startMarketTutorial();
+                localStorage.setItem('tutorial_mercado_visto', 'true');
+            }, 1000);
+        }
+    }
+});
