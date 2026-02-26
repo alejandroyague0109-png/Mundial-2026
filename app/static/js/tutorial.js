@@ -133,7 +133,7 @@ window.startAlbumTutorial = function() {
 };
 
 // ==========================================
-// 3. TUTORIAL DEL MERCADO 
+// 3. TUTORIAL DEL MERCADO (PARCHE MÓVIL)
 // ==========================================
 window.startMarketTutorial = function() {
     if (!window.driver || !window.driver.js) return;
@@ -150,6 +150,14 @@ window.startMarketTutorial = function() {
         modalSeguridad.showModal = function() {}; 
     }
 
+    let styleLock = document.getElementById('tutorial-lock-css');
+    if (!styleLock) {
+        styleLock = document.createElement('style');
+        styleLock.id = 'tutorial-lock-css';
+        styleLock.innerHTML = `.driver-active-element { pointer-events: none !important; }`;
+        document.head.appendChild(styleLock);
+    }
+
     function bloqueadorDeClicks(e) {
         if (!e.target.closest('.driver-popover')) {
             e.stopPropagation(); e.preventDefault();
@@ -162,16 +170,13 @@ window.startMarketTutorial = function() {
     const triangulacionSection = btnTriangulacion ? btnTriangulacion.closest('section') : null;
     const pestanasContainer = marketResults.previousElementSibling; 
 
-    // BÚSQUEDA INFALIBLE DE LA TARJETA
-    // Busca cualquier elemento dentro de market-results que tenga la clase 'group' (que es la de tus tarjetas)
+    // Verificamos si hay tarjetas reales dibujadas
     let tarjetaReal = marketResults.querySelector('.group');
-    
     let tarjetaFantasma = null;
-    let elementoAiluminarTarjeta = null;
     let nodosOcultos = []; 
+    let selectorPaso4 = ''; // Ahora usamos un String (texto) en lugar de un Elemento
     
     if (!tarjetaReal || marketResults.innerText.includes('No hay nada por aquí')) {
-        
         Array.from(marketResults.children).forEach(node => {
             nodosOcultos.push({ node: node, display: node.style.display });
             node.style.display = 'none';
@@ -179,7 +184,8 @@ window.startMarketTutorial = function() {
 
         tarjetaFantasma = document.createElement('div');
         tarjetaFantasma.id = 'tutorial-fake-card';
-        tarjetaFantasma.className = 'bg-slate-800 rounded-xl p-4 border-2 border-green-500 border-dashed animate-pulse mb-4 mt-4 shadow-lg w-full max-w-sm mx-auto';
+        // Le agregamos relative y z-10 por las dudas para el renderizado de móviles
+        tarjetaFantasma.className = 'bg-slate-800 rounded-xl p-4 border-2 border-green-500 border-dashed animate-pulse mb-4 mt-4 shadow-lg w-full max-w-sm mx-auto relative z-10';
         tarjetaFantasma.innerHTML = `
             <div class="flex justify-between items-center mb-2">
                 <span class="font-bold text-white flex items-center gap-2"><span>👤</span> Usuario_Demo</span>
@@ -189,14 +195,17 @@ window.startMarketTutorial = function() {
             <div class="w-full bg-green-600 text-white font-bold py-2 rounded flex justify-center items-center gap-2"><span>💬</span> Negociar</div>
         `;
         marketResults.appendChild(tarjetaFantasma);
-        elementoAiluminarTarjeta = tarjetaFantasma;
+        
+        // Le decimos al tutorial que busque exactamente el ID de la fantasma
+        selectorPaso4 = '#tutorial-fake-card'; 
     } else {
-        elementoAiluminarTarjeta = tarjetaReal;
+        // Le decimos al tutorial que busque la primera tarjeta de la grilla en el DOM activo
+        selectorPaso4 = '#market-results .group';
     }
 
     try {
         const driverObj = driver({
-            popoverClass: 'altoque-theme', // APLICAMOS EL TEMA OSCURO AL MERCADO TAMBIÉN
+            popoverClass: 'altoque-theme', 
             showProgress: true, animate: true, allowClose: false,
             nextBtnText: 'Siguiente ➔', prevBtnText: '⬅ Atrás', doneBtnText: '¡A Canjear! 🙌',
             onDestroyStarted: () => {
@@ -206,6 +215,7 @@ window.startMarketTutorial = function() {
                 
                 nodosOcultos.forEach(item => item.node.style.display = item.display);
                 document.removeEventListener('click', bloqueadorDeClicks, true);
+                if (styleLock) styleLock.remove();
                 
                 if (modalSeguridad && modalSeguridad.funcionOriginal) {
                     modalSeguridad.showModal = modalSeguridad.funcionOriginal;
@@ -219,12 +229,13 @@ window.startMarketTutorial = function() {
                 { element: filtrosForm, popover: { title: 'Filtros de Búsqueda 🔍', description: 'Encontrá las figuritas que buscas filtrando por <b>Provincia</b>, <b>Zona</b>, <b>Usuario</b> o buscando por <b>Número</b>.', side: "bottom", align: 'center' } },
                 { element: triangulacionSection, popover: { title: 'La Magia: Triangulación 📐', description: '¿Nadie tiene la que buscás? El sistema busca "puentes" entre 3 personas para que todos consigan destrabar sus canjes.', side: "bottom", align: 'center' } },
                 { element: pestanasContainer, popover: { title: 'Organización 📁', description: 'Navegá entre las figuritas disponibles para <b>Canjear</b>, las que están a la <b>Venta</b>, y revisá tus contactos <b>Pendientes</b> para cerrar operaciones.', side: "bottom", align: 'center' } },
-                { element: elementoAiluminarTarjeta, popover: { title: '¡A Negociar! 🤝', description: 'Acá verás los posibles intercambios. Tocá el botón de <b>Negociar</b> para contactarlos y cerrar el trato.', side: "top", align: 'center' } }
+                { element: selectorPaso4, popover: { title: '¡A Negociar! 🤝', description: 'Acá verás los posibles intercambios. Tocá el botón de <b>Negociar</b> para contactarlos y cerrar el trato.', side: "top", align: 'center' } }
             ]
         });
         driverObj.drive();
     } catch (error) { 
         document.removeEventListener('click', bloqueadorDeClicks, true); 
+        if (styleLock) styleLock.remove();
     }
 };
 
