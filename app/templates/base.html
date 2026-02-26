@@ -219,17 +219,6 @@
         // Ejecutamos cuando cargue la página
         document.addEventListener('DOMContentLoaded', showIosPrompt);
     </script>
-    ```
-
-### ¿Qué hace esta maravilla?
-1. Tiene una función `isIos()` que lee el navegador del usuario y detecta si es un dispositivo Apple.
-2. Tiene una función clave `isInStandaloneMode()`: Esta magia sabe si el usuario **ya la tiene instalada**. Si la está abriendo desde el ícono de su pantalla de inicio, el cartel **no** aparece para no molestar.
-3. Si el usuario toca la cruz (`✕`), se guarda en la memoria del celular (`localStorage`) para no volver a insistirle nunca más.
-4. El cartel flota por encima de todo (`z-[100]`) y tiene una flechita azul animada apuntando hacia abajo, que es justo donde Safari pone el botón de compartir.
-
-Para probarlo, guardalo, hacé `git push`, y si tenés un iPhone, abrilo en Safari (acordate de vaciar caché o abrir pestaña de incógnito). Si estás en tu compu, podés engañar a Chrome abriendo la consola (F12) -> Tocando el ícono de celular (Toggle device toolbar) -> Eligiendo "iPhone 14 PRO" -> y recargando la página.
-
-¡Decime cómo se ve!
 
 </body>
 </html>
