@@ -21,7 +21,7 @@ engine = create_async_engine(
     max_overflow=10,
     future=True,
     pool_pre_ping=True,  # 🪄 MAGIA 1: Verifica que la conexión esté viva antes de usarla
-    pool_recycle=1800    # 🪄 MAGIA 2: Recicla las conexiones cada 30 minutos (1800 segs) para que no queden viejas
+    pool_recycle=1800,    # 🪄 MAGIA 2: Recicla las conexiones cada 30 minutos (1800 segs) para que no queden viejas
     connect_args={
         "statement_cache_size": 0
     }
