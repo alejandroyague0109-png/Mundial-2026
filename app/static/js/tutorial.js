@@ -74,6 +74,20 @@ window.startAlbumTutorial = function() {
         return;
     }
 
+    // --- MAGIA: Secuestramos el cartel de iOS ---
+    let originalShowIosPrompt = null;
+    if (typeof window.showIosPrompt === 'function') {
+        originalShowIosPrompt = window.showIosPrompt;
+        window.showIosPrompt = function() {}; // Lo anulamos temporalmente
+    }
+    const iosPrompt = document.getElementById('ios-install-prompt');
+    if (iosPrompt) {
+        iosPrompt.classList.add('hidden'); 
+        iosPrompt.classList.remove('translate-y-0'); // Le sacamos la posición de "arriba"
+        iosPrompt.classList.add('translate-y-[150%]'); // Lo mandamos "abajo" para que vuelva a subir con animación luego
+    }
+    // --------------------------------------------
+
     function bloqueadorDeClicks(e) {
         if (!e.target.closest('.driver-popover')) {
             e.stopPropagation(); e.preventDefault();  
@@ -116,6 +130,15 @@ window.startAlbumTutorial = function() {
             onDestroyStarted: () => {
                 if (tablaFantasma && tablaFantasma.parentNode) tablaFantasma.parentNode.removeChild(tablaFantasma);
                 document.removeEventListener('click', bloqueadorDeClicks, true);
+                if (styleLock) styleLock.remove();
+
+                // --- Liberamos el cartel de iOS ---
+                if (originalShowIosPrompt) {
+                    window.showIosPrompt = originalShowIosPrompt;
+                    setTimeout(() => window.showIosPrompt(), 500);
+                }
+                // ----------------------------------
+
                 driverObj.destroy();
             },
             steps: [
@@ -149,6 +172,20 @@ window.startMarketTutorial = function() {
         modalSeguridad.funcionOriginal = modalSeguridad.showModal;
         modalSeguridad.showModal = function() {}; 
     }
+
+    // --- MAGIA: Secuestramos el cartel de iOS (También acá por si acaso) ---
+    let originalShowIosPrompt = null;
+    if (typeof window.showIosPrompt === 'function') {
+        originalShowIosPrompt = window.showIosPrompt;
+        window.showIosPrompt = function() {}; 
+    }
+    const iosPrompt = document.getElementById('ios-install-prompt');
+    if (iosPrompt) {
+        iosPrompt.classList.add('hidden'); 
+        iosPrompt.classList.remove('translate-y-0'); // Le sacamos la posición de "arriba"
+        iosPrompt.classList.add('translate-y-[150%]'); // Lo mandamos "abajo" para que vuelva a subir con animación luego
+    }
+    // ------------------------------------------------------------------------
 
     let styleLock = document.getElementById('tutorial-lock-css');
     if (!styleLock) {
@@ -222,6 +259,13 @@ window.startMarketTutorial = function() {
                     const shouldSkip = localStorage.getItem('skipSecurityModal') === 'true';
                     if (!shouldSkip) setTimeout(() => modalSeguridad.showModal(), 500);
                 }
+
+                // --- Liberamos el cartel de iOS ---
+                if (originalShowIosPrompt) {
+                    window.showIosPrompt = originalShowIosPrompt;
+                    setTimeout(() => window.showIosPrompt(), 500);
+                }
+                // ----------------------------------
 
                 driverObj.destroy();
             },
