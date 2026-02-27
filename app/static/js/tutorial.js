@@ -130,7 +130,6 @@ window.startAlbumTutorial = function() {
             onDestroyStarted: () => {
                 if (tablaFantasma && tablaFantasma.parentNode) tablaFantasma.parentNode.removeChild(tablaFantasma);
                 document.removeEventListener('click', bloqueadorDeClicks, true);
-                if (styleLock) styleLock.remove();
 
                 // --- Liberamos el cartel de iOS ---
                 if (originalShowIosPrompt) {
