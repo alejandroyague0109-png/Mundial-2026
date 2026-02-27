@@ -1,8 +1,11 @@
-[{
-  "relation": ["delegate_permission/common.handle_all_urls"],
-  "target": {
-    "namespace": "android_app",
-    "package_name": "com.canjealtoque.app",
-    "sha256_cert_fingerprints": ["FA:55:C4:7D:52:29:51:DC:C7:FD:7E:B0:85:05:9D:AF:16:6A:B6:74:BC:DE:E3:50:D7:91:36:89:9A:15:C9:89"]
+[
+  {
+    "relation": ["delegate_permission/common.handle_all_urls"],
+    "target": {
+      "namespace": "android_app",
+      "package_name": "com.canjealtoque.app",
+      "sha256_cert_fingerprints":
+        ["FA:55:C4:7D:52:29:51:DC:C7:FD:7E:B0:85:05:9D:AF:16:6A:B6:74:BC:DE:E3:50:D7:91:36:89:9A:15:C9:89"]
+    }
   }
-}]
+]
