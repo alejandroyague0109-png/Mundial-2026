@@ -13,7 +13,7 @@
     <meta property="og:type" content="website">
     
     <meta property="og:image" itemprop="image" content="https://canjealtoque26.com/static/img/logo_whatsapp.png">
-    <meta property="og:image:secure_url" itemprop="image" content="https://canjealtoque26.com/static/img/lologo_whatsapp.png">
+    <meta property="og:image:secure_url" itemprop="image" content="https://canjealtoque26.com/static/img/logo_whatsapp.png">
     <meta property="og:image:type" content="image/png">
     <meta property="og:image:width" content="600">
     <meta property="og:image:height" content="600">
@@ -46,7 +46,8 @@
             backdrop-filter: blur(4px);
         }
     </style>
-<link rel="manifest" href="/static/manifest.json">
+
+    <link rel="manifest" href="/static/manifest.json">
     <meta name="theme-color" content="#0f172a">
     <meta name="mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-capable" content="yes">
@@ -62,7 +63,6 @@
             });
         }
     </script>
-
 </head>
 
 <body class="bg-slate-900 text-gray-200 min-h-screen flex flex-col pt-20 relative z-0">
@@ -72,45 +72,36 @@
             
             <div class="flex justify-start items-center gap-3">
                 <img src="/static/img/logo.png" alt="Logo Canje AlToque" class="h-10 w-auto object-contain hover:scale-105 transition-transform">
-                
                 <a href="/" class="text-lg md:text-xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-yellow-400 to-yellow-600 hover:to-yellow-300 truncate transition hidden sm:block">
                     Canje AlToque 26
                 </a>
             </div>
 
             <nav class="flex justify-center items-center h-full gap-2 md:gap-8">
-    <a href="/album" 
-       class="relative h-full flex items-center px-4 md:px-4 font-bold text-xs md:text-sm uppercase tracking-wider transition-colors group
-       {{ 'text-yellow-400' if active_tab == 'album' else 'text-gray-400 hover:text-gray-200' }}">
-       
-        <div class="flex items-center gap-2">
-            <span class="text-2xl md:text-lg transition-all duration-300 {{ 'scale-110 drop-shadow-[0_0_10px_rgba(234,179,8,0.8)]' if active_tab == 'album' else 'opacity-60 group-hover:opacity-100 group-hover:scale-105' }}">
-                📖
-            </span>
-            <span class="hidden md:inline">Mi Álbum</span>
-        </div>
-        
-        {% if active_tab == 'album' %}
-        <div class="absolute bottom-0 left-0 w-full h-1 bg-yellow-500 rounded-t-full shadow-[0_-1px_5px_rgba(234,179,8,0.5)] animate-fade-in"></div>
-        {% endif %}
-    </a>
+                <a href="/album" class="relative h-full flex items-center px-4 md:px-4 font-bold text-xs md:text-sm uppercase tracking-wider transition-colors group {{ 'text-yellow-400' if active_tab == 'album' else 'text-gray-400 hover:text-gray-200' }}">
+                    <div class="flex items-center gap-2">
+                        <span class="text-2xl md:text-lg transition-all duration-300 {{ 'scale-110 drop-shadow-[0_0_10px_rgba(234,179,8,0.8)]' if active_tab == 'album' else 'opacity-60 group-hover:opacity-100 group-hover:scale-105' }}">
+                            📖
+                        </span>
+                        <span class="hidden md:inline">Mi Álbum</span>
+                    </div>
+                    {% if active_tab == 'album' %}
+                    <div class="absolute bottom-0 left-0 w-full h-1 bg-yellow-500 rounded-t-full shadow-[0_-1px_5px_rgba(234,179,8,0.5)] animate-fade-in"></div>
+                    {% endif %}
+                </a>
 
-    <a href="/market" 
-       class="relative h-full flex items-center px-4 md:px-4 font-bold text-xs md:text-sm uppercase tracking-wider transition-colors group
-       {{ 'text-yellow-400' if active_tab == 'market' else 'text-gray-400 hover:text-gray-200' }}">
-       
-        <div class="flex items-center gap-2">
-            <span class="text-2xl md:text-lg transition-all duration-300 {{ 'scale-110 drop-shadow-[0_0_10px_rgba(234,179,8,0.8)]' if active_tab == 'market' else 'opacity-60 group-hover:opacity-100 group-hover:scale-105' }}">
-                ⚖️
-            </span>
-            <span class="hidden md:inline">Mercado</span>
-        </div>
-        
-        {% if active_tab == 'market' %}
-        <div class="absolute bottom-0 left-0 w-full h-1 bg-yellow-500 rounded-t-full shadow-[0_-1px_5px_rgba(234,179,8,0.5)] animate-fade-in"></div>
-        {% endif %}
-    </a>
-</nav>
+                <a href="/market" class="relative h-full flex items-center px-4 md:px-4 font-bold text-xs md:text-sm uppercase tracking-wider transition-colors group {{ 'text-yellow-400' if active_tab == 'market' else 'text-gray-400 hover:text-gray-200' }}">
+                    <div class="flex items-center gap-2">
+                        <span class="text-2xl md:text-lg transition-all duration-300 {{ 'scale-110 drop-shadow-[0_0_10px_rgba(234,179,8,0.8)]' if active_tab == 'market' else 'opacity-60 group-hover:opacity-100 group-hover:scale-105' }}">
+                            ⚖️
+                        </span>
+                        <span class="hidden md:inline">Mercado</span>
+                    </div>
+                    {% if active_tab == 'market' %}
+                    <div class="absolute bottom-0 left-0 w-full h-1 bg-yellow-500 rounded-t-full shadow-[0_-1px_5px_rgba(234,179,8,0.5)] animate-fade-in"></div>
+                    {% endif %}
+                </a>
+            </nav>
 
             <div class="flex justify-end items-center gap-3">
                 {% if user %}
@@ -130,7 +121,6 @@
                     <a href="/login" class="text-sm text-yellow-400 font-bold hover:underline">Ingresar</a>
                 {% endif %}
             </div>
-
         </div>
     </header>
 
@@ -138,34 +128,32 @@
         {% block content %}{% endblock %}
     </div>
 
-<footer class="relative z-[60] bg-slate-950 text-slate-500 text-center p-6 mt-8 border-t border-slate-900 shadow-[0_-4px_20px_rgba(0,0,0,0.5)]">
-    <p class="text-sm font-medium text-slate-400">© 2026 Canje AlToque - Hecho con 🧉 y Pasión</p>
-    <div class="mt-2 text-xs flex justify-center gap-4 text-slate-600 font-mono flex-wrap">
-        <span>📧 canjealtoque@gmail.com</span>
-        <span class="text-slate-800">|</span>
-        <span>📷 @canjealtoque_26</span>
-    </div>
-</footer>
+    <footer class="relative z-[60] bg-slate-950 text-slate-500 text-center p-6 mt-8 border-t border-slate-900 shadow-[0_-4px_20px_rgba(0,0,0,0.5)]">
+        <p class="text-sm font-medium text-slate-400">© 2026 Canje AlToque - Hecho con 🧉 y Pasión</p>
+        <div class="mt-2 text-xs flex justify-center gap-4 text-slate-600 font-mono flex-wrap">
+            <span>📧 canjealtoque@gmail.com</span>
+            <span class="text-slate-800">|</span>
+            <span>📷 @canjealtoque_26</span>
+        </div>
+    </footer>
 
     {% include "components/modals.html" %}
-
     {% include "partials/toast_renewal.html" %}
 
-<script>
+    <script>
         window.openModal = function(modalId) {
             const modal = document.getElementById(modalId);
             if (modal) {
                 modal.showModal();
             } else {
                 console.warn("⚠️ Modal no encontrado:", modalId);
-                // Opcional: alert("Función no disponible en esta pantalla.");
             }
         }
     </script>
 
-<script src="/static/js/tutorial.js?v=3.7"></script>
+    <script src="/static/js/tutorial.js?v=9"></script>
 
-<div id="ios-install-prompt" class="fixed bottom-4 left-4 right-4 z-[100] bg-slate-800 border-2 border-slate-600 rounded-2xl shadow-[0_10px_40px_rgba(0,0,0,0.8)] p-4 transform translate-y-[150%] transition-transform duration-500 hidden">
+    <div id="ios-install-prompt" class="fixed bottom-4 left-4 right-4 z-[100] bg-slate-800 border-2 border-slate-600 rounded-2xl shadow-[0_10px_40px_rgba(0,0,0,0.8)] p-4 transform translate-y-[150%] transition-transform duration-500 hidden">
         <div class="flex items-start gap-4">
             <div class="text-4xl drop-shadow-md">🍏</div>
             <div class="flex-1">
@@ -186,59 +174,36 @@
     </div>
 
     <script>
-        // Lógica para detectar iPhone y mostrar el cartel
         function isIos() {
             const userAgent = window.navigator.userAgent.toLowerCase();
             return /iphone|ipad|ipod/.test(userAgent);
         }
 
         function isInStandaloneMode() {
-            // Verifica si la app ya está instalada en la pantalla de inicio (PWA)
             return ('standalone' in window.navigator) && (window.navigator.standalone);
         }
 
         function showIosPrompt() {
-            // Solo mostramos si: Es iOS, NO está instalada, y NO la cerró antes
             if (isIos() && !isInStandaloneMode() && !localStorage.getItem('ios_prompt_dismissed')) {
                 const prompt = document.getElementById('ios-install-prompt');
                 prompt.classList.remove('hidden');
-                
-                // Pequeño delay para que la animación de entrada funcione
                 setTimeout(() => {
                     prompt.classList.remove('translate-y-[150%]');
                     prompt.classList.add('translate-y-0');
-                }, 500); // Aparece medio segundo después de entrar a la web
+                }, 500); 
             }
         }
 
         function dismissIosPrompt() {
             const prompt = document.getElementById('ios-install-prompt');
             prompt.classList.remove('translate-y-0');
-            prompt.classList.add('translate-y-[150%]'); // Lo deslizamos hacia abajo
-            
-            // Lo ocultamos por completo después de la animación
+            prompt.classList.add('translate-y-[150%]'); 
             setTimeout(() => prompt.classList.add('hidden'), 500);
-            
-            // Guardamos que ya no lo quiere ver más
             localStorage.setItem('ios_prompt_dismissed', 'true');
         }
 
-        // Ejecutamos cuando cargue la página
         document.addEventListener('DOMContentLoaded', showIosPrompt);
     </script>
-
-<script>
-        window.openModal = function(modalId) {
-            const modal = document.getElementById(modalId);
-            if (modal) {
-                modal.showModal();
-            } else {
-                console.warn("⚠️ Modal no encontrado:", modalId);
-            }
-        }
-    </script>
-
-    <script src="/static/js/tutorial.js?v=7"></script>
 
     <dialog id="updateRequiredModal" class="bg-slate-900 text-white p-8 rounded-2xl border-2 border-red-500 backdrop:bg-slate-950/95 w-full max-w-sm shadow-2xl m-auto text-center" style="pointer-events: auto; z-index: 9999;">
         <div class="text-6xl mb-4 animate-bounce">🚀</div>
@@ -252,8 +217,6 @@
     </dialog>
 
     <script>
-        // 1. LA VERSIÓN ACTUAL DE ESTE HTML
-        // (Aumentá este número en el HTML y en Python cuando subas un cambio grande)
         const CURRENT_FRONTEND_VERSION = 1; 
 
         async function checkAppVersion() {
@@ -262,7 +225,6 @@
                 if (!res.ok) return;
                 const data = await res.json();
 
-                // Si el servidor exige una versión mayor a la que tenemos, bloqueamos.
                 if (data.min_version > CURRENT_FRONTEND_VERSION) {
                     const modal = document.getElementById('updateRequiredModal');
                     if (modal && !modal.open) {
@@ -270,14 +232,11 @@
                     }
                 }
             } catch (error) {
-                // Si hay error (ej: no hay internet), no hacemos nada
                 console.log("Validación de versión omitida (sin red).");
             }
         }
 
-        // 2. FUNCIÓN PARA FORZAR LA ACTUALIZACIÓN
         function forceAppUpdate() {
-            // Rompemos el Service Worker y forzamos recarga
             if ('serviceWorker' in navigator) {
                 navigator.serviceWorker.getRegistrations().then(function(registrations) {
                     for(let registration of registrations) {
@@ -288,7 +247,6 @@
             window.location.reload(true); 
         }
 
-        // 3. ¿CUÁNDO REVISAMOS?
         document.addEventListener('DOMContentLoaded', checkAppVersion);
         
         document.addEventListener('visibilitychange', () => {
@@ -297,8 +255,5 @@
             }
         });
     </script>
-    </body>
-</html>
-
 </body>
 </html>
