@@ -121,7 +121,8 @@
         // 3. MENSAJE
         // 3. ARMAR MENSAJE
         let mensaje = `👋 HOLA! Estoy completando el álbum *Canje AlToque 26*.\n`; 
-        mensaje += `Viendo: *${prefix}*\n`;
+        
+        mensaje += `De: *${prefix}*\n`;
         mensaje += `----------------------------------\n`;
 
         if (wList.length > 0) {
@@ -132,7 +133,7 @@
         }
 
         if (rList.length > 0) {
-            mensaje += `🔄 TENGO REPES:\n`;
+            mensaje += `🔄 TENGO REPETIDAS:\n`;
             mensaje += rList.map(n => `${n}`).join(', ') + `\n`;
         } else {
             mensaje += `🚫 REPES: No tengo por ahora.\n`;
@@ -142,11 +143,11 @@
         mensaje += `¿Cambiamos? 🙌\n\n`;
 
         // PIE DE PÁGINA CON LINKS
+        mensaje += `🍏 *iPhone / Web / Ya la instalé:*\n`;
+        mensaje += `https://canjealtoque26.com`;        
+
         mensaje += `📲 *Android (Descargá la App):*\n`;
         mensaje += `https://play.google.com/store/apps/details?id=com.canjealtoque.app\n\n`;
-
-        mensaje += `🍏 *iPhone / Web / Ya la instalé:*\n`;
-        mensaje += `https://canjealtoque26.com`;
 
         const url = `https://api.whatsapp.com/send?text=${encodeURIComponent(mensaje)}`;
         window.open(url, '_blank');

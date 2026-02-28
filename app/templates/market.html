@@ -66,7 +66,7 @@
 
             <div class="flex-shrink-0">
                 {% if user.daily_contacts_count|default(0) >= 1 %}
-                    <button onclick="premiumModal.showModal()" class="text-[10px] bg-yellow-600 hover:bg-yellow-500 text-white font-bold px-3 py-1.5 rounded transition shadow-lg animate-pulse">
+                    <button onclick="openModal('premiumModal')" class="text-[10px] bg-yellow-600 hover:bg-yellow-500 text-white font-bold px-3 py-1.5 rounded transition shadow-lg animate-pulse">
                         🚀 Desbloquear
                     </button>
                 {% else %}
