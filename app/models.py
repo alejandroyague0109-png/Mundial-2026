@@ -2,6 +2,8 @@ from sqlalchemy import Column, Integer, String, Boolean, Float, ForeignKey, Date
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
 from app.database import Base
+from datetime import datetime
+import pytz
 
 class User(Base):
     __tablename__ = "users"
@@ -34,6 +36,27 @@ class User(Base):
     
     # Relación: Un usuario tiene muchos items en el inventario
     inventory_items = relationship("Inventory", back_populates="owner")
+
+    @property
+    def effective_daily_contacts(self):
+        # Si es Premium, no nos importa el contador, siempre tiene "0" de límite o no aplica.
+        if self.is_premium:
+            return 0 
+            
+        # Si nunca hizo un contacto
+        if not self.last_contact_date:
+            return 0
+            
+        # Configuramos la hora de Argentina para que se resetee a la medianoche local
+        tz_ar = pytz.timezone('America/Argentina/Buenos_Aires')
+        hoy = datetime.now(tz_ar).date()
+        
+        # Si la última vez que contactó fue HOY, mostramos el contador real
+        if self.last_contact_date == hoy:
+            return self.daily_contacts_count
+        else:
+            # Si fue ayer o antes, el contador virtual es 0 (¡Magia!)
+            return 0
 
 class Inventory(Base):
     __tablename__ = "inventory"

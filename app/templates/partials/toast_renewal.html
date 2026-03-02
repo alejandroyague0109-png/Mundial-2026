@@ -40,8 +40,8 @@
                 const lastSeen = localStorage.getItem(key);
                 
                 // 3. Verificamos si realmente tiene el crédito disponible (count == 0)
-                // Usamos la variable de Jinja {{ user.daily_contacts_count }}
-                const contactsUsed = parseInt('{{ user.daily_contacts_count|default(0) }}');
+                // Usamos la variable de Jinja {{ user.effective_daily_contacts }}
+                const contactsUsed = parseInt('{{ user.effective_daily_contacts|default(0) }}');
 
                 if (lastSeen !== today && contactsUsed === 0) {
                     // Esperamos un poquito para que no sea agresivo al cargar la página

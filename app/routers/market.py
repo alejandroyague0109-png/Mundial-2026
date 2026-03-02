@@ -160,20 +160,24 @@ async def contact_item(item_id: int, request: Request, db: AsyncSession = Depend
     existing_log = existing_log_res.scalars().first()
 
     if not existing_log:
-        today = date.today()
-        if current_user.last_contact_date != today:
-            current_user.daily_contacts_count = 0
-            current_user.last_contact_date = today
-            await db.commit() 
+        # Configuramos la zona horaria correcta
+        tz_ar = pytz.timezone('America/Argentina/Buenos_Aires')
+        hoy = datetime.now(tz_ar).date()
         
+        # 1. EVALUAMOS EL LÍMITE USANDO LA PROPIEDAD INTELIGENTE
         if not current_user.is_premium:
-            if current_user.daily_contacts_count >= 1:
+            if current_user.effective_daily_contacts >= 1:
                 return JSONResponse(
                     content={"message": "Has alcanzado tu límite de 1 contacto diario."}, 
                     status_code=403
                 )
-            current_user.daily_contacts_count += 1
+            
+            # 2. SI TIENE CRÉDITO, SE LO DESCONTAMOS Y GUARDAMOS LA FECHA
+            current_user.daily_contacts_count = 1
+            current_user.last_contact_date = hoy
+            # Nota: Al guardar "hoy", effective_daily_contacts automáticamente leerá "1"
         
+        # Creamos el registro del contacto
         new_log = ContactLog(
             user_id=current_user.id,
             target_id=owner.id,
