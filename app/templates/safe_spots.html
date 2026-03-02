@@ -2,7 +2,7 @@
 
 {% block content %}
 <div class="p-4 md:p-8 max-w-6xl mx-auto animate-fade-in"
-     x-data="safeSpotsManager('{{ user.province }}', '{{ user.zone }}')">
+     x-data="safeSpotsManager('{{ default_prov }}', '{{ default_zone }}')">
     
     <div class="mb-6 border-b border-slate-700 pb-4">
         <h1 class="text-3xl font-black text-white flex items-center gap-3">

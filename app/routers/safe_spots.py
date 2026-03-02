@@ -16,32 +16,53 @@ router = APIRouter(tags=["Safe Spots"])
 BASE_DIR = Path(__file__).resolve().parent.parent
 templates = Jinja2Templates(directory=str(BASE_DIR / "templates"))
 
-# 1. RUTA PRINCIPAL (Renderiza el HTML)
+# 1. RUTA PRINCIPAL (PÚBLICA Y ADAPTATIVA)
 @router.get("/safe-spots", response_class=HTMLResponse)
-async def view_safe_spots(request: Request, db: AsyncSession = Depends(get_db)):
+async def view_safe_spots(
+    request: Request, 
+    provincia: str = None, 
+    zona: str = None, 
+    db: AsyncSession = Depends(get_db)
+):
     user_id = request.cookies.get("user_id")
-    if not user_id: 
-        return RedirectResponse(url="/login", status_code=303)
+    user = None
+    
+    # 1. Intentamos buscar al usuario si tiene cookie
+    if user_id: 
+        result_user = await db.execute(select(User).where(User.id == int(user_id)))
+        user = result_user.scalars().first()
 
-    result_user = await db.execute(select(User).where(User.id == int(user_id)))
-    user = result_user.scalars().first()
-    if not user: 
-        response = RedirectResponse(url="/login", status_code=303)
-        response.delete_cookie("user_id")
-        return response
-
-    # Extraemos las categorías únicas de la DB para armar el filtro dinámicamente
+    # Extraemos las categorías únicas
     cat_result = await db.execute(select(PuntoSeguro.categoria).distinct())
     categorias = [c for c in cat_result.scalars().all() if c]
 
+    # 2. Lógica de asignación de zona con las 3 prioridades
+    
+    # Prioridad 1: Viene por la URL (desde WhatsApp)
+    if provincia and zona:
+        default_province = provincia
+        default_zone = zona
+    
+    # Prioridad 2: Está logueado y tiene su zona
+    elif user and user.province and user.zone:
+        default_province = user.province
+        default_zone = user.zone
+        
+    # Prioridad 3: Curioso sin login. Dejamos que el HTML ponga Mendoza por defecto
+    else:
+        default_province = ""
+        default_zone = ""
+
     return templates.TemplateResponse("safe_spots.html", {
         "request": request,
-        "user": user,
+        "user": user,  # Puede ser None, el HTML está preparado
         "active_tab": "safe_spots",
         "album_structure": ALBUM_STRUCTURE,
-        "locations": ARGENTINA,  # <--- CORRECCIÓN AQUÍ (Para los modales)
-        "locations_json": json.dumps(ARGENTINA), # Para el Javascript
-        "categorias": categorias
+        "locations": ARGENTINA,
+        "locations_json": json.dumps(ARGENTINA),
+        "categorias": categorias,
+        "default_prov": default_province,
+        "default_zone": default_zone
     })
 
 # 2. API DE BÚSQUEDA
