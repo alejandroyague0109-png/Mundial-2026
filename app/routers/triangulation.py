@@ -27,10 +27,11 @@ async def search_triangulation(
     db: AsyncSession = Depends(get_db)
 ):
     """
-    Algoritmo de Triangulación Híbrido:
-    1. Busca: VOS -> C -> B -> VOS.
-    2. Prioridad: Puentes (C) distintos.
-    3. Fallback: Si no hay 3 puentes distintos, reutiliza puentes para completar 3 opciones.
+    Algoritmo de Triangulación Circular (Vos -> B -> C -> Vos)
+    Prioridades:
+    1. Matches donde B y C tengan las figuritas en su Wishlist (Scoring).
+    2. Usar Puentes (C) distintos para no saturar a un mismo usuario.
+    3. Fallback: Reutilizar puentes si no hay suficientes opciones únicas.
     """
     
     # 1. Validaciones de Usuario
@@ -58,7 +59,7 @@ async def search_triangulation(
     if not my_repes:
         return JSONResponse({"message": "No tenés repetidas para intercambiar."}, status_code=400)
 
-    # 3. Cargar el Mercado de la ZONA
+    # 3. Cargar el Mercado de la ZONA (Traemos TODO para saber qué les falta)
     zone_query = (
         select(Inventory.user_id, Inventory.sticker_num, Inventory.status, User)
         .join(User)
@@ -66,113 +67,140 @@ async def search_triangulation(
             User.province == me.province,
             User.zone == me.zone,
             User.id != current_user_id,
-            Inventory.status.in_(['wishlist', 'repetida', 'repe'])
+            Inventory.status.in_(['wishlist', 'repetida', 'repe', 'tengo']) 
         )
     )
     
     zone_res = await db.execute(zone_query)
     rows = zone_res.all()
 
-    # 4. Construir Grafos en Memoria
-    user_has = defaultdict(set)
-    user_wants = defaultdict(set)
+    # 4. Construir Diccionarios en Memoria
+    user_repes = defaultdict(set)
+    user_wishlist = defaultdict(set)
+    user_has_any = defaultdict(set)
     users_meta = {}
 
     for uid, s_num, status, user_obj in rows:
         users_meta[uid] = user_obj
         st = status.lower()
         if st in ['repetida', 'repe']:
-            user_has[uid].add(s_num)
+            user_repes[uid].add(s_num)
+            user_has_any[uid].add(s_num)
+        elif st == 'tengo':
+            user_has_any[uid].add(s_num)
         elif st == 'wishlist':
-            user_wants[uid].add(s_num)
+            user_wishlist[uid].add(s_num)
 
-    # 5. ALGORITMO DE BÚSQUEDA HÍBRIDO
-    primary_results = [] # Resultados con puentes ÚNICOS
-    backup_results = []  # Resultados con puentes REPETIDOS
-    used_bridge_ids = set()
-    
-    # Buscar candidatos B (Dueños)
-    possible_Bs = []
-    for uid, stickers in user_has.items():
-        if sticker_num in stickers:
-            possible_Bs.append(uid)
-    
-    random.shuffle(possible_Bs)
+    # 5. ALGORITMO DE MATCH CIRCULAR CON SCORING
+    all_possible_results = []
+    seen_combinations = set()
 
-    for uid_B in possible_Bs:
-        # Optimización: Si ya tenemos 3 puentes únicos, paramos.
-        if len(primary_results) >= 3: break
-        
-        wants_of_B = user_wants[uid_B]
-        if not wants_of_B: continue
+    # Paso A: ¿Quién tiene la que YO quiero? (Estos serán los B)
+    # IMPORTANTE: En la triangulación Vos->B->C->Vos, quien TIENE lo que vos querés es B.
+    candidates_B = [uid for uid, repes in user_repes.items() if sticker_num in repes]
 
-        # Buscar candidatos C (Puentes)
-        potential_Cs = list(user_has.keys())
-        random.shuffle(potential_Cs) # Mezclar para variedad
+    for uid_B in candidates_B:
+        # Paso B: Buscamos a C (El Puente)
+        for uid_C, c_repes in user_repes.items():
+            if uid_C == uid_B or uid_C == current_user_id: 
+                continue
 
-        for uid_C in potential_Cs:
-            if uid_C == uid_B: continue 
-            
-            # Match C -> B
-            stickers_C_has = user_has[uid_C]
-            match_C_gives_B = stickers_C_has.intersection(wants_of_B)
-            
-            if match_C_gives_B:
-                # Match Yo -> C
-                wants_of_C = user_wants[uid_C]
-                match_A_gives_C = wants_of_C.intersection(my_repes)
+            # ¿Qué le puede dar C a B? (Algo que C tiene repetido y B NO tiene)
+            possible_bridges = c_repes - user_has_any[uid_B]
+            if not possible_bridges: 
+                continue 
 
-                if match_A_gives_C:
-                    # ¡Triangulación encontrada!
-                    sticker_bridge = list(match_C_gives_B)[0]
-                    sticker_payment = list(match_A_gives_C)[0]
-                    
-                    user_B = users_meta[uid_B]
-                    user_C = users_meta[uid_C]
+            # ¿Qué le puedo dar YO a C? (Algo que YO tengo repetido y C NO tiene)
+            possible_payments = my_repes - user_has_any[uid_C]
+            if not possible_payments: 
+                continue
 
-                    triangulation_data = {
-                        "target_sticker": {
-                            "num": sticker_num,
-                            "name": format_sticker(sticker_num)
-                        },
-                        "my_payment_sticker": {
-                            "num": sticker_payment,
-                            "name": format_sticker(sticker_payment)
-                        },
-                        "bridge_sticker": {
-                            "num": sticker_bridge,
-                            "name": format_sticker(sticker_bridge)
-                        },
-                        "user_B": {
-                            "id": user_B.id,
-                            "nick": user_B.nick,
-                            "phone": decrypt_phone(user_B.phone_hash)
-                        },
-                        "user_C": {
-                            "id": user_C.id,
-                            "nick": user_C.nick,
-                            "phone": decrypt_phone(user_C.phone_hash)
-                        }
+            # Selección de mejores figuritas (Priorizando Wishlist)
+            best_bridge = None
+            bridge_in_wishlist = False
+            for b in possible_bridges:
+                if b in user_wishlist[uid_B]: # B la quiere explícitamente
+                    best_bridge = b
+                    bridge_in_wishlist = True
+                    break
+            if not best_bridge:
+                best_bridge = list(possible_bridges)[0]
+
+            best_payment = None
+            payment_in_wishlist = False
+            for p in possible_payments:
+                if p in user_wishlist[uid_C]: # C la quiere explícitamente
+                    best_payment = p
+                    payment_in_wishlist = True
+                    break
+            if not best_payment:
+                best_payment = list(possible_payments)[0]
+
+            score = 0
+            if bridge_in_wishlist: score += 1
+            if payment_in_wishlist: score += 1
+
+            combo_key = (uid_B, uid_C)
+            if combo_key not in seen_combinations:
+                seen_combinations.add(combo_key)
+                
+                user_B = users_meta[uid_B]
+                user_C = users_meta[uid_C]
+                
+                all_possible_results.append({
+                    "score": score,
+                    "target_sticker": {
+                        "num": sticker_num,
+                        "name": format_sticker(sticker_num)
+                    },
+                    "my_payment_sticker": {
+                        "num": best_payment,
+                        "name": format_sticker(best_payment),
+                        "is_wishlist": payment_in_wishlist
+                    },
+                    "bridge_sticker": {
+                        "num": best_bridge,
+                        "name": format_sticker(best_bridge),
+                        "is_wishlist": bridge_in_wishlist
+                    },
+                    "user_B": {
+                        "id": user_B.id,
+                        "nick": user_B.nick,
+                        "phone": decrypt_phone(user_B.phone_hash) if user_B.phone_hash else ""
+                    },
+                    "user_C": {
+                        "id": user_C.id,
+                        "nick": user_C.nick,
+                        "phone": decrypt_phone(user_C.phone_hash) if user_C.phone_hash else ""
                     }
-                    
-                    # CLASIFICACIÓN DE RESULTADO
-                    if uid_C not in used_bridge_ids:
-                        primary_results.append(triangulation_data)
-                        used_bridge_ids.add(uid_C)
-                    else:
-                        backup_results.append(triangulation_data)
-                    
-                    # Rompemos aquí para pasar al siguiente B.
-                    # Esto asegura variedad de Dueños (B).
-                    break 
+                })
 
-    # 6. CONSOLIDACIÓN FINAL (Llenar hasta 3)
-    final_results = primary_results
+    # 6. FILTRADO Y CONSOLIDACIÓN (Prioridad a Puentes Únicos + Score)
     
-    while len(final_results) < 3 and len(backup_results) > 0:
-        final_results.append(backup_results.pop(0))
+    # Primero ordenamos todo el pool global por Score (Los mejores arriba)
+    all_possible_results.sort(key=lambda x: x["score"], reverse=True)
     
-    # Cortar por seguridad si nos pasamos (aunque el break lo evita)
-    final_results = final_results[:3]
+    primary_results = [] # Tienen puente (C) único
+    backup_results = []  # El puente (C) ya fue usado en un primary_result
+    used_bridge_ids = set()
+
+    for res in all_possible_results:
+        bridge_id = res["user_C"]["id"]
+        
+        # Como ya están ordenados por Score, el primero que entra de un Puente es su mejor match
+        if bridge_id not in used_bridge_ids:
+            primary_results.append(res)
+            used_bridge_ids.add(bridge_id)
+        else:
+            backup_results.append(res)
+
+    # Llenamos la lista final priorizando los primarios
+    final_results = primary_results[:3]
+    
+    # Si no llegamos a 3 con puentes únicos, rellenamos con los backups (que también tienen alto score)
+    backup_index = 0
+    while len(final_results) < 3 and backup_index < len(backup_results):
+        final_results.append(backup_results[backup_index])
+        backup_index += 1
 
     return JSONResponse(content={"found": len(final_results) > 0, "results": final_results})
