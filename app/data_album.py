@@ -71,7 +71,7 @@ ALBUM_STRUCTURE = {
     "PAN": {"name": "Panamá 🇵🇦", "start": 959, "count": 20},
     
     # --- ESPECIALES COCA-COLA ---
-    "COCA": {"name": "Coca-Cola Specials", "start": 979, "count": 2},
+    "COCA": {"name": "Coca-Cola Specials 🥤", "start": 979, "count": 2},
 }
 
 # --- LÓGICA DE COMPATIBILIDAD ---
