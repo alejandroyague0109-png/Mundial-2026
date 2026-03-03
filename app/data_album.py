@@ -17,7 +17,7 @@ ALBUM_STRUCTURE = {
 
     "CAN": {"name": "Canadá 🇨🇦", "start": 99, "count": 20},    
     "RE2": {"name": "Repechaje 2 🏴", "start": 119, "count": 20},
-    "CAT": {"name": "Catar 🇶🇦", "start": 139, "count": 20},
+    "QAT": {"name": "Catar 🇶🇦", "start": 139, "count": 20},
     "SUI": {"name": "Suiza 🇨🇭", "start": 159, "count": 20},
 
     "BRA": {"name": "Brasil 🇧🇷", "start": 179, "count": 20},
@@ -42,12 +42,12 @@ ALBUM_STRUCTURE = {
 
     "BEL": {"name": "Bélgica 🇧🇪", "start": 499, "count": 20},
     "EGI": {"name": "Egipto 🇪🇬", "start": 519, "count": 20},
-    "IRA": {"name": "Irán 🇮🇷", "start": 539, "count": 20},
+    "IRN": {"name": "Irán 🇮🇷", "start": 539, "count": 20},
     "NZE": {"name": "Nueva Zelanda 🇳🇿", "start": 559, "count": 20},
 
     "ESP": {"name": "España 🇪🇸", "start": 579, "count": 20},
     "CAB": {"name": "Cabo Verde 🇨🇻", "start": 599, "count": 20},
-    "ARA": {"name": "Arabia Saudita 🇸🇦", "start": 619, "count": 20},
+    "KSA": {"name": "Arabia Saudita 🇸🇦", "start": 619, "count": 20},
     "URU": {"name": "Uruguay 🇺🇾", "start": 639, "count": 20},    
 
     "FRA": {"name": "Francia 🇫🇷", "start": 659, "count": 20},
