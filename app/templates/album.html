@@ -211,7 +211,7 @@
         let pageName = titleEl ? titleEl.innerText.trim() : "una página";
 
         let mensaje = `🎉 ¡VAMOOOO! Acabo de completar la página de *${pageName}* en mi álbum.\n\n`; 
-        mensaje += `Entrá a *Canje AlToque 26* para armar el tuyo gratis y cambiar figuritas en la cerca:\n`;
+        mensaje += `Entrá a *Canje AlToque 26* para armar el tuyo gratis y cambiar figuritas cerca tuyo:\n`;
         mensaje += `https://canjealtoque26.com`;
 
         const url = `https://api.whatsapp.com/send?text=${encodeURIComponent(mensaje)}`;
@@ -272,19 +272,14 @@
             status: initialStatus || 'falta',
             
             // Acción al hacer click
-            // Acción al hacer click
             toggle() {
-                // 1. Cambio visual INSTANTÁNEO
+                // 1. Cambio visual INSTANTÁNEO (Ciclo: Falta -> Tengo -> Repe -> Wishlist -> Falta)
                 if (this.status === 'falta') this.status = 'tengo';
                 else if (this.status === 'tengo') this.status = 'repetida';
                 else if (this.status === 'repetida') this.status = 'wishlist';
                 else if (this.status === 'wishlist') this.status = 'falta';
                 
-                // Actualizamos temporalmente el atributo data-status para que checkPageCompletion lo lea bien
-                this.$el.setAttribute('data-status', this.status);
-                
-                // 2. Llamamos a la función que cuenta las figuritas
-                checkPageCompletion();
+                // 2. La petición HTMX se dispara automáticamente por el evento click del HTML
             },
 
             // Clases dinámicas según el estado
@@ -339,6 +334,15 @@
                     }
                 }, 2000);
             }
+        }
+    });
+
+// --- ESCUCHAMOS CUANDO HTMX TERMINA DE ACTUALIZAR ALGO ---
+    // Esto asegura que contamos las figuritas DESPUÉS de que el servidor guardó el cambio
+    document.body.addEventListener('htmx:afterSettle', function(evt) {
+        // Solo verificamos si la actualización ocurrió dentro del contenedor dinámico
+        if (evt.target.id === 'dynamic-content' || evt.target.closest('#dynamic-content')) {
+            checkPageCompletion();
         }
     });
 </script>
