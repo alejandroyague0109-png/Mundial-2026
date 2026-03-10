@@ -1,5 +1,5 @@
 from fastapi import APIRouter, Depends, Request, Form, Response, BackgroundTasks
-from fastapi.responses import HTMLResponse, RedirectResponse
+from fastapi.responses import HTMLResponse, RedirectResponse, JSONResponse
 from fastapi.templating import Jinja2Templates
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, delete
@@ -321,3 +321,49 @@ async def update_item_details(
             "force_oob": True 
         })
     return Response(status_code=200)
+
+# --- 5. API PARA COMPARTIR TODO EL ÁLBUM ---
+@router.get("/api/user_full_inventory")
+async def get_user_full_inventory(request: Request, db: AsyncSession = Depends(get_db)):
+    user_id_cookie = request.cookies.get("user_id")
+    if not user_id_cookie: 
+        return JSONResponse({"error": "No auth"}, status_code=401)
+    
+    user_id = int(user_id_cookie)
+
+    # 1. Traer todo el inventario del usuario
+    result = await db.execute(select(Inventory).where(Inventory.user_id == user_id))
+    items = result.scalars().all()
+
+    # 2. Separar lo que tiene
+    repetidas = []
+    wishlist = []
+    tengo = set() # Set para búsqueda rápida
+
+    for item in items:
+        if item.status == "repetida":
+            repetidas.append(item.sticker_num)
+            tengo.add(item.sticker_num)
+        elif item.status == "wishlist":
+            wishlist.append(item.sticker_num)
+        elif item.status == "tengo":
+            tengo.add(item.sticker_num)
+
+    # 3. Calcular las faltantes totales (Todo el álbum menos lo que 'tengo' y 'repetida')
+    faltantes = []
+    for code, data in ALBUM_STRUCTURE.items():
+        start = data["start"]
+        end = start + data["count"]
+        for num in range(start, end):
+            if num not in tengo:
+                faltantes.append(num)
+
+    # Formatear los números para que se vean lindos (Ej: ARG 10 en vez de 135)
+    def format_list(num_list):
+        return [format_sticker(n) for n in sorted(num_list)]
+
+    return JSONResponse({
+        "repetidas": format_list(repetidas),
+        "wishlist": format_list(wishlist),
+        "faltantes": format_list(faltantes)
+    })
