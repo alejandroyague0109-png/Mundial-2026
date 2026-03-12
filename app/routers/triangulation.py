@@ -64,6 +64,7 @@ async def search_triangulation(
         select(Inventory.user_id, Inventory.sticker_num, Inventory.status, User)
         .join(User)
         .where(
+            User.country_code == me.country_code, # <-- NUEVO: Aislar por país
             User.province == me.province,
             User.zone == me.zone,
             User.id != current_user_id,

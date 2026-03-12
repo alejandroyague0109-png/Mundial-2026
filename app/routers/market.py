@@ -12,7 +12,7 @@ from pydantic import BaseModel
 
 from app.database import get_db
 from app.models import User, Inventory, ContactLog
-from app.locations import ARGENTINA
+from app.locations import LOCATIONS_BY_COUNTRY
 from app.data_album import ALBUM_STRUCTURE 
 
 # --- IMPORTACIÓN DE UTILIDADES ---
@@ -109,7 +109,7 @@ async def market_view(
     return templates.TemplateResponse("market.html", {
         "request": request,
         "user": user,
-        "locations": ARGENTINA,
+        "locations": LOCATIONS_BY_COUNTRY,
         "active_tab": "market",
         "album_structure": ALBUM_STRUCTURE,
         "wishlist": wishlist_formatted,
@@ -122,15 +122,14 @@ async def market_view(
     })
 
 @router.get("/market/zones_options")
-async def get_zones_options(province: str = ""):
-    # TODO: Expandir cuando importemos MEXICO, COLOMBIA, etc.
-    COUNTRY_DICT = ARGENTINA 
+async def get_zones_options(country_code: str = "AR", province: str = ""):
+    country_data = LOCATIONS_BY_COUNTRY.get(country_code, {})
     
-    if not province or province not in COUNTRY_DICT:
+    if not province or province not in country_data:
         return HTMLResponse("<option value=''>Todas las zonas</option>")
     
     options = "<option value=''>Todas las zonas</option>"
-    for zone in COUNTRY_DICT[province]:
+    for zone in country_data[province]:
         options += f"<option value='{zone}'>{zone}</option>"
     return HTMLResponse(options)
 
@@ -347,8 +346,8 @@ async def search_market(
 
     context_data = {
         "request": request, 
-        "user": current_user_obj,           
-        "locations": ARGENTINA,         
+        "user": current_user_obj,            
+        "locations": LOCATIONS_BY_COUNTRY,         
         "album_structure": ALBUM_STRUCTURE,
         "my_duplicates_json": json.dumps(my_dupes_list) # Pasamos la lista al template
     }

@@ -94,13 +94,16 @@
                 <select name="province" 
                         class="w-full bg-slate-900 border border-slate-600 rounded px-3 py-2 text-sm text-white focus:border-yellow-500 outline-none"
                         hx-get="/market/zones_options" 
+                        hx-vals='{"country_code": "{{ user.country_code }}"}'
                         hx-target="#zone-selector"
                         hx-trigger="change">
                     
                     <option value="">Todas</option>
-                    {% for p in locations.keys() %}
-                        <option value="{{ p }}" {{ 'selected' if p == user.province else '' }}>{{ p }}</option>
-                    {% endfor %}
+                    {% if user.country_code in locations %}
+                        {% for p in locations[user.country_code].keys() %}
+                            <option value="{{ p }}" {{ 'selected' if p == user.province else '' }}>{{ p }}</option>
+                        {% endfor %}
+                    {% endif %}
                 </select>
             </div>
 
@@ -110,8 +113,8 @@
                     
                     <option value="">Todas las zonas</option>
                     
-                    {% if user.province and user.province in locations %}
-                        {% for z in locations[user.province] %}
+                    {% if user.country_code in locations and user.province in locations[user.country_code] %}
+                        {% for z in locations[user.country_code][user.province] %}
                             <option value="{{ z }}" {{ 'selected' if z == (auto_zone if auto_zone else user.zone) else '' }}>{{ z }}</option>
                         {% endfor %}
                     {% else %}
