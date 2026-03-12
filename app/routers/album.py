@@ -86,7 +86,6 @@ async def view_album(request: Request, db: AsyncSession = Depends(get_db)):
 # --- 2. VISTA DE UN PAÍS (GRILLA + TABLA) ---
 @router.get("/country/{country_code}")
 async def get_country_view(request: Request, country_code: str, db: AsyncSession = Depends(get_db)):
-    # ... (TU CÓDIGO SE MANTIENE IGUAL) ...
     user_id = request.cookies.get("user_id")
     if not user_id: return Response(status_code=401)
 
@@ -103,8 +102,14 @@ async def get_country_view(request: Request, country_code: str, db: AsyncSession
     )
     items = result.scalars().all()
     
+    # --- CORRECCIÓN: Buscamos al usuario para el traductor ---
+    res_u = await db.execute(select(User).where(User.id == int(user_id)))
+    current_user = res_u.scalars().first()
+    # ---------------------------------------------------------
+    
     return templates.TemplateResponse("partials/country_view.html", {
         "request": request,
+        "user": current_user, # <-- AHORA LO PASAMOS ACÁ
         "info": info,
         "code": country_code,
         "inventory": {item.sticker_num: item for item in items},
@@ -265,6 +270,7 @@ async def toggle_sticker(
         )
         table_html = templates.TemplateResponse("partials/repeated_table.html", {
             "request": request,
+            "user": current_user, # <--- FALTABA ESTA LÍNEA ACÁ
             "repeated_items": result_repes.scalars().all(),
             "oob": True
         }).body.decode("utf-8")
