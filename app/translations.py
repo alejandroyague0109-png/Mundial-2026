@@ -342,9 +342,9 @@ TRANSLATIONS = {
         "default": "Para que la logística sea fácil, el sistema solo busca marcadas como"
     },
     "figurita_objetivo": {
-        "AR": "🎯 Figurita Objetivo", "UY": "🎯 Figurita Objetivo", "PE": "🎯 Figurita Objetivo",
-        "MX": "🎯 Estampa Objetivo", "CL": "🎯 Lámina Objetivo", "CO": "🎯 Lámina Objetivo",
-        "default": "🎯 Objetivo"
+        "AR": "Figurita Objetivo", "UY": "Figurita Objetivo", "PE": "Figurita Objetivo",
+        "MX": "Estampa Objetivo", "CL": "Lámina Objetivo", "CO": "Lámina Objetivo",
+        "default": "Objetivo"
     },
     "participar_triangulacion": {
         "AR": "Para participar en una triangulación, la figurita debe estar marcada previamente como",

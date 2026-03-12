@@ -86,7 +86,7 @@
     </div>
 
     <p class="text-sm text-gray-400 mb-4">
-        Seleccioná cuál de tus faltantes querés conseguir ahora:
+        Selecciona cuál de tus faltantes quieres conseguir ahora:
     </p>
 
     <form onsubmit="startTriangulationSearch(event)" class="space-y-4">
@@ -102,7 +102,7 @@
                             <option value="{{ item.num }}">{{ item.name }}</option>
                         {% endfor %}
                     {% else %}
-                        <option value="" disabled selected>No tenés faltantes marcadas</option>
+                        <option value="" disabled selected>No tienes faltantes marcadas</option>
                     {% endif %}
 
                 </select>

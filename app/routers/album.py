@@ -163,10 +163,17 @@ async def process_quick_load(
     if new_rows: db.add_all(new_rows)
     await db.commit()
 
+    # --- CORRECCIÓN: Traemos el objeto user para el traductor ---
+    res_u = await db.execute(select(User).where(User.id == user_id))
+    user_obj = res_u.scalars().first()
+
     response_html = (await get_country_view(request, country_code, db)).body.decode("utf-8")
     
     stats = await calculate_user_stats(user_id, db)
-    stats_html = templates.TemplateResponse("partials/stats_bar.html", {"request": request, "stats": stats, "oob": True}).body.decode("utf-8")
+    stats_html = templates.TemplateResponse(
+        "partials/stats_bar.html", 
+        {"request": request, "user": user_obj, "stats": stats, "oob": True}
+    ).body.decode("utf-8")
 
     response = HTMLResponse(content=response_html + stats_html)
     response.headers["HX-Trigger"] = "closeModal"
@@ -263,10 +270,12 @@ async def toggle_sticker(
         }).body.decode("utf-8")
 
     # E. Renderizar STATS BAR
+    # ... al final de toggle_sticker ...
     stats = await calculate_user_stats(user_id, db)
-    stats_html = templates.TemplateResponse("partials/stats_bar.html", {
-        "request": request, "stats": stats, "oob": True
-    }).body.decode("utf-8")
+    stats_html = templates.TemplateResponse(
+        "partials/stats_bar.html", 
+        {"request": request, "user": current_user, "stats": stats, "oob": True} # <--- Cambiado a 'current_user'
+    ).body.decode("utf-8")
 
     return HTMLResponse(content=card_html + table_html + stats_html)
 
@@ -290,13 +299,19 @@ async def batch_country_action(request: Request, country_code: str, action: str,
         db.add_all([Inventory(user_id=user_id, sticker_num=num, status="tengo", quantity=1) for num in range(start, end + 1)])
     await db.commit()
 
+    # --- CORRECCIÓN: Traemos el objeto user para el traductor ---
+    res_u = await db.execute(select(User).where(User.id == user_id))
+    user_obj = res_u.scalars().first()
+
     response_html = (await get_country_view(request, country_code, db)).body.decode("utf-8")
     stats = await calculate_user_stats(user_id, db)
-    # Así debe quedar:
-stats_html = templates.TemplateResponse(
-    "partials/stats_bar.html", 
-    {"request": request, "user": current_user_obj, "stats": stats, "oob": True} # <--- Agregamos "user": current_user_obj
-).body.decode("utf-8")
+    
+    # --- INDENTACIÓN CORREGIDA (4 espacios) ---
+    stats_html = templates.TemplateResponse(
+        "partials/stats_bar.html", 
+        {"request": request, "user": user_obj, "stats": stats, "oob": True}
+    ).body.decode("utf-8")
+    
     return HTMLResponse(content=response_html + stats_html)
 
 @router.post("/update_item/{sticker_num}")
