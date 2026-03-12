@@ -157,3 +157,34 @@ ARGENTINA = {
         "Río Chico", "Simoca", "Tafí del Valle", "Tafí Viejo", "Trancas", "Yerba Buena"
     ]
 }
+
+# Agregamos los países de expansión inmediata (Nivel Verde según la estrategia)
+URUGUAY = {
+    "Montevideo": ["Centro", "Cordón", "Pocitos", "Buceo", "Malvín", "Carrasco", "Prado", "Ciudad Vieja", "Tres Cruces", "La Blanqueada"],
+    "Canelones": ["Ciudad de la Costa", "Las Piedras", "Pando", "Atlántida", "Santa Lucía", "Canelones"],
+    "Maldonado": ["Maldonado", "Punta del Este", "San Carlos", "Piriápolis", "Pan de Azúcar"],
+    "Interior": ["Salto", "Colonia", "Paysandú", "Rivera", "Tacuarembó", "Artigas", "Soriano", "Rocha", "San José", "Florida", "Lavalleja", "Durazno", "Treinta y Tres", "Cerro Largo", "Flores", "Río Negro"]
+}
+
+CHILE = {
+    "Región Metropolitana": ["Santiago Centro", "Providencia", "Las Condes", "Ñuñoa", "Maipú", "La Florida", "Vitacura", "Puente Alto", "La Reina", "Macul", "Peñalolén", "San Miguel", "Estación Central", "Quilicura"],
+    "Valparaíso": ["Valparaíso", "Viña del Mar", "Concón", "Quilpué", "Villa Alemana", "San Antonio", "Los Andes"],
+    "Biobío": ["Valparaíso", "Concepción", "Talcahuano", "San Pedro de la Paz", "Chiguayante", "Los Ángeles"],
+    "Otras Regiones": ["Arica y Parinacota", "Tarapacá", "Antofagasta", "Atacama", "Coquimbo", "O'Higgins", "Maule", "Ñuble", "Araucanía", "La Araucanía", "Los Ríos", "Los Lagos", "Aysén", "Magallanes"]
+}
+
+# --- EL DICCIONARIO MAESTRO ---
+# Clave: Código de País (ISO 3166-1 alpha-2), Valor: Diccionario de provincias/zonas
+LOCATIONS_BY_COUNTRY = {
+    "AR": ARGENTINA,
+    "UY": URUGUAY,
+    "CL": CHILE
+}
+
+# --- LISTA PARA EL FRONTEND (Formulario de Registro) ---
+# Esto se enviará al select del HTML para que el usuario elija su país
+AVAILABLE_COUNTRIES = [
+    {"code": "AR", "name": "Argentina", "flag": "🇦🇷", "prefix": "+54"},
+    {"code": "UY", "name": "Uruguay", "flag": "🇺🇾", "prefix": "+598"},
+    {"code": "CL", "name": "Chile", "flag": "🇨🇱", "prefix": "+56"}
+]

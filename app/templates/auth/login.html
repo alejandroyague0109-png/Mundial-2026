@@ -75,10 +75,16 @@
             <div class="p-6">
                 
                 <form x-show="view === 'login'" action="/login" method="POST" class="space-y-5 animate-fade-in">
-                    <div>
-                        <label class="block text-xs font-medium text-gray-400 mb-1">Celular</label>
-                        <input name="phone" type="tel" required placeholder="Ej: 2604445566" 
-                            class="w-full px-4 py-3 bg-slate-900 border border-slate-600 rounded-lg focus:outline-none focus:border-yellow-500 focus:ring-1 focus:ring-yellow-500 transition text-sm text-white">
+                    <label class="block text-xs font-medium text-gray-400 mb-1">Celular</label>
+                    <div class="flex gap-2">
+                        <select x-model="pais" name="country_code" class="w-1/4 px-2 py-3 bg-slate-900 border border-slate-600 rounded-lg focus:outline-none focus:border-yellow-500 focus:ring-1 focus:ring-yellow-500 transition text-lg text-center cursor-pointer">
+                            <template x-for="c in countries" :key="c.code">
+                                <option :value="c.code" x-text="c.flag"></option>
+                            </template>
+                        </select>
+                        
+                        <input name="phone" type="tel" required placeholder="Tu número local" 
+                            class="w-3/4 px-4 py-3 bg-slate-900 border border-slate-600 rounded-lg focus:outline-none focus:border-yellow-500 focus:ring-1 focus:ring-yellow-500 transition text-sm text-white">
                     </div>
                     <div>
                         <label class="block text-xs font-medium text-gray-400 mb-1">Contraseña</label>
@@ -107,26 +113,35 @@
                         </div>
                         <div>
                             <label class="block text-[10px] text-gray-400 uppercase font-bold mb-1">Celular</label>
-                            <input name="phone" type="tel" required placeholder="Sin 0 ni 15" pattern="[0-9]+"
+                            <input name="phone" type="tel" required placeholder="Ingresa tu número" pattern="[0-9]+"
                                 class="w-full px-3 py-2 bg-slate-900 border border-slate-600 rounded focus:border-yellow-500 focus:outline-none text-sm text-white">
                         </div>
                     </div>
 
+                    <div>
+                        <label class="block text-[10px] text-gray-400 uppercase font-bold mb-1">País</label>
+                        <select x-model="pais" name="country_code" required @change="provincia = ''; zona = ''" class="w-full px-3 py-2 bg-slate-900 border border-slate-600 rounded focus:border-yellow-500 focus:outline-none text-sm text-white">
+                            <template x-for="c in countries" :key="c.code">
+                                <option :value="c.code" x-text="c.flag + ' ' + c.name + ' (' + c.prefix + ')'"></option>
+                            </template>
+                        </select>
+                    </div>
+
                     <div class="grid grid-cols-2 gap-3">
                         <div>
-                            <label class="block text-[10px] text-gray-400 uppercase font-bold mb-1">Provincia</label>
+                            <label class="block text-[10px] text-gray-400 uppercase font-bold mb-1">Provincia / Región</label>
                             <select x-model="provincia" name="province" required class="w-full px-3 py-2 bg-slate-900 border border-slate-600 rounded focus:border-yellow-500 focus:outline-none text-sm text-white">
                                 <option value="" disabled>Elegir...</option>
-                                <template x-for="(zonas, prov) in locations" :key="prov">
+                                <template x-for="(zonas, prov) in (pais ? locations[pais] : {})" :key="prov">
                                     <option :value="prov" x-text="prov"></option>
                                 </template>
                             </select>
                         </div>
                         <div>
-                            <label class="block text-[10px] text-gray-400 uppercase font-bold mb-1">Zona</label>
+                            <label class="block text-[10px] text-gray-400 uppercase font-bold mb-1">Zona / Comuna</label>
                             <select x-model="zona" name="zone" required :disabled="!provincia" class="w-full px-3 py-2 bg-slate-900 border border-slate-600 rounded focus:border-yellow-500 focus:outline-none text-sm text-white disabled:opacity-50">
                                 <option value="" disabled>Elegir...</option>
-                                <template x-for="z in (provincia ? locations[provincia] : [])" :key="z">
+                                <template x-for="z in (pais && provincia ? locations[pais][provincia] : [])" :key="z">
                                     <option :value="z" x-text="z"></option>
                                 </template>
                             </select>
@@ -192,9 +207,16 @@
                               hx-swap="innerHTML" 
                               class="space-y-4">
                               
-                            <input name="phone" type="tel" required placeholder="Celular registrado" 
-                                class="w-full px-4 py-3 bg-slate-900 border border-slate-600 rounded-lg focus:border-yellow-500 text-sm text-white">
-                            
+                            <div class="flex gap-2">
+                                <select x-model="pais" name="country_code" class="w-1/4 px-2 py-3 bg-slate-900 border border-slate-600 rounded-lg focus:outline-none focus:border-yellow-500 focus:ring-1 focus:ring-yellow-500 transition text-lg text-center cursor-pointer">
+                                    <template x-for="c in countries" :key="c.code">
+                                        <option :value="c.code" x-text="c.flag"></option>
+                                    </template>
+                                </select>
+                                <input name="phone" type="tel" required placeholder="Celular registrado" 
+                                    class="w-3/4 px-4 py-3 bg-slate-900 border border-slate-600 rounded-lg focus:border-yellow-500 text-sm text-white">
+                            </div>
+
                             <button type="submit" class="w-full py-2 bg-slate-700 hover:bg-slate-600 text-white font-bold rounded transition flex justify-center items-center gap-2">
                                 <span class="htmx-indicator-hide">Buscar Cuenta</span>
                                 <svg class="htmx-indicator w-5 h-5 text-white animate-spin" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
@@ -338,9 +360,11 @@
         function authApp() {
             return {
                 view: 'login', // 'login', 'register', 'recovery'
+                pais: 'AR',    // Por defecto arranca en Argentina
                 provincia: '',
                 zona: '',
-                locations: {{ locations | tojson }}
+                locations: {{ locations | tojson }},
+                countries: {{ countries | tojson }} // Recibimos la lista de países
             }
         }
     </script>

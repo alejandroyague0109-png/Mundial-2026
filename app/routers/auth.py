@@ -4,24 +4,21 @@ from fastapi.templating import Jinja2Templates
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, or_
 from pathlib import Path
+import phonenumbers # IMPORTANTE: La nueva librería
 
 # Imports internos
 from app.database import get_db
 from app.models import User
-from app import locations # Importamos el diccionario de provincias/zonas
+from app import locations # Importamos todo el módulo
 from app.utils import (
     hash_password, 
     verify_password, 
-    limpiar_telefono, 
-    # hash_phone_searchable, # YA NO SE USA PARA GUARDAR
-    encrypt_phone # <--- NUEVO: Encriptación reversible
+    encrypt_phone 
 )
 
 # Configuración de rutas
 router = APIRouter(tags=["Authentication"])
 
-# Configuración de templates
-# Apunta a la carpeta 'app/templates'
 BASE_DIR = Path(__file__).resolve().parent.parent
 templates = Jinja2Templates(directory=str(BASE_DIR / "templates"))
 
@@ -30,54 +27,61 @@ templates = Jinja2Templates(directory=str(BASE_DIR / "templates"))
 async def login_page(request: Request):
     """
     Muestra la pantalla de Login/Registro.
-    Si el usuario ya tiene cookie, lo mandamos al álbum.
     """
     if request.cookies.get("user_id"):
         return RedirectResponse(url="/album", status_code=status.HTTP_303_SEE_OTHER)
 
-    # IMPORTANTE: Pasamos 'locations' para que Alpine.js pueda armar los selectores
+    # Ahora pasamos TODAS las locaciones y los PAÍSES disponibles al HTML
     return templates.TemplateResponse("auth/login.html", {
         "request": request,
-        "locations": locations.ARGENTINA 
+        "locations": locations.LOCATIONS_BY_COUNTRY,
+        "countries": locations.AVAILABLE_COUNTRIES
     })
 
 # --- 2. PROCESAR EL LOGIN (POST) ---
 @router.post("/login")
 async def login(
     request: Request,
+    country_code: str = Form("AR"),
     phone: str = Form(...),
     password: str = Form(...),
     db: AsyncSession = Depends(get_db)
 ):
     """
     Valida credenciales y crea la sesión.
+    (El login no pide país, así que probamos parselo como AR por defecto 
+    si no tiene el '+', o lo dejamos pasar si ya lo tiene).
     """
-    # 1. Limpiar datos de entrada
-    clean_phone = limpiar_telefono(phone)
+    error_msg = "Teléfono o contraseña incorrectos"
     
-    # CAMBIO: Usamos encrypt_phone para buscar al usuario
-    # (porque así está guardado en la DB ahora)
+    try:
+        # Intenta formatear el número para buscarlo. 
+        # Si el usuario no puso el '+', asumimos que es de Argentina por ser el mercado original.
+        # Si ya es un usuario internacional, debería poner el '+' y su código.
+        if not phone.startswith('+'):
+            phone_obj = phonenumbers.parse(phone, country_code)
+        else:
+            phone_obj = phonenumbers.parse(phone)
+            
+        clean_phone = phonenumbers.format_number(phone_obj, phonenumbers.PhoneNumberFormat.E164)
+    except phonenumbers.phonenumberutil.NumberParseException:
+        # Si falló el formateo, usamos lo que escribió (por compatibilidad con cuentas muy viejas)
+        clean_phone = phone.replace(" ", "").replace("-", "")
+    
     phone_processed = encrypt_phone(clean_phone) 
     
-    # 2. Buscar Usuario
     result = await db.execute(select(User).where(User.phone_hash == phone_processed))
     user = result.scalars().first()
 
-    error_msg = "Teléfono o contraseña incorrectos"
-
-    # 3. Validar (Usuario existe Y contraseña coincide con Bcrypt)
     if not user or not verify_password(password, user.password):
-        # En caso de error, DEBEMOS pasar 'locations' de nuevo, 
-        # sino los selectores se rompen al recargar la página.
         return templates.TemplateResponse("auth/login.html", {
             "request": request, 
             "error": error_msg,
-            "locations": locations.ARGENTINA
+            "locations": locations.LOCATIONS_BY_COUNTRY,
+            "countries": locations.AVAILABLE_COUNTRIES
         })
 
-    # 4. ÉXITO: Crear Cookie y Redirigir
     response = RedirectResponse(url="/album", status_code=status.HTTP_303_SEE_OTHER)
-    # Cookie segura, dura 30 días
     response.set_cookie(key="user_id", value=str(user.id), httponly=True, max_age=2592000)
     
     return response
@@ -87,26 +91,50 @@ async def login(
 async def register(
     request: Request,
     nick: str = Form(...),
+    country_code: str = Form(...), # NUEVO: Recibimos el país desde el select
     phone: str = Form(...),
     province: str = Form(...),
     zone: str = Form(...),
     password: str = Form(...),
     secret_question: str = Form(...),
     secret_answer: str = Form(...),
-    # tyc: bool = Form(...) # El checkbox 'required' del HTML ya valida que esto venga en True
     db: AsyncSession = Depends(get_db)
 ):
     """
-    Crea un nuevo usuario con todos los datos requeridos.
+    Crea un nuevo usuario validando su teléfono según su país.
     """
-    # 1. Limpieza
-    clean_phone = limpiar_telefono(phone)
+    # 1. Validación Estricta de Teléfono (La Magia de phonenumbers)
+    try:
+        # Le decimos a Google: "Analizá este número asumiendo que es de {country_code}"
+        parsed_phone = phonenumbers.parse(phone, country_code)
+        
+        if not phonenumbers.is_valid_number(parsed_phone):
+            raise ValueError("El número no es válido para ese país.")
+            
+        # Lo guardamos en formato internacional (+5492604..., +569...)
+        clean_phone = phonenumbers.format_number(parsed_phone, phonenumbers.PhoneNumberFormat.E164)
+        
+    except (phonenumbers.phonenumberutil.NumberParseException, ValueError) as e:
+        # Mensaje de ayuda dinámico
+        if country_code == "AR":
+            ayuda = "Asegurate de incluir el código de área completo. (Ej: 2604123456)"
+        elif country_code == "UY":
+            ayuda = "En Uruguay suele empezar con 09. (Ej: 099123456)"
+        elif country_code == "CL":
+            ayuda = "En Chile suele empezar con 9. (Ej: 912345678)"
+        else:
+            ayuda = "Revisá que la cantidad de dígitos sea la correcta."
+
+        return templates.TemplateResponse("auth/login.html", {
+            "request": request, 
+            "error": f"El número no es válido para ese país. {ayuda}",
+            "locations": locations.LOCATIONS_BY_COUNTRY,
+            "countries": locations.AVAILABLE_COUNTRIES
+        })
     
-    # CAMBIO CRÍTICO: Usamos encrypt_phone (Reversible) al registrar
     phone_processed = encrypt_phone(clean_phone)
     
     # 2. Verificar duplicados (Nick o Teléfono)
-    # Buscamos si ya existe alguien con ese teléfono O ese nick
     stmt = select(User).where(or_(User.phone_hash == phone_processed, User.nick == nick))
     result = await db.execute(stmt)
     existing_user = result.scalars().first()
@@ -119,17 +147,19 @@ async def register(
         return templates.TemplateResponse("auth/login.html", {
             "request": request, 
             "error": msg,
-            "locations": locations.ARGENTINA
+            "locations": locations.LOCATIONS_BY_COUNTRY,
+            "countries": locations.AVAILABLE_COUNTRIES
         })
 
-    # 3. Hashear secretos (Password y Respuesta de seguridad)
+    # 3. Hashear secretos
     hashed_pwd = hash_password(password)
     hashed_answer = hash_password(secret_answer)
 
-    # 4. Crear el Objeto Usuario
+    # 4. Crear el Objeto Usuario (AHORA INCLUYE EL PAÍS)
     new_user = User(
         nick=nick,
-        phone_hash=phone_processed, # Guardamos el valor reversible
+        phone_hash=phone_processed,
+        country_code=country_code, # <-- CRÍTICO PARA EL AISLAMIENTO RLS
         province=province,
         zone=zone,
         password=hashed_pwd,
@@ -144,7 +174,7 @@ async def register(
         await db.commit()
         await db.refresh(new_user)
         
-        # 5. Login Automático (Redirigir directo al álbum)
+        # 5. Login Automático
         response = RedirectResponse(url="/album", status_code=status.HTTP_303_SEE_OTHER)
         response.set_cookie(key="user_id", value=str(new_user.id), httponly=True, max_age=2592000)
         return response
@@ -154,7 +184,8 @@ async def register(
         return templates.TemplateResponse("auth/login.html", {
             "request": request, 
             "error": "Error interno al crear cuenta. Intenta nuevamente.",
-            "locations": locations.ARGENTINA
+            "locations": locations.LOCATIONS_BY_COUNTRY,
+            "countries": locations.AVAILABLE_COUNTRIES
         })
 
 # --- 4. LOGOUT ---
@@ -165,61 +196,65 @@ async def logout():
     return response
 
 # --- 5. RECUPERACIÓN DE CONTRASEÑA ---
-
 @router.post("/auth/recover/step1")
-async def recover_step1(request: Request, phone: str = Form(...), db: AsyncSession = Depends(get_db)):
+async def recover_step1(request: Request, country_code: str = Form("AR"), phone: str = Form(...), db: AsyncSession = Depends(get_db)):
     try:
-        clean_phone = limpiar_telefono(phone)
+        # 2. Reemplazamos limpiar_telefono por la validación de Google (phonenumbers)
+        if not phone.startswith('+'):
+            phone_obj = phonenumbers.parse(phone, country_code)
+        else:
+            phone_obj = phonenumbers.parse(phone)
+            
+        clean_phone = phonenumbers.format_number(phone_obj, phonenumbers.PhoneNumberFormat.E164)
+    except phonenumbers.phonenumberutil.NumberParseException:
+        # Fallback por si escriben algo muy raro
+        clean_phone = phone.replace(" ", "").replace("-", "")
         
-        # CAMBIO: Buscamos usando el método reversible
-        phone_processed = encrypt_phone(clean_phone)
-        
-        result = await db.execute(select(User).where(User.phone_hash == phone_processed))
-        user = result.scalars().first()
+    # CAMBIO: Buscamos usando el método reversible
+    phone_processed = encrypt_phone(clean_phone)
+    
+    result = await db.execute(select(User).where(User.phone_hash == phone_processed))
+    user = result.scalars().first()
 
-        # Caso: Usuario no encontrado
-        if not user:
-            return HTMLResponse("""
-                <div class='bg-red-500/20 border border-red-500 p-3 rounded text-center mb-3 animate-pulse'>
-                    <p class='text-sm text-red-200'>❌ No encontramos ese número.</p>
-                </div>
-                <form hx-post="/auth/recover/step1" hx-target="#recovery-container" hx-swap="innerHTML" class="space-y-4">
-                    <input name="phone" type="tel" required placeholder="Celular registrado" class="w-full px-4 py-3 bg-slate-900 border border-slate-600 rounded-lg focus:border-yellow-500 text-sm text-white">
-                    <button type="submit" class="w-full py-2 bg-slate-700 hover:bg-slate-600 text-white font-bold rounded transition">Intentar de nuevo</button>
-                </form>
-            """)
+    # Caso: Usuario no encontrado
+    if not user:
+        return HTMLResponse("""
+            <div class='bg-red-500/20 border border-red-500 p-3 rounded text-center mb-3 animate-pulse'>
+                <p class='text-sm text-red-200'>❌ No encontramos ese número.</p>
+            </div>
+            <form hx-post="/auth/recover/step1" hx-target="#recovery-container" hx-swap="innerHTML" class="space-y-4">
+                <input name="phone" type="tel" required placeholder="Celular registrado (con código de país ej: +54)" class="w-full px-4 py-3 bg-slate-900 border border-slate-600 rounded-lg focus:border-yellow-500 text-sm text-white">
+                <button type="submit" class="w-full py-2 bg-slate-700 hover:bg-slate-600 text-white font-bold rounded transition">Intentar de nuevo</button>
+            </form>
+        """)
 
-        # Caso: Usuario encontrado -> Devolver form del paso 2
-        return HTMLResponse(f"""
-            <div class='animate-fade-in'>
-                <div class='bg-blue-900/30 border border-blue-500/50 p-3 rounded mb-4'>
-                    <p class='text-xs text-blue-300 font-bold uppercase'>Tu Pregunta Secreta:</p>
-                    <p class='text-lg font-bold text-white'>¿{user.secret_question}? </p>
+    # Caso: Usuario encontrado -> Devolver form del paso 2
+    return HTMLResponse(f"""
+        <div class='animate-fade-in'>
+            <div class='bg-blue-900/30 border border-blue-500/50 p-3 rounded mb-4'>
+                <p class='text-xs text-blue-300 font-bold uppercase'>Tu Pregunta Secreta:</p>
+                <p class='text-lg font-bold text-white'>¿{user.secret_question}? </p>
+            </div>
+            
+            <form hx-post="/auth/recover/step2" hx-target="#recovery-container" class="space-y-4">
+                <input type="hidden" name="phone" value="{clean_phone}">
+                
+                <div>
+                    <input name="secret_answer" type="password" required placeholder="Tu Respuesta..." 
+                        class="w-full px-4 py-2 bg-slate-900 border border-slate-600 rounded focus:border-yellow-500 text-white text-sm">
                 </div>
                 
-                <form hx-post="/auth/recover/step2" hx-target="#recovery-container" class="space-y-4">
-                    <input type="hidden" name="phone" value="{phone}">
-                    
-                    <div>
-                        <input name="secret_answer" type="password" required placeholder="Tu Respuesta..." 
-                            class="w-full px-4 py-2 bg-slate-900 border border-slate-600 rounded focus:border-yellow-500 text-white text-sm">
-                    </div>
-                    
-                    <div>
-                        <input name="new_password" type="password" required placeholder="Nueva contraseña..." 
-                            class="w-full px-4 py-2 bg-slate-900 border border-slate-600 rounded focus:border-yellow-500 text-white text-sm">
-                    </div>
+                <div>
+                    <input name="new_password" type="password" required placeholder="Nueva contraseña..." 
+                        class="w-full px-4 py-2 bg-slate-900 border border-slate-600 rounded focus:border-yellow-500 text-white text-sm">
+                </div>
 
-                    <button type="submit" class="w-full py-2 bg-yellow-600 hover:bg-yellow-500 text-white font-bold rounded shadow-lg transition">
-                        Cambiar Contraseña
-                    </button>
-                </form>
-            </div>
-        """)
-        
-    except Exception as e:
-        print(f"❌ ERROR EN RECOVERY: {e}") # Mira esto en la consola de VS Code
-        return HTMLResponse(f"<div class='text-red-500'>Error interno: {e}</div>")
+                <button type="submit" class="w-full py-2 bg-yellow-600 hover:bg-yellow-500 text-white font-bold rounded shadow-lg transition">
+                    Cambiar Contraseña
+                </button>
+            </form>
+        </div>
+    """)
 
 
 @router.post("/auth/recover/step2")
@@ -232,15 +267,11 @@ async def recover_step2(
     """
     Paso 2: Verifica respuesta -> Cambia password.
     """
-    clean_phone = limpiar_telefono(phone)
-    
-    # CAMBIO: Usamos encrypt_phone
-    phone_processed = encrypt_phone(clean_phone)
+    phone_processed = encrypt_phone(phone) # El form oculto ya nos manda el E164 limpio
     
     result = await db.execute(select(User).where(User.phone_hash == phone_processed))
     user = result.scalars().first()
 
-    # Validación de seguridad
     if not user or not verify_password(secret_answer, user.secret_answer):
         return HTMLResponse("""
             <div class='bg-red-500/20 border border-red-500 p-3 rounded text-center'>
@@ -249,7 +280,6 @@ async def recover_step2(
             </div>
         """)
 
-    # ÉXITO: Cambiar contraseña
     user.password = hash_password(new_password)
     await db.commit()
 

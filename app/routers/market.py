@@ -123,10 +123,14 @@ async def market_view(
 
 @router.get("/market/zones_options")
 async def get_zones_options(province: str = ""):
-    if not province or province not in ARGENTINA:
+    # TODO: Expandir cuando importemos MEXICO, COLOMBIA, etc.
+    COUNTRY_DICT = ARGENTINA 
+    
+    if not province or province not in COUNTRY_DICT:
         return HTMLResponse("<option value=''>Todas las zonas</option>")
+    
     options = "<option value=''>Todas las zonas</option>"
-    for zone in ARGENTINA[province]:
+    for zone in COUNTRY_DICT[province]:
         options += f"<option value='{zone}'>{zone}</option>"
     return HTMLResponse(options)
 
@@ -358,7 +362,8 @@ async def search_market(
         .join(User, ContactLog.target_id == User.id)
         .where(
             ContactLog.user_id == current_user_id,
-            ContactLog.status == 'pending'
+            ContactLog.status == 'pending',
+            ContactLog.country_code == current_user_obj.country_code # <-- NUEVO
         )
         .order_by(ContactLog.created_at.desc())
     )
@@ -419,7 +424,8 @@ async def search_market(
         .join(User)
         .where(
             Inventory.status.in_(['repetida', 'repe']), 
-            Inventory.user_id != current_user_id
+            Inventory.user_id != current_user_id,
+            User.country_code == current_user_obj.country_code # <-- EVITAMOS MEZCLAR PAÍSES
         )
         .distinct() 
     )
@@ -455,9 +461,11 @@ async def search_market(
             .where(
                 Inventory.sticker_num.in_(found_sticker_ids),
                 Inventory.status.in_(['repetida', 'repe']),
-                Inventory.user_id != current_user_id
+                Inventory.user_id != current_user_id,
+                User.country_code == current_user_obj.country_code # <-- NUEVO
             )
         )
+
         if province: full_query = full_query.where(User.province == province)
         if zone: full_query = full_query.where(User.zone == zone)
         if nick: full_query = full_query.where(User.nick.ilike(f"%{nick}%"))

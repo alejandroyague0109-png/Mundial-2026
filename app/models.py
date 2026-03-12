@@ -14,6 +14,7 @@ class User(Base):
     password = Column(String, nullable=False)
     
     # Datos de Ubicación
+    country_code = Column(String(2), default="AR", nullable=False)
     province = Column(String)
     zone = Column(String)
 
@@ -64,6 +65,9 @@ class Inventory(Base):
     id = Column(Integer, primary_key=True, index=True)
     user_id = Column(Integer, ForeignKey("users.id")) # Clave foránea
     sticker_num = Column(Integer, index=True)
+
+    country_code = Column(String(2), default="AR", nullable=False)
+
     status = Column(String) # 'tengo', 'wishlist', 'repetida'
     quantity = Column(Integer, default=1)
     price = Column(Integer, default=0)
@@ -79,6 +83,8 @@ class ContactLog(Base):
     user_id = Column(Integer, ForeignKey("users.id"))     # Quien inició el contacto (Interesado)
     target_id = Column(Integer, ForeignKey("users.id"))   # A quien contactó (Dueño)
     
+    country_code = Column(String(2), default="AR", nullable=False)    
+
     # Nuevos campos necesarios para la pestaña Pendientes
     inventory_id = Column(Integer, ForeignKey("inventory.id"), nullable=True) # La figurita específica
     status = Column(String, default="pending") # Estados: 'pending', 'completed', 'cancelled'
@@ -96,6 +102,9 @@ class PuntoSeguro(Base):
     __tablename__ = "puntos_seguros"
 
     id = Column(String, primary_key=True, index=True)
+
+    country_code = Column(String(2), default="AR", nullable=False)
+
     nombre = Column(String)
     categoria = Column(String)
     provincia = Column(String)
