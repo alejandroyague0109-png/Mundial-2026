@@ -4,9 +4,9 @@
     
     <div class="text-center sm:text-left">
         <h1 class="text-xl sm:text-2xl font-bold text-white flex items-center justify-center sm:justify-start gap-2">
-            Mi Álbum <span class="text-sm font-normal text-gray-500 hidden md:inline">| Panel de Control</span>
+            {{ t('mi_album', user.country_code) }} <span class="text-sm font-normal text-gray-500 hidden md:inline">| Panel de Control</span>
         </h1>
-        <p class="text-xs sm:text-sm text-gray-400 mt-1">Medí tu progreso en tiempo real. Vos tenés el control.</p>
+        <p class="text-xs sm:text-sm text-gray-400 mt-1">{{ t('progreso_control', user.country_code) }}</p>
     </div>
     
     <div class="flex items-center gap-3 sm:gap-6 bg-slate-900/50 px-3 py-2 rounded-lg border border-slate-700 overflow-x-auto">
@@ -27,7 +27,7 @@
 
         <div class="text-center min-w-[50px]">
             <span class="block text-lg sm:text-xl font-bold text-yellow-400 transition-all">{{ stats.repetidas }}</span>
-            <span class="text-[9px] sm:text-[10px] text-gray-500 tracking-wider font-bold">REPES</span>
+            <span class="text-[9px] sm:text-[10px] text-gray-500 tracking-wider font-bold uppercase">{{ t('repes', user.country_code) }}</span>
         </div>
 
         <div class="w-px h-8 bg-slate-700"></div>

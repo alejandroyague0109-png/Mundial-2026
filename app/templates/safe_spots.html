@@ -6,17 +6,17 @@
     
     <div class="mb-6 border-b border-slate-700 pb-4">
         <h1 class="text-3xl font-black text-white flex items-center gap-3">
-            <span>🛡️</span> Puntos de Canje
+            <span>🛡️</span> Puntos de Intercambio
         </h1>
         <p class="text-gray-400 mt-2 text-sm">
-            Lugares públicos e informados recomendados para realizar tus intercambios.
+            Lugares públicos e informados recomendados para realizar tus reuniones.
         </p>
     </div>
 
     <div class="bg-yellow-900/20 border border-yellow-700/50 rounded-xl p-4 mb-6 flex items-start gap-3 shadow-lg">
         <div class="text-2xl mt-0.5">⚠️</div>
         <p class="text-xs text-yellow-200/80 leading-relaxed">
-            <strong>Aviso de la comunidad:</strong> Verificamos que estos locales tengan reseñas de más de 4 estrellas y contactamos a cada uno de ellos. Sin embargo, no podemos hacernos responsables por los sucesos que en ellos ocurran.
+            <strong>Aviso para la comunidad:</strong> Verificamos que estos locales tengan reseñas de más de 4 estrellas y contactamos a cada uno de ellos. Sin embargo, no podemos hacernos responsables por los sucesos que en ellos ocurran.
         </p>
     </div>
 
@@ -32,7 +32,7 @@
         </div>
 
         <div>
-            <label class="block text-[10px] font-bold text-gray-400 uppercase mb-1">Provincia</label>
+            <label class="block text-[10px] font-bold text-gray-400 uppercase mb-1">Provincia / región</label>
             <select x-model="filters.provincia" @change="updateLocalidades(); fetchSpots()" class="w-full bg-slate-900 border border-slate-600 rounded-lg px-3 py-2 text-sm text-white focus:border-emerald-500 outline-none transition disabled:opacity-50" :disabled="provinciasDisponibles.length === 0">
                 <template x-for="prov in provinciasDisponibles" :key="prov">
                     <option :value="prov" x-text="prov" :selected="prov === filters.provincia"></option>
@@ -41,7 +41,7 @@
         </div>
         
         <div>
-            <label class="block text-[10px] font-bold text-gray-400 uppercase mb-1">Localidad</label>
+            <label class="block text-[10px] font-bold text-gray-400 uppercase mb-1">Localidad / comuna</label>
             <select x-model="filters.localidad" @change="fetchSpots()" class="w-full bg-slate-900 border border-slate-600 rounded-lg px-3 py-2 text-sm text-white focus:border-emerald-500 outline-none transition disabled:opacity-50" :disabled="localidadesDisponibles.length === 0">
                 <template x-for="loc in localidadesDisponibles" :key="loc">
                     <option :value="loc" x-text="loc" :selected="loc === filters.localidad"></option>
@@ -87,7 +87,7 @@
                     
                     <a :href="'https://www.google.com/maps/search/?api=1&query=' + spot.latitud + ',' + spot.longitud" target="_blank" 
                        class="mt-4 w-full bg-slate-700 hover:bg-emerald-600 text-white font-bold py-2.5 rounded-lg transition-colors flex items-center justify-center gap-2 text-sm shadow">
-                        <span>🗺️</span> Ver en Mapa
+                        <span>🗺️</span> Buscar en Mapa
                     </a>
                 </div>
             </template>
@@ -95,8 +95,8 @@
 
         <div x-show="!loading && spots.length === 0" class="flex flex-col items-center justify-center p-12 bg-slate-800/50 rounded-xl border border-slate-700 border-dashed mt-4">
             <div class="text-5xl mb-3 grayscale opacity-50">🏝️</div>
-            <p class="text-gray-300 font-bold">No encontramos puntos seguros aquí.</p>
-            <p class="text-xs text-gray-500 mt-1 text-center">Elegí otra localidad o provincia cercana para ver opciones.</p>
+            <p class="text-gray-300 font-bold">No encontramos puntos recomendados aquí.</p>
+            <p class="text-xs text-gray-500 mt-1 text-center">Elige otra localidad o región cercana para ver opciones.</p>
         </div>
     </div>
 

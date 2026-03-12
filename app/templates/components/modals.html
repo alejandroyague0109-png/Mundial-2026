@@ -1,19 +1,19 @@
 <dialog id="clicksModal" class="bg-slate-800 text-white p-6 rounded-xl border border-slate-600 backdrop:bg-slate-900/80 w-full max-w-md shadow-2xl">
     <div class="flex justify-between items-start mb-4">
-        <h3 class="text-xl font-bold text-blue-400">👆 ¿Cómo marcar figuritas?</h3>
+        <h3 class="text-xl font-bold text-blue-400">{{ t('como_marcar_figuritas', user.country_code) }}</h3>
         <button onclick="document.getElementById('clicksModal').close()" class="text-gray-400 hover:text-white">✕</button>
     </div>
     
     <div class="space-y-4 text-sm text-gray-300">
-        <p>El sistema funciona por ciclos al hacer clic sobre una figurita:</p>
+        <p>{{ t('ciclo_clic', user.country_code) }}</p>
         <ul class="space-y-3 ml-2">
             <li class="flex items-center gap-3">
                 <div class="w-6 h-8 bg-slate-900 border border-slate-600 rounded flex-shrink-0"></div> 
-                <span>1️⃣ <strong>Gris:</strong> No la tenés (Falta).</span>
+                <span>1️⃣ <strong>Gris:</strong> No la tienes (Falta).</span>
             </li>
             <li class="flex items-center gap-3">
                 <div class="w-6 h-8 bg-gradient-to-br from-green-600 to-green-800 border-green-500 rounded flex-shrink-0"></div> 
-                <span>2️⃣ <strong>Verde:</strong> ¡La tenés! (Pegada).</span>
+                <span>2️⃣ <strong>Verde:</strong> ¡La tienes! (Pegada).</span>
             </li>
             <li class="flex items-center gap-3">
                 <div class="w-6 h-8 bg-gradient-to-br from-yellow-600 to-yellow-800 border-yellow-500 rounded flex-shrink-0"></div> 
@@ -21,7 +21,7 @@
             </li>
             <li class="flex items-center gap-3">
                 <div class="w-6 h-8 bg-slate-700 border-red-500 border rounded flex justify-center items-center flex-shrink-0">❤️</div> 
-                <span>4️⃣ <strong>Rojo:</strong> Wishlist (La buscás urgente).</span>
+                <span>4️⃣ <strong>Rojo:</strong> Wishlist (La buscas urgente).</span>
             </li>
         </ul>
         <div class="bg-slate-900/50 p-2 rounded text-xs text-gray-400 italic text-center border border-slate-700">
@@ -35,12 +35,12 @@
 
 <dialog id="repesModal" class="bg-slate-800 text-white p-6 rounded-xl border border-slate-600 backdrop:bg-slate-900/80 w-full max-w-md shadow-2xl">
     <div class="flex justify-between items-start mb-4">
-        <h3 class="text-xl font-bold text-yellow-400">💰 Tabla de Repetidas</h3>
+        <h3 class="text-xl font-bold text-yellow-400">{{ t('tabla_de_repetidas', user.country_code) }}</h3>
         <button onclick="document.getElementById('repesModal').close()" class="text-gray-400 hover:text-white">✕</button>
     </div>
 
     <div class="space-y-4 text-sm text-gray-300">
-        <p>Cuando marcás una figurita como <strong>Amarilla (Repetida)</strong>, aparecerá una tabla debajo de la grilla del país.</p>
+        <p>{{ t('cuando_marcas_figurita', user.country_code) }} <strong>Amarilla (Repetida)</strong>, aparecerá una tabla debajo de la grilla del país.</p>
         
         <div class="bg-slate-900/50 p-4 rounded border border-slate-700 space-y-2">
             <p class="font-bold text-white border-b border-slate-700 pb-1 mb-2">Configuración:</p>
@@ -73,8 +73,8 @@
             <h4 class="font-bold text-white mb-1">1. Para TODOS (Prioridad y Compartir)</h4>
             <p class="mb-2">¡Organizá tu búsqueda! 📋</p>
             <ul class="list-disc ml-4 space-y-1 text-gray-400">
-                <li><strong class="text-white">🚀 Prioridad:</strong> En el Mercado, las figuritas que marcás acá aparecen <strong>PRIMERAS</strong>.</li>
-                <li><strong class="text-white">📲 WhatsApp:</strong> Te sirve para tener tu lista de faltantes a mano y compartirla.</li>
+                <li><strong class="text-white">🚀 Prioridad:</strong> En el Mercado, las {{ t('figuritas', user.country_code) }} que marcas aquí aparecen <strong>PRIMERAS</strong>.</li>
+                <li><strong class="text-white">📲 WhatsApp:</strong> Sirve para tener tu lista de faltantes a mano y compartirla.</li>
             </ul>
         </div>
 
@@ -82,7 +82,7 @@
             <h4 class="font-bold text-yellow-400 mb-1">2. Para PREMIUM (IA 🤖)</h4>
             <ul class="list-disc ml-4 space-y-1 text-gray-400">
                 <li><strong class="text-white">🔔 Alertas:</strong> Notificación automática cuando alguien publica una de tu lista.</li>
-                <li><strong class="text-white">📐 Triangulación:</strong> Habilita canje a 3 bandas (Vos -> Puente -> Objetivo).</li>
+                <li><strong class="text-white">📐 Triangulación:</strong> Habilita canje a 3 bandas (Tú -> Puente -> Objetivo).</li>
             </ul>
         </div>
     </div>
@@ -108,10 +108,10 @@
                 <span class="transition-transform group-open:rotate-180">▼</span>
             </summary>
             <div class="p-4 pt-0 border-t border-slate-700/50 mt-2 space-y-2 leading-relaxed">
-                <p><strong class="text-blue-400">Mi Álbum:</strong> Entrá a la sección de tu país/equipo.</p>
-                <p><strong class="text-blue-400">Cargá:</strong> Marcá las que <strong>TENÉS</strong> y las que <strong>DESEÁS</strong> (Wishlist).</p>
-                <p><strong class="text-blue-400">Repes:</strong> Si tenés repetidas, marcalas abajo para canje o venta.</p>
-                <p><strong class="text-blue-400">Mercado:</strong> El sistema cruza datos y te muestra quién tiene lo que buscás y quiere lo que vos tenés (Match).</p>
+                <p><strong class="text-blue-400">{{ t('mi_album', user.country_code) }}:</strong> Ingresa a la sección de tu país/equipo.</p>
+                <p><strong class="text-blue-400">Cargá:</strong> Marca las que <strong>TIENES</strong> y las que <strong>DESEAS</strong> (Wishlist).</p>
+                <p><strong class="text-blue-400">Repes:</strong> Si tienes {{ t('repes', user.country_code) }}, márcalas abajo para intercambio o venta.</p>
+                <p><strong class="text-blue-400">Mercado:</strong> El sistema cruza datos y te muestra quién tiene lo que buscas y quiere lo que tienes (Match).</p>
             </div>
         </details>
 
@@ -121,7 +121,7 @@
                 <span class="transition-transform group-open:rotate-180">▼</span>
             </summary>
             <div class="p-4 pt-0 border-t border-slate-700/50 mt-2 leading-relaxed">
-                <p><strong>Sí.</strong> Podés usar la app totalmente gratis. Tenés <strong>1 crédito diario</strong> para contactar (ver el WhatsApp) de otro coleccionista. Los créditos se renuevan cada 24hs automáticamente.</p>
+                <p><strong>Sí.</strong> Puedes usar la app totalmente gratis. Tienes <strong>1 crédito diario</strong> para contactar a (ver el WhatsApp de) otro coleccionista. Los créditos se renuevan cada 24hs automáticamente.</p>
             </div>
         </details>
 
@@ -132,8 +132,8 @@
             </summary>
             <div class="p-4 pt-0 border-t border-slate-700/50 mt-2 space-y-2 leading-relaxed">
                 <ul class="list-disc ml-4 space-y-1">
-                    <li>Reunite siempre en <strong>lugares públicos</strong> y concurridos.</li>
-                    <li>Revisá bien las figuritas antes de cerrar el trato.</li>
+                    <li>Reunete siempre en <strong>lugares públicos</strong> y concurridos.</li>
+                    <li>Revisa bien las {{ t('figuritas', user.country_code) }} antes de cerrar el trato.</li>
                     <li><strong>Nunca envíes dinero</strong> por adelantado.</li>
                     <li>Canje AlToque 26 conecta partes pero no participa de la transacción.</li>
                 </ul>
@@ -146,10 +146,10 @@
                 <span class="transition-transform group-open:rotate-180">▼</span>
             </summary>
             <div class="p-4 pt-0 border-t border-slate-700/50 mt-2 leading-relaxed">
-                <p class="mb-2">Es la forma más veloz de llenar tu álbum sin ir figurita por figurita.</p>
+                <p class="mb-2">Es la forma más veloz de llenar tu álbum sin ir {{ t('figurita', user.country_code) }} por {{ t('figurita', user.country_code) }}.</p>
                 <ul class="list-disc ml-5 space-y-1 text-gray-400">
-                    <li>Elegí un país y escribí los números en la caja de texto.</li>
-                    <li>Usá <strong>comas</strong> para separar (ej: <code>1, 5, 10</code>) o <strong>guiones</strong> para rangos (ej: <code>1-5</code>).</li>
+                    <li>Elige un país y escribe los números en la caja de texto.</li>
+                    <li>Usa <strong>comas</strong> para separar (ej: <code>1, 5, 10</code>) o <strong>guiones</strong> para rangos (ej: <code>1-5</code>).</li>
                     <li>El sistema detecta automáticamente qué pegar y qué poner en repetidas.</li>
                 </ul>
             </div>
@@ -162,8 +162,8 @@
             </summary>
             <div class="p-4 pt-0 border-t border-slate-700/50 mt-2 leading-relaxed">
                 <p>
-                    Marcar las figus que más querés es vital para el motor de búsqueda. 
-                    Tus figuritas deseadas tienen <strong>prioridad</strong> en el mercado, ayudando a que otros usuarios te encuentren más rápido para cambiar.
+                    Marcar las que más quieres es vital para el motor de búsqueda. 
+                    Tus deseadas tienen <strong>prioridad</strong> en el mercado, ayudando a que otros usuarios te encuentren más rápido para cambiar.
                     Además, es el requisito para recibir <strong>Alertas</strong> automáticas y para participar de la <strong>Triangulación</strong>.
                 </p>
             </div>
@@ -177,7 +177,7 @@
             <div class="p-4 pt-0 border-t border-slate-700/50 mt-2 leading-relaxed">
                 <p>
                     Es una función avanzada para <strong>Usuarios Premium</strong>. 
-                    Si nadie quiere hacer un cambio directo con vos (A ↔ B), el sistema busca un <strong>Puente</strong> (C) en tu misma zona para hacer un canje circular: 
+                    Si nadie quiere hacer un cambio directo contigo (A ↔ B), el sistema busca un <strong>Puente</strong> (C) en tu misma zona para hacer un intercambio circular: 
                 </p>
                 <div class="block text-center font-mono text-yellow-300 mt-2 bg-slate-800 p-2 rounded border border-yellow-500/30">
                     Vos → Puente → Objetivo → Vos
@@ -200,7 +200,7 @@
                     </li>
                     <li class="flex gap-2 items-start">
                         <span class="text-lg">📐</span>
-                        <div><strong class="text-white">Triangulación:</strong> Acceso a la herramienta de canjes a 3 bandas.</div>
+                        <div><strong class="text-white">Triangulación:</strong> Acceso a la herramienta de canje a 3 bandas.</div>
                     </li>
                     <li class="flex gap-2 items-start">
                         <span class="text-lg">🥇</span>
@@ -208,7 +208,7 @@
                     </li>
                     <li class="flex gap-2 items-start">
                         <span class="text-lg">🔔</span>
-                        <div><strong class="text-white">Alertas:</strong> Te avisamos si alguien carga una figu de tu Wishlist.</div>
+                        <div><strong class="text-white">Alertas:</strong> Te avisamos si alguien carga una de tu Wishlist.</div>
                     </li>
                 </ul>
                 <div class="mt-4 pt-4 border-t border-slate-700 text-center">
@@ -274,11 +274,11 @@
 
         <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div>
-                <label class="block text-xs font-bold text-blue-400 mb-1">🟦 TENGO</label>
+                <label class="block text-xs font-bold text-blue-400 mb-1">🟦 PEGADAS</label>
                 <textarea name="tengo_txt" class="w-full h-24 bg-slate-900/50 border border-blue-900/50 rounded p-2 text-xs text-gray-300 focus:border-blue-500 outline-none resize-none" placeholder="Ej: 1-5, 8, 11"></textarea>
             </div>
             <div>
-                <label class="block text-xs font-bold text-green-400 mb-1">🟩 REPES</label>
+                <label class="block text-xs font-bold text-green-400 mb-1">🟩 REPETIDAS</label>
                 <textarea name="repes_txt" class="w-full h-24 bg-slate-900/50 border border-green-900/50 rounded p-2 text-xs text-gray-300 focus:border-green-500 outline-none resize-none" placeholder="Ej: 5, 9"></textarea>
             </div>
             <div>
@@ -289,7 +289,7 @@
 
         <div class="bg-slate-900/50 p-3 rounded text-[10px] text-gray-500 flex gap-2 items-start">
             <span>ℹ️</span>
-            <p>Usá comas, espacios o guiones (1-5). Al procesar, se reemplazará lo que tenías cargado en este país.</p>
+            <p>Usa comas, espacios o guiones (1-5). Al procesar, se reemplazará lo que tenías cargado en este país por lo nuevo.</p>
         </div>
 
         <div class="pt-2">
@@ -306,7 +306,7 @@
         <div>
             <h3 class="text-lg font-bold text-white">📲 Instalar App</h3>
             <p class="text-gray-300 text-sm mt-1">
-                ¡Tené tu álbum siempre a mano y recibí notificaciones!
+                ¡Ten tu álbum siempre a mano y recibe notificaciones!
             </p>
         </div>
         <button onclick="document.getElementById('installModal').close()" class="text-gray-400 hover:text-white p-1">✕</button>
@@ -335,9 +335,9 @@
                 </div>
 
                 <div class="space-y-2 opacity-80">
-                    <p>1. Tocá los <strong>3 puntitos (⋮)</strong> en Chrome.</p>
-                    <p>2. Elegí <strong>"Instalar aplicación"</strong>.</p>
-                    <p>3. Confirmá y listo.</p>
+                    <p>1. Toca los <strong>3 puntitos (⋮)</strong> en Chrome.</p>
+                    <p>2. Selecciona <strong>"Instalar aplicación"</strong>.</p>
+                    <p>3. Confirma y listo.</p>
                 </div>
             </div>
         </details>
@@ -348,8 +348,8 @@
                 <span class="transition-transform group-open:rotate-180">▼</span>
             </summary>
             <div class="p-3 pt-0 text-xs text-gray-300 space-y-2 border-t border-slate-800 mt-2">
-                <p>1. Tocá el botón <strong>Compartir</strong> (cuadrado con flecha).</p>
-                <p>2. Bajá hasta <strong>"Agregar al Inicio"</strong>.</p>
+                <p>1. Toca el botón <strong>Compartir</strong> (cuadrado con flecha).</p>
+                <p>2. Baja hasta <strong>"Agregar al Inicio"</strong>.</p>
                 <p>3. Dale a "Agregar".</p>
             </div>
         </details>
@@ -370,6 +370,9 @@
                 <option value="AR">🇦🇷 Argentina</option>
                 <option value="UY">🇺🇾 Uruguay</option>
                 <option value="CL">🇨🇱 Chile</option>
+                <option value="CO">🇨🇴 Colombia</option>
+                <option value="MX">🇲🇽 México</option>
+                <option value="PE">🇵🇪 Perú</option>
             </select>
         </div>
 
@@ -419,7 +422,7 @@
     <div class="space-y-3 text-xs mb-6 bg-slate-900/50 p-4 rounded-lg border border-slate-700">
     <div class="flex items-center gap-3">
         <span class="text-base leading-none">🔓</span>
-        <div class="leading-tight"><strong class="text-white">Contactos Ilimitados:</strong> Hablá con quien quieras hoy.</div>
+        <div class="leading-tight"><strong class="text-white">Contactos Ilimitados:</strong> Habla con quien quieras hoy.</div>
     </div>
     
     <div class="flex items-center gap-3">
@@ -434,7 +437,7 @@
     
     <div class="flex items-center gap-3">
         <span class="text-base leading-none">⭐</span>
-        <div class="leading-tight"><strong class="text-white">Perfil Destacado:</strong> Aparecés primero en las listas.</div>
+        <div class="leading-tight"><strong class="text-white">Perfil Destacado:</strong> Apareces primero en las listas.</div>
     </div>        
     
     <div class="flex items-center gap-3">
@@ -443,15 +446,17 @@
     </div>
 </div>
 
-    <div class="mb-6 text-center">
-    <div class="relative inline-block bg-slate-950/80 border border-slate-600 rounded-xl px-10 py-5 shadow-[0_0_15px_rgba(0,0,0,0.5)] backdrop-blur-md">
-        
-        <span class="absolute -top-3 left-1/2 -translate-x-1/2 bg-green-500 text-slate-950 text-[10px] font-black px-3 py-1 rounded-full uppercase tracking-tighter whitespace-nowrap shadow-lg">
-            Gastá menos y completalo 10 X más rápido por el precio de 2 sobres
-        </span>
+    <<div class="mb-6 text-center">
+        <div class="relative inline-block bg-slate-950/80 border border-slate-600 rounded-xl px-10 py-5 shadow-[0_0_15px_rgba(0,0,0,0.5)] backdrop-blur-md">
+            
+            <span class="absolute -top-3 left-1/2 -translate-x-1/2 bg-green-500 text-slate-950 text-[10px] font-black px-3 py-1 rounded-full uppercase tracking-tighter whitespace-nowrap shadow-lg">
+                Gasta menos y complétalo 10 X más rápido
+            </span>
 
             <div class="flex items-baseline justify-center gap-1.5">
-                <span class="text-3xl font-bold text-white tracking-tight">Solo $5.000</span>
+                <span class="text-3xl font-bold text-white tracking-tight">
+                    Solo {% if user.country_code == 'AR' %}Solo $4.999 ARS{% else %}Solo 3.99 USD{% endif %}
+                </span>
             </div>
             <p class="text-[10px] text-slate-600 mt-1">Pago único • Acceso por todo el Mundial</p>
         </div>
@@ -480,29 +485,29 @@
     </div>
 
     <p class="text-sm text-gray-300 mb-4">
-        Recibí notificaciones en tu celular cuando alguien publique figuritas de tu Wishlist.
+        Recibe notificaciones en tu celular cuando alguien publique figuritas de tu Wishlist.
     </p>
 
     <form hx-post="/update_telegram" hx-target="#telegram-response" class="space-y-4">
         <div>
-            <label class="text-xs text-blue-400 font-bold">PASO 1: Iniciá el Bot</label>
+            <label class="text-xs text-blue-400 font-bold">PASO 1: Inicia el Bot</label>
             <a href="https://t.me/Canje_Al_Toque_bot" target="_blank" class="block w-full text-center bg-blue-600 hover:bg-blue-500 text-white py-2 rounded text-sm font-bold mt-1 mb-3 transition">
                 🤖 Abrir @Canje_Al_Toque_bot
             </a>
-            <p class="text-[10px] text-gray-400">Escribile <code>/start</code> para activarlo.</p>
+            <p class="text-[10px] text-gray-400">Escribele <code>/start</code> para activarlo.</p>
         </div>
 
         <div class="border-t border-slate-700 pt-4">
-    <label class="text-xs text-yellow-500 font-bold">PASO 2: Pegá tu ID acá</label>
+    <label class="text-xs text-yellow-500 font-bold">PASO 2: Pega tu ID aquí</label>
     
     <input type="text" name="telegram_id" value="{{ user.telegram_chat_id or '' }}" placeholder="Ej: 123456789" class="w-full bg-slate-900 border border-slate-700 rounded px-3 py-2 text-sm mt-1 text-white focus:border-yellow-500 outline-none font-mono text-center">
     
     <p class="text-[10px] text-gray-400 mt-3">
-        Buscá en Telegram <code class="bg-slate-800 px-1 rounded text-yellow-200">@userinfobot</code> y escribile <code class="bg-slate-800 px-1 rounded text-yellow-200">/start</code> para recibir tu ID.
+        Busca en Telegram <code class="bg-slate-800 px-1 rounded text-yellow-200">@userinfobot</code> y escribele <code class="bg-slate-800 px-1 rounded text-yellow-200">/start</code> para recibir tu ID.
     </p>
     
     <p class="text-[10px] text-gray-400 mt-2">
-        Asegurate de haber activado las notificaciones de Telegram desde los ajustes de tu celu para que te avise cuando llegue una figu nueva.
+        {{ t('aviso_figu_nueva', user.country_code) }}
     </p>        
 </div>
 
@@ -615,7 +620,7 @@
             <h4 class="font-bold text-white mb-1">1. Para TODOS (Prioridad y Compartir)</h4>
             <p class="mb-2">¡Organizá tu búsqueda! 📋</p>
             <ul class="list-disc ml-4 space-y-1">
-                <li><strong class="text-white">🚀 Prioridad:</strong> En el Mercado, las figuritas que marcás acá aparecen <strong>PRIMERAS</strong>.</li>
+                <li><strong class="text-white">🚀 Prioridad:</strong> En el Mercado, las {{ t('figuritas', user.country_code) }} que marcás acá aparecen <strong>PRIMERAS</strong>.</li>
                 <li><strong class="text-white">📲 WhatsApp:</strong> Te sirve para tener tu lista de faltantes siempre a mano y compartirla rápido por WhatsApp con tus amigos.</li>
             </ul>
         </div>
@@ -624,7 +629,7 @@
             <h4 class="font-bold text-yellow-400 mb-1">2. Para PREMIUM (Alertas y Triangulación)</h4>
             <p class="mb-2">Desbloqueá la inteligencia artificial del álbum 🤖.</p>
             <ul class="list-disc ml-4 space-y-1">
-                <li><strong class="text-white">🔔 Alertas:</strong> El sistema te <strong>notifica automáticamente</strong> cuando alguien publica una figurita de tu Wishlist.</li>
+                <li><strong class="text-white">🔔 Alertas:</strong> El sistema te <strong>notifica automáticamente</strong> cuando alguien publica una {{ t('figurita', user.country_code) }} de tu Wishlist.</li>
                 <li><strong class="text-white">📐 Triangulación:</strong> Habilita el canje a 3 bandas (Vos → Puente → Objetivo) cuando no hay cambio directo.</li>
             </ul>
         </div>
@@ -649,7 +654,7 @@
     <div class="p-6 space-y-5 overflow-y-auto max-h-[70vh] custom-scrollbar text-sm text-gray-300">
         
         <div>
-            <h4 class="font-bold text-white text-base">🚀 Cómo cargar tus figus volando</h4>
+            <h4 class="font-bold text-white text-base">{{ t('como_cargar_volando', user.country_code) }}</h4>
             <p class="mt-1 text-gray-400">Olvidate de buscar número por número. Hacelo por país.</p>
         </div>
 
@@ -736,8 +741,8 @@
                 <li class="flex items-start gap-3">
                     <div class="w-10 h-10 rounded-full bg-slate-700 flex items-center justify-center text-lg shadow-md border border-slate-600 font-bold text-gray-400">1</div>
                     <div>
-                        <strong class="text-white block">Vos → Puente</strong>
-                        <span class="text-xs text-gray-400">Le das una repe al Puente.</span>
+                        <strong class="text-white block">Tú → Puente</strong>
+                        <span class="text-xs text-gray-400">Le das una repetida al Puente.</span>
                     </div>
                 </li>
                 <li class="flex items-start gap-3">
@@ -750,8 +755,8 @@
                 <li class="flex items-start gap-3">
                     <div class="w-10 h-10 rounded-full bg-yellow-600/20 flex items-center justify-center text-lg shadow-md border border-yellow-500 font-bold text-yellow-400">3</div>
                     <div>
-                        <strong class="text-yellow-400 block">Dueño → Vos</strong>
-                        <span class="text-xs text-gray-400">¡El Dueño te da a vos la figurita que buscás! 🎯</span>
+                        <strong class="text-yellow-400 block">Dueño → a Tí</strong>
+                        <span class="text-xs text-gray-400">{{ t('dueño_te_da_figurita', user.country_code) }}</span>
                     </div>
                 </li>
             </ul>

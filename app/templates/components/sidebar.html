@@ -65,19 +65,20 @@
         <button onclick="openModal('premiumModal')" class="w-full relative group overflow-hidden rounded-2xl border border-yellow-600/30 p-5 text-left transition active:scale-95 shadow-lg shadow-yellow-900/10">
             <div class="absolute inset-0 bg-gradient-to-r from-yellow-900/40 to-slate-900 transition group-hover:from-yellow-900/60"></div>
             <div class="relative flex justify-between items-center">
-                <div class="flex items-center gap-3"> <div class="w-10 h-10 rounded-xl bg-yellow-900/20 flex items-center justify-center text-xl group-hover:scale-110 transition-transform">
-        💎
-    </div>
+                <div class="flex items-center gap-3"> 
+                    <div class="w-10 h-10 rounded-xl bg-yellow-900/20 flex items-center justify-center text-xl group-hover:scale-110 transition-transform">
+                        💎
+                    </div>
 
-    <div class="flex-1">
-        <div class="text-sm font-bold text-yellow-400 group-hover:text-yellow-300">
-            Hacete Premium
-        </div>
-        <div class="text-[11px] text-yellow-200/60 mt-0.5 leading-tight">
-            Triangulación, prioridad, alertas y contactos ilimitados.
-        </div>
-    </div>
-</div>
+                    <div class="flex-1">
+                        <div class="text-sm font-bold text-yellow-400 group-hover:text-yellow-300">
+                            Hacete Premium
+                        </div>
+                        <div class="text-[11px] text-yellow-200/60 mt-0.5 leading-tight">
+                            Triangulación, prioridad, alertas y contactos ilimitados.
+                        </div>
+                    </div>
+                </div>
               
             </div>
         </button>
@@ -90,15 +91,16 @@
                     🛡️
                 </div>
                 <div class="flex-1">
-                    <div class="text-sm font-bold text-gray-200 group-hover:text-emerald-400">Puntos de canje</div>
-                    <div class="text-[11px] text-gray-500 mt-0.5">Lugares recomendados para canjear</div>
+                    <div class="text-sm font-bold text-gray-200 group-hover:text-emerald-400">{{ t('puntos_de_canje', user.country_code) }}</div>
+                    <div class="text-[11px] text-gray-500 mt-0.5">{{ t('lugares_recomendados', user.country_code) }}</div>
                 </div>
             </a>
         </div>
 
         <div>
             <div class="text-[11px] font-bold text-gray-500 uppercase tracking-widest mb-3 px-1">Aplicación</div>
-            <div class="space-y-3 pb-4"> <button onclick="openModal('installModal')" class="w-full flex items-center gap-4 p-4 bg-slate-800/50 hover:bg-slate-800 border border-slate-700/50 hover:border-green-500/30 rounded-2xl transition group text-left active:scale-95">
+            <div class="space-y-3 pb-4"> 
+                <button onclick="openModal('installModal')" class="w-full flex items-center gap-4 p-4 bg-slate-800/50 hover:bg-slate-800 border border-slate-700/50 hover:border-green-500/30 rounded-2xl transition group text-left active:scale-95">
                     <div class="w-10 h-10 rounded-xl bg-green-900/20 flex items-center justify-center text-xl group-hover:scale-110 transition-transform">📲</div>
                     <div class="flex-1">
                         <div class="text-sm font-bold text-gray-200 group-hover:text-green-400">Instalar App</div>
@@ -106,15 +108,15 @@
                     </div>
                 </button>
 
-	<button @click="sidebarOpen = false; setTimeout(() => window.startTutorial(), 400)" class="w-full flex items-center gap-4 p-4 bg-slate-800/50 hover:bg-slate-800 border border-slate-700/50 hover:border-yellow-500/30 rounded-2xl transition group text-left active:scale-95">
-    <div class="w-10 h-10 rounded-xl bg-yellow-900/20 flex items-center justify-center text-xl group-hover:scale-110 transition-transform">
-        💡
-    </div>
-    <div class="flex-1">
-        <div class="text-sm font-bold text-gray-200 group-hover:text-yellow-400">Ver Tutorial</div>
-        <div class="text-[11px] text-gray-500 mt-0.5">Guía rápida paso a paso</div>
-    </div>
-</button>
+                <button @click="sidebarOpen = false; setTimeout(() => window.startTutorial(), 400)" class="w-full flex items-center gap-4 p-4 bg-slate-800/50 hover:bg-slate-800 border border-slate-700/50 hover:border-yellow-500/30 rounded-2xl transition group text-left active:scale-95">
+                    <div class="w-10 h-10 rounded-xl bg-yellow-900/20 flex items-center justify-center text-xl group-hover:scale-110 transition-transform">
+                        💡
+                    </div>
+                    <div class="flex-1">
+                        <div class="text-sm font-bold text-gray-200 group-hover:text-yellow-400">Ver Tutorial</div>
+                        <div class="text-[11px] text-gray-500 mt-0.5">Guía rápida paso a paso</div>
+                    </div>
+                </button>
 
                 <button onclick="openModal('faqModal')" class="w-full flex items-center gap-4 p-4 bg-slate-800/50 hover:bg-slate-800 border border-slate-700/50 hover:border-purple-500/30 rounded-2xl transition group text-left active:scale-95">
                     <div class="w-10 h-10 rounded-xl bg-purple-900/20 flex items-center justify-center text-xl group-hover:scale-110 transition-transform">❓</div>
@@ -147,4 +149,4 @@
 
     </div>
 
-    </aside>
+</aside>

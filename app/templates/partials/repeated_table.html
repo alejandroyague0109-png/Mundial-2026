@@ -8,14 +8,14 @@
                 <p class="text-xs text-gray-400">Define precios y cantidades.</p>
             </div>
             <span class="bg-yellow-900/30 text-yellow-500 text-xs font-bold px-2 py-1 rounded border border-yellow-800">
-                {{ repeated_items|length }} figuritas
+                {{ repeated_items|length }} {{ t('figuritas', user.country_code) }}
             </span>
         </div>
         <div class="overflow-x-auto">
             <table class="w-full text-left text-sm text-gray-300">
                 <thead class="bg-slate-900 text-xs uppercase text-gray-500">
                     <tr>
-                        <th class="px-3 py-3">Figurita</th>
+                        <th class="px-3 py-3">{{ t('figurita', user.country_code).capitalize() }}</th>
                         <th class="px-3 py-3">Estado</th>
                         <th class="px-3 py-3">Precio ($)</th>
                         <th class="px-3 py-3">Cantidad</th>
@@ -32,7 +32,7 @@
                             {% if item.price > 0 %}
                                 <span class="text-green-400 font-bold text-xs px-2 py-1 rounded bg-slate-900 border border-slate-700">VENTA</span>
                             {% else %}
-                                <span class="text-blue-400 font-bold text-xs px-2 py-1 rounded bg-slate-900 border border-slate-700">CANJE</span>
+                                <span class="text-blue-400 font-bold text-xs px-2 py-1 rounded bg-slate-900 border border-slate-700">{{ t('canje_mayus', user.country_code) }}</span>
                             {% endif %}
                         </td>
 

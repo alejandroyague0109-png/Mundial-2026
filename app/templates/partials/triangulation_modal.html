@@ -41,7 +41,7 @@
             <div class="text-4xl mb-4">🤷‍♂️</div>
             <h4 class="text-lg font-bold text-gray-300">No encontramos triangulaciones exactas</h4>
             <p class="text-sm text-gray-500 mt-2 max-w-sm mx-auto">
-                Intentá agregar más figuritas a tu <strong>Wishlist</strong> o cargá más <strong>Repetidas</strong> para tener más opciones de negociación.
+                Intentá agregar más {{ t('figuritas', user.country_code) }} a tu <strong>Wishlist</strong> o cargá más <strong>Repetidas</strong> para tener más opciones de negociación.
             </p>
             <button @click="state = 'initial'" class="mt-6 text-indigo-400 hover:text-white text-sm underline">Volver</button>
         </div>
@@ -55,7 +55,7 @@
         <div x-show="state === 'results'" class="space-y-4">
             <p class="text-xs text-center text-gray-400 mb-4">
                 Encontramos <strong class="text-white" x-text="results.length"></strong> oportunidades. 
-                Contactá al usuario que quiere TU figurita (Usuario C).
+                Contactá al usuario que quiere TU {{ t('figurita', user.country_code) }} (Usuario C).
             </p>
 
             <template x-for="(t, index) in results" :key="index">
@@ -103,6 +103,14 @@
 </dialog>
 
 <script>
+    window.TRIANGULATION_I18N = {
+        tengo_la_figurita: "{{ t('tengo_la_figurita', user.country_code) }}",
+        que_buscas: "{{ t('que_buscas_en_app', user.country_code) }}",
+        te_copa: "{{ t('te_copa_avisame', user.country_code) }}"
+    };
+</script>
+
+<script>
     // Ahora la función acepta el parámetro autoStart
     function triangulationLogic(autoStart = false) {
         return {
@@ -146,12 +154,12 @@
             contactTarget(t) {
                 const phoneC = String(t.user_C.phone).replace(/\D/g, '');
                 
-                const text = `Hola *${t.user_C.nick}*! Tengo la figurita *${t.sticker_I_give.name}* que buscás en Figus26.
+                const text = `Hola *${t.user_C.nick}*! ${window.TRIANGULATION_I18N.tengo_la_figurita} *${t.sticker_I_give.name}* ${window.TRIANGULATION_I18N.que_buscas}
                 
 Para hacer el canje, necesitamos una triangulación:
 Vos le das la *${t.user_C.sticker_gets.name}* a *${t.user_B.nick}* (Tel: ${t.user_B.phone}), y él me da la *${t.sticker_I_get.name}* a mí.
                 
-¿Te copa? Avisame y coordinamos los 3. 📐⚽`;
+${window.TRIANGULATION_I18N.te_copa}`;
 
                 const url = `https://wa.me/${phoneC}?text=${encodeURIComponent(text)}`;
                 window.open(url, '_blank');

@@ -131,7 +131,7 @@
             </div>
 
             <div>
-                <label class="block text-[10px] font-bold text-gray-500 uppercase mb-1">N° Figurita</label>
+                <label class="block text-[10px] font-bold text-gray-500 uppercase mb-1">{{ t('numero_figurita', user.country_code) }}</label>
                 <div class="flex gap-2">
                     <input type="text" name="sticker_num" x-model="autoSticker" placeholder="Ej: ARG 10" 
                            class="w-full bg-slate-900 border border-slate-600 rounded px-3 py-2 text-sm text-white focus:border-yellow-500 outline-none placeholder-gray-600">
@@ -154,7 +154,7 @@
                     <span class="text-[10px] bg-indigo-500 text-white px-2 py-0.5 rounded-full font-bold">BETA</span>
                 </div>
                 <p class="text-sm text-indigo-200">
-                    ¿Buscás una figurita difícil? Probá la <strong class="text-white">Triangulación</strong>.
+                    {{ t('buscas_figurita_dificil', user.country_code) }} Probá la <strong class="text-white">Triangulación</strong>.
                     El sistema busca "Puentes" para destrabar canjes.
                 </p>
             </div>
@@ -197,7 +197,7 @@
                 <div class="text-4xl mb-4 grayscale opacity-50">🏟️</div>
                 <h3 class="text-lg font-bold text-gray-300">Cargando mercado...</h3>
                 <p class="text-sm text-gray-500 mt-2 max-w-md mx-auto">
-                    Buscando figuritas en tu zona...
+                    {{ t('buscar_figuritas_placeholder', user.country_code) }}
                 </p>
                 <div class="mt-6 flex justify-center gap-2">
                     <span class="h-2 w-2 rounded-full bg-slate-600 animate-bounce"></span>
@@ -214,23 +214,23 @@
     <div class="flex justify-between items-start mb-4">
         <div class="flex items-center gap-2 text-yellow-400">
             <span class="text-2xl">🛡️</span>
-            <h3 class="text-lg font-bold">Consejos de Seguridad</h3>
+            <h3 class="text-lg font-bold">{{ t('consejos_seguridad', user.country_code) }}</h3>
         </div>
         <button onclick="document.getElementById('securityModal').close()" class="text-gray-400 hover:text-white">✕</button>
     </div>
 
     <div class="space-y-4 text-sm text-gray-300">
         <div class="bg-blue-900/30 p-3 rounded border border-blue-500/30">
-            <p class="font-bold text-blue-300 mb-1">Para jugar tranquilo:</p>
+            <p class="font-bold text-blue-300 mb-1">{{ t('jugar_tranquilo', user.country_code) }}</p>
             <ul class="space-y-2">
                 <li class="flex items-start gap-2">
                     <span>🏢</span> <strong>Campo Neutral:</strong> Lugares públicos.
                 </li>
                 <li class="flex items-start gap-2">
-                    <span>👀</span> <strong>VAR:</strong> Revisá antes de cambiar.
+                    <span>👀</span> <strong>VAR:</strong> {{ t('revisar_antes', user.country_code) }}
                 </li>
                 <li class="flex items-start gap-2">
-                    <span>💰</span> <strong>Sin Adelantos:</strong> Plata en mano.
+                    <span>💰</span> <strong>Sin Adelantos:</strong> {{ t('plata_en_mano', user.country_code) }}
                 </li>
             </ul>
         </div>
@@ -249,7 +249,7 @@
 
     <div class="flex gap-3">
         <button onclick="confirmSecurityAction()" class="w-full py-2 bg-yellow-600 hover:bg-yellow-500 text-white rounded font-bold shadow-lg text-sm">
-            Entendido, a jugar ⚽
+            {{ t('a_jugar', user.country_code) }}
         </button>
     </div>
 </dialog>

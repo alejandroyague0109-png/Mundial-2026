@@ -83,7 +83,7 @@
                         <span class="text-2xl md:text-lg transition-all duration-300 {{ 'scale-110 drop-shadow-[0_0_10px_rgba(234,179,8,0.8)]' if active_tab == 'album' else 'opacity-60 group-hover:opacity-100 group-hover:scale-105' }}">
                             📖
                         </span>
-                        <span class="hidden md:inline">Mi Álbum</span>
+                        <span class="hidden md:inline">{{ t('nav_mi_album', user.country_code if user else 'AR') }}</span>
                     </div>
                     {% if active_tab == 'album' %}
                     <div class="absolute bottom-0 left-0 w-full h-1 bg-yellow-500 rounded-t-full shadow-[0_-1px_5px_rgba(234,179,8,0.5)] animate-fade-in"></div>
@@ -95,7 +95,7 @@
                         <span class="text-2xl md:text-lg transition-all duration-300 {{ 'scale-110 drop-shadow-[0_0_10px_rgba(234,179,8,0.8)]' if active_tab == 'market' else 'opacity-60 group-hover:opacity-100 group-hover:scale-105' }}">
                             ⚖️
                         </span>
-                        <span class="hidden md:inline">Mercado</span>
+                        <span class="hidden md:inline">{{ t('nav_mercado', user.country_code if user else 'AR') }}</span>
                     </div>
                     {% if active_tab == 'market' %}
                     <div class="absolute bottom-0 left-0 w-full h-1 bg-yellow-500 rounded-t-full shadow-[0_-1px_5px_rgba(234,179,8,0.5)] animate-fade-in"></div>
@@ -106,7 +106,7 @@
             <div class="flex justify-end items-center gap-3">
                 {% if user %}
                     <div class="text-right hidden sm:block leading-tight">
-                        <span class="block text-[10px] text-gray-500 uppercase font-bold">Jugador</span>
+                        <span class="block text-[10px] text-gray-500 uppercase font-bold">{{ t('nav_jugador', user.country_code) }}</span>
                         <span class="block text-sm font-bold text-white">{{ user.nick }}</span>
                     </div>
                     
@@ -118,7 +118,7 @@
                         </button>
                     </form>
                 {% else %}
-                    <a href="/login" class="text-sm text-yellow-400 font-bold hover:underline">Ingresar</a>
+                    <a href="/login" class="text-sm text-yellow-400 font-bold hover:underline">{{ t('nav_ingresar', 'AR') }}</a>
                 {% endif %}
             </div>
         </div>
@@ -207,9 +207,9 @@
 
     <dialog id="updateRequiredModal" class="bg-slate-900 text-white p-8 rounded-2xl border-2 border-red-500 backdrop:bg-slate-950/95 w-full max-w-sm shadow-2xl m-auto text-center" style="pointer-events: auto; z-index: 9999;">
         <div class="text-6xl mb-4 animate-bounce">🚀</div>
-        <h3 class="text-xl font-black text-yellow-400 mb-2">¡Nueva Versión Disponible!</h3>
+        <h3 class="text-xl font-black text-yellow-400 mb-2">{{ t('update_title', user.country_code if user else 'AR') }}</h3>
         <p class="text-sm text-gray-300 mb-6 leading-relaxed">
-            Agregamos nuevas funciones y mejoras. Necesitás actualizar para seguir canjeando sin problemas.
+            {{ t('update_text', user.country_code if user else 'AR') }}
         </p>
         <button onclick="forceAppUpdate()" class="w-full bg-yellow-600 hover:bg-yellow-500 text-white font-bold py-3 px-4 rounded-xl shadow-lg shadow-yellow-900/50 transform active:scale-95 transition text-lg">
             Actualizar Ahora 🔄

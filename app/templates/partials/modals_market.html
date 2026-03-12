@@ -28,7 +28,7 @@
                 <div class="flex-shrink-0 w-6 h-6 rounded-full bg-indigo-900 text-indigo-300 flex items-center justify-center font-bold text-xs border border-indigo-500/30">1</div>
                 <div>
                     <strong class="text-indigo-300 block text-xs">Vos → Puente</strong>
-                    <span class="text-xs text-gray-400">Le das una repe al Puente.</span>
+                    <span class="text-xs text-gray-400">{{ t('repe_al_puente', user.country_code) }}</span>
                 </div>
             </div>
 
@@ -44,7 +44,7 @@
                 <div class="flex-shrink-0 w-6 h-6 rounded-full bg-green-900 text-green-300 flex items-center justify-center font-bold text-xs border border-green-500/30">3</div>
                 <div>
                     <strong class="text-white block text-xs">Dueño → Vos</strong>
-                    <span class="text-xs text-gray-400">¡El Dueño te da a vos la figurita que buscás! 🎯</span>
+                    <span class="text-xs text-gray-400">{{ t('dueño_te_da_figurita', user.country_code) }}</span>
                 </div>
             </div>
         </div>
@@ -54,7 +54,7 @@
             <div>
                 <strong class="text-indigo-300 block text-xs mb-1 uppercase tracking-wider">Requisito</strong>
                 <p class="text-xs text-gray-300">
-                    Para que la logística sea fácil, el sistema solo busca figuritas marcadas como <strong class="text-indigo-300">WISHLIST</strong> y "Puentes" que vivan en tu misma zona:
+                    {{ t('busca_figuritas_marcadas', user.country_code) }} <strong class="text-indigo-300">WISHLIST</strong> y "Puentes" que vivan en tu misma zona:
                     <br>
                     <strong class="text-white mt-1.5 block text-sm border-l-2 border-indigo-500 pl-2">
                         {{ user.zone }} / {{ user.province }}
@@ -74,14 +74,14 @@
 <dialog id="triangulationInputModal" class="bg-slate-900 text-white p-6 rounded-xl border border-indigo-500/50 w-full max-w-sm shadow-2xl backdrop:bg-slate-900/90">
     <div class="flex justify-between items-start mb-4">
         <h3 class="text-lg font-bold text-white flex items-center gap-2">
-            <span>🎯</span> Figurita Objetivo
+            <span>🎯</span> {{ t('figurita_objetivo', user.country_code) }}
         </h3>
         <button onclick="document.getElementById('triangulationInputModal').close()" class="text-gray-400 hover:text-white transition">✕</button>
     </div>
 
     <div class="bg-yellow-900/20 border border-yellow-700/50 rounded p-3 mb-5">
         <p class="text-xs text-yellow-200">
-            ⚠️ <strong>Importante:</strong> Para participar en una triangulación, la figurita debe estar marcada previamente como <strong>Wishlist</strong> en tu álbum.
+            ⚠️ <strong>Importante:</strong> {{ t('participar_triangulacion', user.country_code) }} <strong>Wishlist</strong> en tu álbum.
         </p>
     </div>
 
@@ -97,7 +97,7 @@
                 <select id="targetStickerInput" name="sticker" required class="w-full bg-slate-800 border border-slate-600 rounded px-3 py-3 text-white focus:border-indigo-500 outline-none appearance-none font-mono text-center tracking-wide cursor-pointer hover:bg-slate-700 transition">
                     
                     {% if wishlist %}
-                        <option value="" disabled selected>-- Elegí una figurita --</option>
+                        <option value="" disabled selected>{{ t('elegi_una_figurita', user.country_code) }}</option>
                         {% for item in wishlist %}
                             <option value="{{ item.num }}">{{ item.name }}</option>
                         {% endfor %}
@@ -136,6 +136,13 @@
     <div id="resultsContainer" class="p-4 space-y-4 overflow-y-auto max-h-[70vh] bg-slate-900">
         </div>
 </dialog>
+
+<script>
+    window.MARKET_MODAL_I18N = {
+        ver_figurita_app: "{{ t('ver_figurita_en_app', user.country_code) }}",
+        no_triangulaciones: "{{ t('no_triangulaciones_posibles', user.country_code) }}"
+    };
+</script>
 
 <script>
     async function startTriangulationSearch(e) {
@@ -188,7 +195,7 @@
                 renderResults(data.results);
                 document.getElementById('triangulationResultsModal').showModal();
             } else {
-                alert(data.message || "❌ No se encontraron triangulaciones posibles en tu zona para esta figurita hoy.");
+                alert(data.message || window.MARKET_MODAL_I18N.no_triangulaciones);
             }
 
         } catch (error) {
@@ -220,7 +227,7 @@ Vi en *Canje AlToque 26* que tenés la *${t.bridge_sticker.name}* y buscás la *
 
 ¿Te copa? Avisame y coordinamos. 📐⚽
 
-📲 *Ver figurita en la App:*
+📲 *${window.MARKET_MODAL_I18N.ver_figurita_app}*
 ${deepLink}
 
 🛡️ *Puntos de canje recomendados:*

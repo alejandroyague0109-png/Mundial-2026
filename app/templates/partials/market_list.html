@@ -3,6 +3,12 @@
     // INYECCIÓN DE REPETIDAS DEL USUARIO
     window.myDuplicatesData = {{ my_duplicates_json | safe }};
     window.currentUserNick = "{{ user.nick }}";
+    
+    // Inyectamos traducciones para usarlas en Javascript
+    window.MARKET_I18N = {
+        compra_titulo: "{{ t('wsp_compra_figurita', user.country_code) }}"
+    };
+    
     document.dispatchEvent(new CustomEvent('data-ready'));
 </script>
 
@@ -94,7 +100,7 @@
                                     <div class="flex flex-col gap-1 w-full">
                                         <template x-for="match in card.matches">
                                             <div class="bg-blue-600/20 border border-blue-500/50 text-blue-200 text-[10px] font-bold px-2 py-1 rounded relative">
-                                                <span class="block text-[8px] text-blue-400 uppercase">Vos tenés:</span>
+                                                <span class="block text-[8px] text-blue-400 uppercase">{{ t('vos_tenes', user.country_code) }}</span>
                                                 <span x-text="match.name"></span>
                                             </div>
                                         </template>
@@ -161,7 +167,7 @@
                 <div class="text-4xl mb-2 grayscale opacity-50">💨</div>
                 <p class="text-gray-400">No hay nada por aquí.</p>
                 <template x-if="tab === 'pendientes'">
-                    <p class="text-xs text-gray-500 mt-2">No tenés negociaciones activas. ¡Buscá figuritas!</p>
+                    <p class="text-xs text-gray-500 mt-2">No tenés negociaciones activas. {{ t('busca_figuritas', user.country_code) }}</p>
                 </template>
             </div>
         </template>
@@ -177,7 +183,7 @@
 
         <div x-show="currentCard" class="space-y-4">
             <div class="bg-slate-900 p-3 rounded border border-slate-700 text-sm text-gray-300 text-center">
-                Figurita: <strong class="text-white" x-text="currentCard?.sticker_name"></strong><br>
+                {{ t('figurita', user.country_code).capitalize() }}: <strong class="text-white" x-text="currentCard?.sticker_name"></strong><br>
                 De: <span x-text="currentCard?.owner.nick"></span>
             </div>
 
@@ -206,7 +212,7 @@
                 <button @click="actionComplete()" class="w-full py-2 bg-green-700 hover:bg-green-600 rounded font-bold text-sm shadow-lg">
                     Confirmar Intercambio
                 </button>
-                <p class="text-[9px] text-gray-500 text-center mt-1">Se sumará la figurita a tu álbum.</p>
+                <p class="text-[9px] text-gray-500 text-center mt-1">{{ t('se_sumara_figurita', user.country_code) }}</p>
             </div>
 
             <div class="border-t border-slate-700 pt-4">
@@ -282,7 +288,6 @@
                     if (res.ok) {
                         this.currentCard.rating_given = true;
                         alert("¡Reputación enviada! ⭐");
-                        // Aquí NO recargamos porque no afecta inventario, solo UI
                     } else {
                         alert("Error al enviar calificación.");
                     }
@@ -300,7 +305,6 @@
 
                     if (res.ok) {
                         alert("¡Fichaje completado! 🎉 Se actualizó tu álbum.");
-                        // RECARGA OBLIGATORIA para actualizar inventario y selector de repetidas
                         window.location.reload(); 
                     } else {
                         alert("Error al completar la transacción.");
@@ -315,7 +319,6 @@
                 try {
                     const res = await fetch(`/market/log/${this.currentCard.log_id}/cancel`, { method: 'POST' });
                     if (res.ok) {
-                        // RECARGA OBLIGATORIA para limpiar la lista limpiamente
                         window.location.reload();
                     } else {
                         alert("Error al cancelar.");
@@ -345,8 +348,6 @@
                         card.owner.phone = data.phone;
                         card.is_pending = true; 
                         this.openWhatsapp(card);
-                        // En este caso NO recargamos, solo movemos la tarjeta visualmente
-                        // para que la experiencia sea fluida mientras negocia.
                         this.allCards = [...this.allCards];
                     } else if (response.status === 403) {
                         const pModal = document.getElementById('premiumModal');
@@ -378,14 +379,13 @@
 
                 if (card.is_sale) {
                     // --- MODO VENTA ---
-                    text += `\uD83D\uDCB0 *COMPRA DE FIGURITA*\n`;
+                    text += `\uD83D\uDCB0 *${window.MARKET_I18N.compra_titulo}*\n`;
                     text += `-----------------------------------\n`; 
                     text += `Quiero la: *${card.sticker_name}*\n`;
                     text += `Precio: *$${card.price}*\n`;
                     text += `-----------------------------------\n\n`;
                     text += `¿La tenés disponible hoy? \uD83D\uDCB8`;
 
-                    const countryCode = card.sticker_name.split(' ')[0];
                     deepLink = `https://canjealtoque26.com/`;
 
                 } else {
@@ -403,9 +403,6 @@
                     text += `-----------------------------------\n\n`;
                     text += `¿Te sirve el cambio? \uD83E\uDD14`;
 
-                    // --- CORRECCIÓN AQUÍ ---
-                    // Usamos la variable global que definimos arriba.
-                    // Si por alguna razón falla, no ponemos filtro de nick.
                     const myNick = window.currentUserNick || "";
                     
                     deepLink = `https://canjealtoque26.com/market?nick=${encodeURIComponent(myNick)}`;
@@ -414,7 +411,6 @@
                 // 2. AGREGAR EL LINK INTELIGENTE AL FINAL
                 text += `\n\n📲 *Ver posibles canjes:* ${deepLink}`;
 
-                // --- NUEVO: AGREGAR EL LINK DE PUNTOS SEGUROS ---
                 text += `\n\n🛡️ *Puntos de canje recomendados:*\nhttps://canjealtoque26.com/safe-spots`;
 
                 return `https://api.whatsapp.com/send?phone=${phone}&text=${encodeURIComponent(text)}`;
