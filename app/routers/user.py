@@ -1,5 +1,6 @@
 import os
 import mercadopago
+import httpx  # <-- AGREGAR ESTO PARA PAYPAL
 from fastapi import APIRouter, Depends, Request, Form, Response
 from fastapi.responses import RedirectResponse
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -113,79 +114,156 @@ async def update_telegram(
 # ==============================================================================
 #   INTEGRACIÓN MERCADO PAGO: CHECKOUT PRO (AUTOMÁTICO) + WEBHOOKS
 # ==============================================================================
-
-# --- 4. CREAR PREFERENCIA (Al hacer clic en "Activar Premium") ---
+# --- 4. CREAR PREFERENCIA (MERCADO PAGO O PAYPAL) ---
 @router.get("/create_preference")
 async def create_preference(
     request: Request, 
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user) 
 ):
-    print(f"--- 🚀 INTENTO DE PAGO: Usuario {current_user.id} ---")
-
-    token = os.getenv("MP_ACCESS_TOKEN")
-    if not token:
-        return {"error": "Falta Token MP"}
-
-    sdk = mercadopago.SDK(token)
-    
-    # --- CORRECCIÓN FINAL: URL REAL ---
-    # Usamos tu dominio real directamente para asegurar que MP lo acepte.
-    # (Si cambias de dominio en el futuro, recuerda actualizar esto o usar una variable de entorno DOMAIN)
+    print(f"--- 🚀 INTENTO DE PAGO: Usuario {current_user.id} - País: {current_user.country_code} ---")
     base_url = "https://mundial-2026-production.up.railway.app"
+    country = current_user.country_code if current_user.country_code else "AR"
 
-    preference_data = {
-        "items": [
-            {
-                "id": "premium_upgrade",
-                "title": "Suscripción Premium - Canje AlToque 26",
-                "quantity": 1,
-                "currency_id": "ARS",
-                "unit_price": 5000.0
-            }
-        ],
-        "payer": {
-            # Email genérico obligatorio
-            "email": "usuario_app@canjealtoque.com" 
-        },
-        "back_urls": {
-            # Definimos explícitamente a dónde volver
-            "success": f"{base_url}/payment_callback",
-            "failure": f"{base_url}/payment_callback",
-            "pending": f"{base_url}/payment_callback"
-        },
-        "auto_return": "approved", # Esto obliga a que back_urls.success exista y sea válido
-        
-        "notification_url": f"{base_url}/webhook", 
-        "external_reference": str(current_user.id),
-        
-        "payment_methods": {
-            "excluded_payment_types": [{"id": "ticket"}, {"id": "atm"}]
+    # --- FLUJO ARGENTINA: MERCADO PAGO ---
+    if country == "AR":
+        token = os.getenv("MP_ACCESS_TOKEN")
+        if not token: return {"error": "Falta Token MP"}
+
+        sdk = mercadopago.SDK(token)
+        preference_data = {
+            "items": [{
+                "id": "premium_upgrade", "title": "Suscripción Premium - Canje AlToque 26",
+                "quantity": 1, "currency_id": "ARS", "unit_price": 4999.99
+            }],
+            "payer": {"email": "usuario_app@canjealtoque.com"},
+            "back_urls": {
+                "success": f"{base_url}/payment_callback",
+                "failure": f"{base_url}/payment_callback",
+                "pending": f"{base_url}/payment_callback"
+            },
+            "auto_return": "approved",
+            "notification_url": f"{base_url}/webhook", 
+            "external_reference": str(current_user.id),
+            "payment_methods": {"excluded_payment_types": [{"id": "ticket"}, {"id": "atm"}]}
         }
-    }
 
-    try:
-        result = sdk.preference().create(preference_data)
-        response_body = result.get("response", {})
-        
-        if result.get("status") not in [200, 201]:
-            print(f"❌ ERROR MP DETALLE: {response_body}")
-            return {
-                "error": "Rechazado por Mercado Pago",
-                "detalle": response_body
-            }
+        try:
+            result = sdk.preference().create(preference_data)
+            response_body = result.get("response", {})
+            if result.get("status") not in [200, 201]:
+                return {"error": "Rechazado por Mercado Pago", "detalle": response_body}
 
-        # Elegir link (Sandbox o Prod)
-        url = response_body.get("init_point")
-        if "TEST" in token:
-            url = response_body.get("sandbox_init_point")
-            
-        print(f"✅ LINK OK: {url}")
-        return RedirectResponse(url=url, status_code=303)
+            url = response_body.get("init_point")
+            if "TEST" in token: url = response_body.get("sandbox_init_point")
+            return RedirectResponse(url=url, status_code=303)
+        except Exception as e:
+            return {"error": str(e)}
 
-    except Exception as e:
-        print(f"❌ CRASH: {e}")
-        return {"error": str(e)}
+    # --- FLUJO RESTO DEL MUNDO: PAYPAL ---
+    else:
+        client_id = os.getenv("PAYPAL_CLIENT_ID")
+        secret = os.getenv("PAYPAL_SECRET")
+        mode = os.getenv("PAYPAL_MODE", "sandbox") 
+
+        if not client_id or not secret:
+            return {"error": "Faltan credenciales de PayPal."}
+
+        api_base = "https://api-m.paypal.com" if mode == "live" else "https://api-m.sandbox.paypal.com"
+
+        async with httpx.AsyncClient() as client:
+            try:
+                # 1. Autenticar con PayPal
+                auth_res = await client.post(
+                    f"{api_base}/v1/oauth2/token",
+                    auth=(client_id, secret),
+                    data={"grant_type": "client_credentials"}
+                )
+                access_token = auth_res.json().get("access_token")
+                if not access_token: return {"error": "Error auth PayPal"}
+
+                # 2. Crear Orden de 4 USD
+                order_payload = {
+                    "intent": "CAPTURE",
+                    "purchase_units": [{
+                        "reference_id": str(current_user.id),
+                        "description": "Suscripción Premium - Canje AlToque 26",
+                        "amount": {"currency_code": "USD", "value": "3.99"}
+                    }],
+                    "application_context": {
+                        "return_url": f"{base_url}/paypal_capture", # <-- LIMPIO, SIN USER ID
+                        "cancel_url": f"{base_url}/?payment_error=true",
+                        "brand_name": "Canje AlToque 26",
+                        "user_action": "PAY_NOW"
+                    }
+                }
+
+                order_res = await client.post(
+                    f"{api_base}/v2/checkout/orders",
+                    headers={"Authorization": f"Bearer {access_token}", "Content-Type": "application/json"},
+                    json=order_payload
+                )
+                order_data = order_res.json()
+
+                # 3. Redirigir al link de pago
+                for link in order_data.get("links", []):
+                    if link.get("rel") == "approve":
+                        return RedirectResponse(url=link["href"], status_code=303)
+                return {"error": "PayPal no devolvió link", "detalle": order_data}
+
+            except Exception as e:
+                print(f"❌ Error PayPal: {e}")
+                return {"error": "Error conectando con PayPal"}
+
+# --- NUEVA RUTA: CAPTURA DE PAYPAL (El usuario vuelve de PayPal) ---
+# --- NUEVA RUTA: CAPTURA DE PAYPAL (El usuario vuelve de PayPal) ---
+@router.get("/paypal_capture")
+async def paypal_capture(request: Request, token: str, db: AsyncSession = Depends(get_db)):
+    
+    # 🛡️ SEGURIDAD: Obtenemos el usuario de la cookie, es inhackeable por URL
+    user_id_cookie = request.cookies.get("user_id")
+    if not user_id_cookie:
+        return RedirectResponse(url="/?payment_error=true", status_code=303)
+    user_id = int(user_id_cookie)
+
+    client_id = os.getenv("PAYPAL_CLIENT_ID")
+    secret = os.getenv("PAYPAL_SECRET")
+    
+    # ... (el resto del código de la función queda exactamente igual) ...
+    mode = os.getenv("PAYPAL_MODE", "sandbox")
+    api_base = "https://api-m.paypal.com" if mode == "live" else "https://api-m.sandbox.paypal.com"
+
+    async with httpx.AsyncClient() as client:
+        try:
+            # 1. Autenticación
+            auth_res = await client.post(
+                f"{api_base}/v1/oauth2/token",
+                auth=(client_id, secret),
+                data={"grant_type": "client_credentials"}
+            )
+            access_token = auth_res.json().get("access_token")
+
+            # 2. Capturar Fondos (PayPal exige hacer esto para confirmar el cobro)
+            capture_res = await client.post(
+                f"{api_base}/v2/checkout/orders/{token}/capture",
+                headers={"Authorization": f"Bearer {access_token}", "Content-Type": "application/json"}
+            )
+            capture_data = capture_res.json()
+
+            # 3. Validar y dar Premium
+            if capture_data.get("status") == "COMPLETED":
+                await db.execute(update(User).where(User.id == user_id).values(is_premium=True))
+                await db.commit()
+                print(f"✅ PayPal Success: Usuario {user_id} es Premium.")
+                return RedirectResponse(url="/?payment_success=true", status_code=303)
+            else:
+                print(f"❌ PayPal Falla/Pendiente: {capture_data}")
+                return RedirectResponse(url="/?payment_error=true", status_code=303)
+                
+        except Exception as e:
+            print(f"Error procesando captura de PayPal: {e}")
+            return RedirectResponse(url="/?payment_error=true", status_code=303)
+
 
 # --- 5. WEBHOOK (Notificación Invisible) ---
 @router.post("/webhook")
@@ -374,4 +452,3 @@ async def delete_account(request: Request, db: AsyncSession = Depends(get_db)):
     response = RedirectResponse(url="/?deleted=true", status_code=303)
     response.delete_cookie("user_id") # Borramos la cookie de sesión
     return response
-
