@@ -10,7 +10,7 @@ import sentry_sdk # Nuevo import
 
 # Imports internos
 from app.database import engine, Base
-from app.routers import auth, album, users, market, triangulation, safe_spots, heatmap
+from app.routers import auth, album, user, market, triangulation, safe_spots, heatmap
 from app import models 
 from app.data_album import ALBUM_STRUCTURE # Necesario para el helper
 
