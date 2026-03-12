@@ -292,7 +292,11 @@ async def batch_country_action(request: Request, country_code: str, action: str,
 
     response_html = (await get_country_view(request, country_code, db)).body.decode("utf-8")
     stats = await calculate_user_stats(user_id, db)
-    stats_html = templates.TemplateResponse("partials/stats_bar.html", {"request": request, "stats": stats, "oob": True}).body.decode("utf-8")
+    # Así debe quedar:
+stats_html = templates.TemplateResponse(
+    "partials/stats_bar.html", 
+    {"request": request, "user": current_user_obj, "stats": stats, "oob": True} # <--- Agregamos "user": current_user_obj
+).body.decode("utf-8")
     return HTMLResponse(content=response_html + stats_html)
 
 @router.post("/update_item/{sticker_num}")

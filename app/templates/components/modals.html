@@ -264,7 +264,7 @@
 
     <form hx-post="/quick_load" hx-target="#dynamic-content" class="space-y-4">
         <div>
-            <label class="block text-xs font-bold text-gray-400 mb-1 uppercase">1. Elegí el Equipo</label>
+            <label class="block text-xs font-bold text-gray-400 mb-1 uppercase">1. Elige el Equipo</label>
             <select name="country_code" class="w-full bg-slate-900 border border-slate-600 rounded px-3 py-2 text-white focus:border-yellow-500 outline-none">
                 {% for code, info in album_structure.items() %}
                 <option value="{{ code }}">{{ info.name }}</option>
@@ -415,8 +415,8 @@
     
     <div class="text-center mb-4">
         <h3 id="premiumTitle" class="text-2xl font-bold text-white mb-1">🚀 ¡No pierdas la oportunidad!</h3>
-        <p id="premiumSubtitle" class="text-sm text-gray-400">Tenés <strong class="text-white">1 contacto gratis</strong> por día.</p>
-        <p class="text-sm text-yellow-400 font-bold mt-1">Jugá en Primera con Premium:</p>
+        <p id="premiumSubtitle" class="text-sm text-gray-400">Tienes <strong class="text-white">1 contacto gratis</strong> por día.</p>
+        <p class="text-sm text-yellow-400 font-bold mt-1">Juega en Primera con Premium:</p>
     </div>
 
     <div class="space-y-3 text-xs mb-6 bg-slate-900/50 p-4 rounded-lg border border-slate-700">
@@ -446,7 +446,7 @@
     </div>
 </div>
 
-    <<div class="mb-6 text-center">
+    <div class="mb-6 text-center">
         <div class="relative inline-block bg-slate-950/80 border border-slate-600 rounded-xl px-10 py-5 shadow-[0_0_15px_rgba(0,0,0,0.5)] backdrop-blur-md">
             
             <span class="absolute -top-3 left-1/2 -translate-x-1/2 bg-green-500 text-slate-950 text-[10px] font-black px-3 py-1 rounded-full uppercase tracking-tighter whitespace-nowrap shadow-lg">
@@ -455,7 +455,7 @@
 
             <div class="flex items-baseline justify-center gap-1.5">
                 <span class="text-3xl font-bold text-white tracking-tight">
-                    Solo {% if user.country_code == 'AR' %}Solo $4.999 ARS{% else %}Solo 3.99 USD{% endif %}
+                    Solo {% if user.country_code == 'AR' %}$4.999 ARS{% else %}3.99 USD{% endif %}
                 </span>
             </div>
             <p class="text-[10px] text-slate-600 mt-1">Pago único • Acceso por todo el Mundial</p>
@@ -655,17 +655,17 @@
         
         <div>
             <h4 class="font-bold text-white text-base">{{ t('como_cargar_volando', user.country_code) }}</h4>
-            <p class="mt-1 text-gray-400">Olvidate de buscar número por número. Hacelo por país.</p>
+            <p class="mt-1 text-gray-400">Olvidate de buscar número por número. Hazlo por país.</p>
         </div>
 
         <div class="space-y-3 bg-slate-900/50 p-3 rounded-lg border border-slate-700">
             <div>
-                <strong class="text-white block mb-1">1. Elegí el Equipo:</strong>
+                <strong class="text-white block mb-1">1. Elige el Equipo:</strong>
                 <span class="text-gray-400">(Ej: Argentina).</span>
             </div>
             <div>
-                <strong class="text-white block mb-1">2. Escribí los números:</strong>
-                <span class="text-gray-400">Usá comas, espacios, enters o guiones para rangos.</span>
+                <strong class="text-white block mb-1">2. Escribe los números:</strong>
+                <span class="text-gray-400">Usa comas, espacios, enters o guiones para rangos.</span>
             </div>
             <div class="text-xs bg-slate-800 p-2 rounded border border-slate-600 font-mono text-yellow-200">
                 Ejemplo: 1, 2, 5-10, 15 <br>
@@ -688,7 +688,7 @@
                 <div class="w-4 h-4 rounded bg-green-600 border border-green-400 mt-0.5 flex-shrink-0"></div>
                 <div>
                     <strong class="text-green-300">Repetidas:</strong>
-                    <p class="text-xs leading-relaxed">Las que tenés para cambiar. <span class="text-yellow-200 font-semibold">Si ponés una acá, el sistema asume que la TENÉS.</span> No hace falta ponerla en la caja azul.</p>
+                    <p class="text-xs leading-relaxed">Las que tienes para cambiar. <span class="text-yellow-200 font-semibold">Si ponés una acá, el sistema asume que la TENÉS.</span> No hace falta ponerla en la caja azul.</p>
                 </div>
             </div>
 
@@ -696,7 +696,7 @@
                 <div class="w-4 h-4 rounded bg-red-600 border border-red-400 mt-0.5 flex-shrink-0"></div>
                 <div>
                     <strong class="text-red-300">Wishlist:</strong>
-                    <p class="text-xs leading-relaxed">Las que te faltan. Si el sistema detecta que ya la tenés (o es repe), la ignora para evitar errores.</p>
+                    <p class="text-xs leading-relaxed">Las que te faltan. Si el sistema detecta que ya la tienes (o es repetida), la ignora para evitar errores.</p>
                 </div>
             </div>
         </div>
