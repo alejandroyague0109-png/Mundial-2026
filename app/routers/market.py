@@ -27,6 +27,11 @@ router = APIRouter(tags=["Market"])
 BASE_DIR = Path(__file__).resolve().parent.parent
 templates = Jinja2Templates(directory=str(BASE_DIR / "templates"))
 
+# --- NUEVO: Inyectamos el traductor globalmente al HTML ---
+from app.translations import t
+templates.env.globals["t"] = t
+# ----------------------------------------------------------
+
 # --- SCHEMAS ACTUALIZADO ---
 class CompleteTransactionSchema(BaseModel):
     given_sticker_num: int = 0  # Cambiamos str por int (0 si no entregó nada)

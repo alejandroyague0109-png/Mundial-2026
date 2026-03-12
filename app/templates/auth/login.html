@@ -6,7 +6,7 @@
     <title>Acceso - Canje AlToque 26</title>
 
     <meta property="og:title" content="Canje AlToque 26">
-    <meta property="og:description" content="Control e Intercambio de Figuritas Cerca Tuyo. ¡Completá el álbum antes que nadie!">
+    <meta property="og:description" content="Control e Intercambio de Figuritas Cerca Tuyo. ¡Completa el álbum antes que nadie!">
     <meta property="og:url" content="https://canjealtoque26.com/">
     <meta property="og:type" content="website">
     
@@ -76,7 +76,7 @@
             <div class="p-6">
                 
                 <form x-show="view === 'login'" action="/login" method="POST" class="space-y-5 animate-fade-in">
-                    <label class="block text-xs font-medium text-gray-400 mb-1">Celular</label>
+                    <label class="block text-xs font-medium text-gray-400 mb-1">Móvil</label>
                     <div class="flex gap-2">
                         <select x-model="pais" name="country_code" class="w-1/4 px-2 py-3 bg-slate-900 border border-slate-600 rounded-lg focus:outline-none focus:border-yellow-500 focus:ring-1 focus:ring-yellow-500 transition text-lg text-center cursor-pointer">
                             <template x-for="c in countries" :key="c.code">
@@ -84,7 +84,7 @@
                             </template>
                         </select>
                         
-                        <input name="phone" type="tel" required placeholder="Tu número local" 
+                        <input name="phone" type="tel" required placeholder="Tu número de teléfono" 
                             class="w-3/4 px-4 py-3 bg-slate-900 border border-slate-600 rounded-lg focus:outline-none focus:border-yellow-500 focus:ring-1 focus:ring-yellow-500 transition text-sm text-white">
                     </div>
                     <div>
@@ -113,7 +113,7 @@
                                 class="w-full px-3 py-2 bg-slate-900 border border-slate-600 rounded focus:border-yellow-500 focus:outline-none text-sm text-white">
                         </div>
                         <div>
-                            <label class="block text-[10px] text-gray-400 uppercase font-bold mb-1">Celular</label>
+                            <label class="block text-[10px] text-gray-400 uppercase font-bold mb-1">Móvil</label>
                             <input name="phone" type="tel" required placeholder="Ingresa tu número" pattern="[0-9]+"
                                 class="w-full px-3 py-2 bg-slate-900 border border-slate-600 rounded focus:border-yellow-500 focus:outline-none text-sm text-white">
                         </div>
@@ -132,7 +132,7 @@
                         <div>
                             <label class="block text-[10px] text-gray-400 uppercase font-bold mb-1">Provincia / Región</label>
                             <select x-model="provincia" name="province" required class="w-full px-3 py-2 bg-slate-900 border border-slate-600 rounded focus:border-yellow-500 focus:outline-none text-sm text-white">
-                                <option value="" disabled>Elegir...</option>
+                                <option value="" disabled>Seleccionar...</option>
                                 <template x-for="(zonas, prov) in (pais ? locations[pais] : {})" :key="prov">
                                     <option :value="prov" x-text="prov"></option>
                                 </template>
@@ -141,7 +141,7 @@
                         <div>
                             <label class="block text-[10px] text-gray-400 uppercase font-bold mb-1">Zona / Comuna</label>
                             <select x-model="zona" name="zone" required :disabled="!provincia" class="w-full px-3 py-2 bg-slate-900 border border-slate-600 rounded focus:border-yellow-500 focus:outline-none text-sm text-white disabled:opacity-50">
-                                <option value="" disabled>Elegir...</option>
+                                <option value="" disabled>Seleccionar...</option>
                                 <template x-for="z in (pais && provincia ? locations[pais][provincia] : [])" :key="z">
                                     <option :value="z" x-text="z"></option>
                                 </template>
@@ -162,7 +162,7 @@
                         
                         <div class="mb-3 p-2 bg-yellow-900/20 border border-yellow-600/40 rounded text-center">
                             <p class="text-[10px] text-yellow-200 font-bold leading-tight">
-                                ⚠️ ¡Esta es la ÚNICA forma de recuperar tu cuenta si olvidás la contraseña!
+                                ⚠️ ¡Esta es la ÚNICA forma de recuperar tu cuenta si olvidas la contraseña!
                             </p>
                         </div>
 
@@ -198,7 +198,7 @@
                 <div x-show="view === 'recovery'" class="animate-fade-in space-y-4" x-cloak>
                     <div class="text-center mb-4">
                         <h3 class="text-lg font-bold text-white">Recuperar Cuenta</h3>
-                        <p class="text-xs text-gray-400">Ingresá tu celular para validar identidad.</p>
+                        <p class="text-xs text-gray-400">Ingresa tu celular para validar tu identidad.</p>
                     </div>
 
                     <div id="recovery-container">
@@ -214,7 +214,7 @@
                                         <option :value="c.code" x-text="c.flag"></option>
                                     </template>
                                 </select>
-                                <input name="phone" type="tel" required placeholder="Celular registrado" 
+                                <input name="phone" type="tel" required placeholder="Móvil registrado" 
                                     class="w-3/4 px-4 py-3 bg-slate-900 border border-slate-600 rounded-lg focus:border-yellow-500 text-sm text-white">
                             </div>
 
@@ -228,7 +228,7 @@
                         </form>
 
                         <div class="htmx-error-message text-red-400 text-xs text-center mt-2 hidden">
-                            Error de conexión. Intentá de nuevo.
+                            Error de conexión. Intenta de nuevo.
                         </div>
                     </div>
 
@@ -250,7 +250,7 @@
             <p><strong>Esta aplicación es exclusiva para mayores de 18 años.</strong></p>
             <p>Facilitamos el contacto entre coleccionistas, pero <strong>no intervenimos en los canjes</strong> ni nos hacemos responsables por las transacciones.</p>
             <div class="bg-slate-950 p-2 rounded text-xs text-gray-500 text-center border border-slate-800">
-                "Al continuar, declarás bajo juramento que sos mayor de edad."
+                "Al continuar, declaras bajo juramento que eres mayor de edad."
             </div>
         </div>
         <div class="p-4 bg-slate-950 border-t border-slate-800">
@@ -323,7 +323,7 @@
             <div>
                 <h4 class="font-bold text-white mb-2">5. PRIVACIDAD Y DATOS</h4>
                 <p>
-                    Su número de teléfono se mantendrá encriptado y solo será revelado a otro usuario cuando este utilice explícitamente la función "Contactar" bajo el sistema de créditos o suscripción Premium. 
+                    Su número de teléfono se mantendrá encriptado y solo será revelado a otro usuario cuando este utilice explícitamente la función "Contactar" o "Negociar" bajo el sistema de créditos o suscripción Premium. 
                     No recolectamos datos fiscales innecesarios para operaciones de bajo monto.
                 </p>
             </div>

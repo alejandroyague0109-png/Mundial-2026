@@ -20,6 +20,11 @@ router = APIRouter(tags=["Album"])
 BASE_DIR = Path(__file__).resolve().parent.parent
 templates = Jinja2Templates(directory=str(BASE_DIR / "templates"))
 
+# --- NUEVO: Inyectamos el traductor globalmente al HTML ---
+from app.translations import t
+templates.env.globals["t"] = t
+# ----------------------------------------------------------
+
 def format_sticker(sticker_num):
     for code, data in ALBUM_STRUCTURE.items():
         if data["start"] <= sticker_num < data["start"] + data["count"]:

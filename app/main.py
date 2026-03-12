@@ -98,6 +98,11 @@ app.mount("/static", StaticFiles(directory=str(BASE_DIR / "static")), name="stat
 # 2. Plantillas Jinja2 y Helpers
 templates = Jinja2Templates(directory=str(BASE_DIR / "templates"))
 
+# --- NUEVO: Inyectamos el traductor globalmente al HTML ---
+from app.translations import t
+templates.env.globals["t"] = t
+# ----------------------------------------------------------
+
 # --- HELPER: Formatear nombre de figurita (Ej: 19 -> ARG 1) ---
 def format_sticker(sticker_num):
     for code, data in ALBUM_STRUCTURE.items():

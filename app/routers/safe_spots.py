@@ -16,6 +16,11 @@ router = APIRouter(tags=["Safe Spots"])
 BASE_DIR = Path(__file__).resolve().parent.parent
 templates = Jinja2Templates(directory=str(BASE_DIR / "templates"))
 
+# --- NUEVO: Inyectamos el traductor globalmente al HTML ---
+from app.translations import t
+templates.env.globals["t"] = t
+# ----------------------------------------------------------
+
 # 1. RUTA PRINCIPAL (PÚBLICA Y ADAPTATIVA)
 @router.get("/safe-spots", response_class=HTMLResponse)
 async def view_safe_spots(
