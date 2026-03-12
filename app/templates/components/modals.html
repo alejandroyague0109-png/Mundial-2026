@@ -362,38 +362,36 @@
     
     <form hx-post="/update_profile" hx-target="#profile-response" class="space-y-4">
         <div>
-            <label class="text-xs text-gray-400 font-bold uppercase">Provincia</label>
-            <select name="province" class="w-full bg-slate-900 border border-slate-700 rounded px-2 py-2 text-sm text-white focus:border-yellow-500 outline-none"
-                hx-get="/locations/zones" hx-target="#zone-select" hx-trigger="change">
-                <option value="{{ user.province }}" selected>{{ user.province }}</option>
+            <label class="text-xs text-gray-400 font-bold uppercase">País</label>
+            <select name="country_code" class="w-full bg-slate-900 border border-slate-700 rounded px-2 py-2 text-sm text-white focus:border-yellow-500 outline-none"
+                hx-get="/locations/provinces" hx-target="#province-select" hx-trigger="change">
+                <option value="{{ user.country_code }}" selected>{{ user.country_code }}</option>
                 <option disabled>──────────</option>
-                {% for prov in locations.keys() %}
-                    {% if prov != user.province %}
-                    <option value="{{ prov }}">{{ prov }}</option>
-                    {% endif %}
-                {% endfor %}
+                <option value="AR">🇦🇷 Argentina</option>
+                <option value="UY">🇺🇾 Uruguay</option>
+                <option value="CL">🇨🇱 Chile</option>
             </select>
+        </div>
+
+        <div>
+            <label class="text-xs text-gray-400 font-bold uppercase">Provincia / Región</label>
+            <select id="province-select" name="province" class="w-full bg-slate-900 border border-slate-700 rounded px-2 py-2 text-sm text-white focus:border-yellow-500 outline-none"
+                hx-get="/locations/zones" hx-include="[name='country_code']" hx-target="#zone-select" hx-trigger="change">
+                <option value="{{ user.province }}" selected>{{ user.province }}</option>
+                </select>
         </div>
 
         <div>
             <label class="text-xs text-gray-400 font-bold uppercase">Localidad / Barrio</label>
             <select id="zone-select" name="zone" class="w-full bg-slate-900 border border-slate-700 rounded px-2 py-2 text-sm text-white focus:border-yellow-500 outline-none">
                 <option value="{{ user.zone }}" selected>{{ user.zone }}</option>
-                {% if user.province in locations %}
-                    {% for z in locations[user.province] %}
-                        {% if z != user.zone %}
-                        <option value="{{ z }}">{{ z }}</option>
-                        {% endif %}
-                    {% endfor %}
-                {% endif %}
-            </select>
+                </select>
         </div>
         
         <button type="submit" class="w-full mt-4 bg-slate-700 hover:bg-green-600 hover:text-white text-gray-200 font-bold py-2 rounded text-sm transition shadow-lg">
             💾 Guardar Ubicación
         </button>
     </form>
-</form>
 
     <div class="mt-8 pt-4 border-t border-slate-700">
         <h4 class="text-[10px] font-bold text-red-500 uppercase mb-2 tracking-wider">Zona de Peligro</h4>

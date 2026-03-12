@@ -9,7 +9,7 @@ from dotenv import load_dotenv
 
 from app.database import get_db
 from app.models import User
-from app.locations import ARGENTINA
+from app.locations import LOCATIONS_BY_COUNTRY
 # Importamos desde el nuevo archivo de dependencias
 from app.dependencies import get_current_user
 
@@ -20,17 +20,26 @@ router = APIRouter(tags=["User"])
 
 
 # --- 1. OBTENER LOCALIDADES (Cascading Select) ---
-@router.get("/locations/zones")
-async def get_zones_for_province(province: str):
-    zones = ARGENTINA.get(province, [])
-    options = f'<option value="" disabled selected>Seleccioná tu zona</option>'
-    options += "".join([f'<option value="{z}">{z}</option>' for z in zones])
+# --- NUEVO: OBTENER PROVINCIAS SEGÚN EL PAÍS ---
+@router.get("/locations/provinces")
+async def get_provinces_for_country(country_code: str):
+    from app.locations import LOCATIONS_BY_COUNTRY
+    country_data = LOCATIONS_BY_COUNTRY.get(country_code, {})
+    provinces = country_data.keys()
+    
+    options = '<option value="" disabled selected>Seleccioná tu provincia</option>'
+    options += "".join([f'<option value="{p}">{p}</option>' for p in provinces])
+    
+    # Truco de HTMX: Al cambiar el país, reseteamos también el select de la zona
+    options += '<script>document.getElementById("zone-select").innerHTML = \'<option value="" disabled selected>Seleccioná tu zona</option>\';</script>'
+    
     return Response(content=options, media_type="text/html")
 
 # --- 2. ACTUALIZAR PERFIL (SOLO UBICACIÓN) ---
 @router.post("/update_profile")
 async def update_profile(
     request: Request,
+    country_code: str = Form(...), # <-- Nuevo campo recibido
     province: str = Form(...),
     zone: str = Form(...),
     db: AsyncSession = Depends(get_db)
@@ -38,7 +47,7 @@ async def update_profile(
     user_id = request.cookies.get("user_id")
     if not user_id: return Response(status_code=401)
 
-    stmt = update(User).where(User.id == int(user_id)).values(province=province, zone=zone)
+    stmt = update(User).where(User.id == int(user_id)).values(country_code=country_code, province=province, zone=zone)
     await db.execute(stmt)
     await db.commit()
 
