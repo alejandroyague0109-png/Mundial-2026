@@ -19,11 +19,10 @@ load_dotenv()
 router = APIRouter(tags=["User"])
 
 
-# --- 1. OBTENER LOCALIDADES (Cascading Select) ---
-# --- NUEVO: OBTENER PROVINCIAS SEGÚN EL PAÍS ---
+# --- 1. OBTENER LOCALIDADES Y ZONAS (Cascading Select) ---
+
 @router.get("/locations/provinces")
-async def get_provinces_for_country(country_code: str):
-    from app.locations import LOCATIONS_BY_COUNTRY
+async def get_provinces_for_country(country_code: str = "AR"):
     country_data = LOCATIONS_BY_COUNTRY.get(country_code, {})
     provinces = country_data.keys()
     
@@ -33,6 +32,16 @@ async def get_provinces_for_country(country_code: str):
     # Truco de HTMX: Al cambiar el país, reseteamos también el select de la zona
     options += '<script>document.getElementById("zone-select").innerHTML = \'<option value="" disabled selected>Seleccioná tu zona</option>\';</script>'
     
+    return Response(content=options, media_type="text/html")
+
+@router.get("/locations/zones")
+async def get_zones_for_province(country_code: str = "AR", province: str = ""):
+    # Buscamos las zonas cruzando país y provincia
+    country_data = LOCATIONS_BY_COUNTRY.get(country_code, {})
+    zones = country_data.get(province, [])
+    
+    options = f'<option value="" disabled selected>Seleccioná tu zona</option>'
+    options += "".join([f'<option value="{z}">{z}</option>' for z in zones])
     return Response(content=options, media_type="text/html")
 
 # --- 2. ACTUALIZAR PERFIL (SOLO UBICACIÓN) ---
