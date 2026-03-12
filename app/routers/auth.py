@@ -294,3 +294,80 @@ async def recover_step2(
             </button>
         </div>
     """)
+
+# --- RUTA TEMPORAL PARA ARREGLAR TELÉFONOS VIEJOS ---
+@router.get("/api/migrate-phones-fix")
+async def migrate_phones_fix(db: AsyncSession = Depends(get_db)):
+    """
+    Busca usuarios con teléfonos viejos o afectados por el SQL manual 
+    (ej: 542604123456) y los formatea exactamente igual que los registros nuevos.
+    """
+    result = await db.execute(select(User))
+    users = result.scalars().all()
+    
+    migrados = 0
+    ya_correctos = 0
+    errores = 0
+    
+    for u in users:
+        raw_phone = u.phone_hash
+        if not raw_phone: 
+            continue
+            
+        needs_migration = False
+        number_to_parse = raw_phone
+        country_hint = "AR"
+        
+        # 1. Detectar el caso SQL (Empieza con 54 y tiene 12 dígitos)
+        if raw_phone.isdigit() and len(raw_phone) == 12 and raw_phone.startswith("54"):
+            # Le sacamos el '54' para que queden los 10 dígitos puros (ej: 2604123456)
+            number_to_parse = raw_phone[2:]
+            needs_migration = True
+            
+        # 2. Detectar caso original intocable (10 dígitos puros)
+        elif raw_phone.isdigit() and len(raw_phone) == 10:
+            needs_migration = True
+            
+        # 3. Detectar caso SQL original con símbolo '+' (+549...)
+        elif raw_phone.startswith('+'):
+            needs_migration = True
+            country_hint = None
+            
+        if needs_migration:
+            try:
+                # La librería analiza los 10 dígitos sabiendo que son de Argentina
+                if country_hint:
+                    phone_obj = phonenumbers.parse(number_to_parse, country_hint)
+                else:
+                    phone_obj = phonenumbers.parse(number_to_parse)
+                    
+                # Lo convierte al estándar perfecto (+5492604...)
+                clean_phone = phonenumbers.format_number(phone_obj, phonenumbers.PhoneNumberFormat.E164)
+                
+                # Lo pasa por TU función (que lo va a dejar exactamente igual que a los usuarios nuevos)
+                nuevo_hash = encrypt_phone(clean_phone)
+                
+                # Solo guardamos si realmente hubo un cambio
+                if u.phone_hash != nuevo_hash:
+                    u.phone_hash = nuevo_hash
+                    migrados += 1
+                else:
+                    ya_correctos += 1
+                    
+            except Exception as e:
+                print(f"Error migrando a {u.nick} ({raw_phone}): {e}")
+                errores += 1
+        else:
+            # Si no entró a las reglas, es porque ya es un número nuevo bien formateado y encriptado.
+            ya_correctos += 1
+
+    # Guardamos todos los cambios juntos
+    await db.commit()
+    
+    return {
+        "status": "success", 
+        "mensaje": "Base de datos sincronizada con el nuevo formato.",
+        "arreglados": migrados,
+        "ya_estaban_bien_o_son_nuevos": ya_correctos,
+        "errores": errores
+    }
