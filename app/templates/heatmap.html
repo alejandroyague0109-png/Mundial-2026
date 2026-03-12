@@ -3,13 +3,24 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Mapa de Calor | Canje AlToque 26</title>
+    
+    <title>Mapa en Vivo: Coleccionistas del Álbum Mundial 2026 | Canje AlToque</title>
+    <meta name="description" content="Descubrí en tiempo real cuántos coleccionistas están intercambiando figuritas, estampas y láminas del Álbum del Mundial 2026 en Argentina, México, Colombia, Perú y toda Latinoamérica.">
+    <meta name="keywords" content="álbum mundial 2026, cambiar figuritas, estampas repetidas, mundial 2026 panini, coleccionistas latam, intercambio de láminas, radar panini">
+    <meta name="robots" content="index, follow">
+    <link rel="canonical" href="https://canjealtoque26.com/heatmap">
+
+    <meta property="og:title" content="Radar en vivo: Álbum Mundial 2026 ⚽🗺️">
+    <meta property="og:description" content="Mirá en vivo la cantidad de coleccionistas y figuritas disponibles para canjear en tu país. ¡Sumate a la comunidad!">
+    <meta property="og:type" content="website">
+    <meta property="og:url" content="https://canjealtoque26.com/heatmap">
+    <meta property="og:image" content="https://canjealtoque26.com/static/heatmap-preview.jpg">
+
     <script src="https://cdn.tailwindcss.com"></script>
     <script type="text/javascript" src="https://www.gstatic.com/charts/loader.js"></script>
     <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
     <style>
         body { background-color: #0f172a; color: white; }
-        /* Forzamos al tooltip de Google a verse moderno */
         .google-visualization-tooltip {
             background-color: #1e293b !important;
             border: 1px solid #334155 !important;
@@ -26,45 +37,57 @@
 
     <header class="bg-slate-900 border-b border-slate-800 p-4 sticky top-0 z-50 shadow-lg">
         <div class="max-w-6xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-4">
-            <div class="flex items-center gap-3">
+            <a href="/" class="flex items-center gap-3 hover:opacity-80 transition-opacity">
                 <span class="text-3xl">🗺️</span>
                 <div>
                     <h1 class="text-xl font-black bg-clip-text text-transparent bg-gradient-to-r from-indigo-400 to-purple-500 tracking-tight">
                         Radar Latinoamericano
                     </h1>
-                    <p class="text-xs text-slate-400">Estadísticas en tiempo real del Mundial 2026</p>
+                    <h2 class="text-xs text-slate-400">Estadísticas de intercambio Álbum Mundial 2026</h2>
                 </div>
-            </div>
+            </a>
 
             <div class="flex bg-slate-800 p-1 rounded-lg border border-slate-700">
                 <button @click="setFilter('users')" 
                         class="px-4 py-2 text-xs font-bold rounded-md transition-all"
                         :class="currentFilter === 'users' ? 'bg-indigo-600 text-white shadow' : 'text-slate-400 hover:text-white'">
-                    👥 Usuarios Activos
+                    👥 Coleccionistas
                 </button>
                 <button @click="setFilter('activity')" 
                         class="px-4 py-2 text-xs font-bold rounded-md transition-all"
                         :class="currentFilter === 'activity' ? 'bg-green-600 text-white shadow' : 'text-slate-400 hover:text-white'">
-                    🔥 Figuritas en el Sistema
+                    🔥 Figuritas Disponibles
                 </button>
             </div>
         </div>
     </header>
 
-    <main class="flex-grow relative flex items-center justify-center p-4">
-        <div class="w-full max-w-5xl bg-slate-900/50 rounded-2xl border border-slate-800 p-2 shadow-2xl relative overflow-hidden">
-            
+    <main class="flex-grow relative flex flex-col items-center p-4 max-w-6xl mx-auto w-full gap-6">
+        
+        <section class="text-center max-w-2xl mt-4">
+            <p class="text-slate-300 text-sm leading-relaxed">
+                El mapa interactivo de <strong>Canje AlToque 26</strong> te muestra en tiempo real dónde está la mayor concentración de fanáticos buscando cambiar sus <strong>figuritas, estampas o láminas</strong> del Mundial. Seleccioná tu país para ver los datos en vivo.
+            </p>
+        </section>
+
+        <div class="w-full bg-slate-900/50 rounded-2xl border border-slate-800 p-2 shadow-2xl relative overflow-hidden">
             <div x-show="loading" class="absolute inset-0 flex items-center justify-center bg-slate-900/80 z-10 backdrop-blur-sm rounded-2xl">
                 <div class="animate-spin text-4xl">⚽</div>
             </div>
-
-            <div id="regions_div" class="w-full h-[60vh] sm:h-[75vh] rounded-xl"></div>
-            
+            <div id="regions_div" class="w-full h-[55vh] sm:h-[65vh] rounded-xl"></div>
         </div>
+
+        <div class="w-full bg-gradient-to-r from-indigo-900/40 to-slate-900 border border-indigo-500/30 rounded-2xl p-6 md:p-8 text-center shadow-lg mt-4 mb-10">
+            <h3 class="text-2xl font-bold text-white mb-2">¿Te faltan figuritas para llenar el álbum?</h3>
+            <p class="text-slate-400 mb-6 max-w-xl mx-auto">Únete a miles de usuarios en toda Latinoamérica. Creá tu cuenta gratis, cargá tus repetidas y encontrá canjes a pocas cuadras de tu casa.</p>
+            <a href="/login" class="inline-block bg-indigo-600 hover:bg-indigo-500 text-white font-bold py-3 px-8 rounded-full shadow-lg shadow-indigo-900/50 transition transform hover:scale-105">
+                Empezar a Canjear Ahora 🚀
+            </a>
+        </div>
+
     </main>
 
     <script>
-        // Inyectamos los datos desde Python de forma segura
         const backendData = {{ map_data | tojson | safe }};
 
         function heatmapLogic() {
@@ -74,15 +97,13 @@
                 chart: null,
                 
                 init() {
-                    // Cargamos la librería de Google
                     google.charts.load('current', {
                         'packages':['geochart'],
-                        'mapsApiKey': '' // No requiere API key para este uso básico
+                        'mapsApiKey': '' 
                     });
                     google.charts.setOnLoadCallback(() => {
                         this.drawMap();
                         this.loading = false;
-                        // Hacemos el mapa responsivo al tamaño de pantalla
                         window.addEventListener('resize', () => this.drawMap());
                     });
                 },
@@ -95,37 +116,32 @@
                 drawMap() {
                     const dataArray = [];
                     
-                    // Cabeceras según el filtro
                     if(this.currentFilter === 'users') {
                         dataArray.push(['País', 'Usuarios Registrados']);
                     } else {
-                        dataArray.push(['País', 'Figuritas Subidas']);
+                        dataArray.push(['País', 'Figuritas en Sistema']);
                     }
 
-                    // Llenamos el array cruzando el código ISO con el dato correspondiente
                     for (const [countryCode, stats] of Object.entries(backendData)) {
                         const val = this.currentFilter === 'users' ? stats.users : stats.activity;
-                        // Formato de Google: ISO code (ej: 'AR', 'MX') y el valor numérico
                         dataArray.push([countryCode, val]);
                     }
 
-                    // Si no hay datos, agregamos un dummy oculto para que no explote
                     if(dataArray.length === 1) dataArray.push(['AR', 0]);
 
                     const data = google.visualization.arrayToDataTable(dataArray);
 
-                    // Colores del heatmap según el filtro
                     const colorAxis = this.currentFilter === 'users' 
-                        ? {colors: ['#312e81', '#4f46e5', '#818cf8']} // Azules/Índigos para Usuarios
-                        : {colors: ['#064e3b', '#16a34a', '#4ade80']}; // Verdes para Figuritas
+                        ? {colors: ['#312e81', '#4f46e5', '#818cf8']} 
+                        : {colors: ['#064e3b', '#16a34a', '#4ade80']}; 
 
                     const options = {
-                        region: '419', // '419' es el código mágico de Google para toda América Latina
+                        region: '419', // Latinoamérica
                         backgroundColor: 'transparent',
-                        datalessRegionColor: '#1e293b', // Países sin data
+                        datalessRegionColor: '#1e293b', 
                         defaultColor: '#334155',
                         colorAxis: colorAxis,
-                        legend: 'none', // Ocultamos la leyenda para que sea más inmersivo
+                        legend: 'none', 
                         tooltip: {isHtml: true}
                     };
 
