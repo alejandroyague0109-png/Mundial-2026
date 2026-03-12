@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html lang="es" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mapa de Calor | Canje AlToque 26</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script type="text/javascript" src="https://www.gstatic.com/charts/loader.js"></script>
+    <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+    <style>
+        body { background-color: #0f172a; color: white; }
+        /* Forzamos al tooltip de Google a verse moderno */
+        .google-visualization-tooltip {
+            background-color: #1e293b !important;
+            border: 1px solid #334155 !important;
+            border-radius: 8px !important;
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.5) !important;
+            color: #f8fafc !important;
+            padding: 10px !important;
+            pointer-events: none;
+        }
+        .google-visualization-tooltip-item span { color: #f8fafc !important; font-family: monospace; }
+    </style>
+</head>
+<body class="min-h-screen flex flex-col" x-data="heatmapLogic()">
+
+    <header class="bg-slate-900 border-b border-slate-800 p-4 sticky top-0 z-50 shadow-lg">
+        <div class="max-w-6xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-4">
+            <div class="flex items-center gap-3">
+                <span class="text-3xl">🗺️</span>
+                <div>
+                    <h1 class="text-xl font-black bg-clip-text text-transparent bg-gradient-to-r from-indigo-400 to-purple-500 tracking-tight">
+                        Radar Latinoamericano
+                    </h1>
+                    <p class="text-xs text-slate-400">Estadísticas en tiempo real del Mundial 2026</p>
+                </div>
+            </div>
+
+            <div class="flex bg-slate-800 p-1 rounded-lg border border-slate-700">
+                <button @click="setFilter('users')" 
+                        class="px-4 py-2 text-xs font-bold rounded-md transition-all"
+                        :class="currentFilter === 'users' ? 'bg-indigo-600 text-white shadow' : 'text-slate-400 hover:text-white'">
+                    👥 Usuarios Activos
+                </button>
+                <button @click="setFilter('activity')" 
+                        class="px-4 py-2 text-xs font-bold rounded-md transition-all"
+                        :class="currentFilter === 'activity' ? 'bg-green-600 text-white shadow' : 'text-slate-400 hover:text-white'">
+                    🔥 Figuritas en el Sistema
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <main class="flex-grow relative flex items-center justify-center p-4">
+        <div class="w-full max-w-5xl bg-slate-900/50 rounded-2xl border border-slate-800 p-2 shadow-2xl relative overflow-hidden">
+            
+            <div x-show="loading" class="absolute inset-0 flex items-center justify-center bg-slate-900/80 z-10 backdrop-blur-sm rounded-2xl">
+                <div class="animate-spin text-4xl">⚽</div>
+            </div>
+
+            <div id="regions_div" class="w-full h-[60vh] sm:h-[75vh] rounded-xl"></div>
+            
+        </div>
+    </main>
+
+    <script>
+        // Inyectamos los datos desde Python de forma segura
+        const backendData = {{ map_data | tojson | safe }};
+
+        function heatmapLogic() {
+            return {
+                currentFilter: 'users',
+                loading: true,
+                chart: null,
+                
+                init() {
+                    // Cargamos la librería de Google
+                    google.charts.load('current', {
+                        'packages':['geochart'],
+                        'mapsApiKey': '' // No requiere API key para este uso básico
+                    });
+                    google.charts.setOnLoadCallback(() => {
+                        this.drawMap();
+                        this.loading = false;
+                        // Hacemos el mapa responsivo al tamaño de pantalla
+                        window.addEventListener('resize', () => this.drawMap());
+                    });
+                },
+
+                setFilter(filterType) {
+                    this.currentFilter = filterType;
+                    this.drawMap();
+                },
+
+                drawMap() {
+                    const dataArray = [];
+                    
+                    // Cabeceras según el filtro
+                    if(this.currentFilter === 'users') {
+                        dataArray.push(['País', 'Usuarios Registrados']);
+                    } else {
+                        dataArray.push(['País', 'Figuritas Subidas']);
+                    }
+
+                    // Llenamos el array cruzando el código ISO con el dato correspondiente
+                    for (const [countryCode, stats] of Object.entries(backendData)) {
+                        const val = this.currentFilter === 'users' ? stats.users : stats.activity;
+                        // Formato de Google: ISO code (ej: 'AR', 'MX') y el valor numérico
+                        dataArray.push([countryCode, val]);
+                    }
+
+                    // Si no hay datos, agregamos un dummy oculto para que no explote
+                    if(dataArray.length === 1) dataArray.push(['AR', 0]);
+
+                    const data = google.visualization.arrayToDataTable(dataArray);
+
+                    // Colores del heatmap según el filtro
+                    const colorAxis = this.currentFilter === 'users' 
+                        ? {colors: ['#312e81', '#4f46e5', '#818cf8']} // Azules/Índigos para Usuarios
+                        : {colors: ['#064e3b', '#16a34a', '#4ade80']}; // Verdes para Figuritas
+
+                    const options = {
+                        region: '419', // '419' es el código mágico de Google para toda América Latina
+                        backgroundColor: 'transparent',
+                        datalessRegionColor: '#1e293b', // Países sin data
+                        defaultColor: '#334155',
+                        colorAxis: colorAxis,
+                        legend: 'none', // Ocultamos la leyenda para que sea más inmersivo
+                        tooltip: {isHtml: true}
+                    };
+
+                    if (!this.chart) {
+                        this.chart = new google.visualization.GeoChart(document.getElementById('regions_div'));
+                    }
+                    this.chart.draw(data, options);
+                }
+            }
+        }
+    </script>
+</body>
+</html>
