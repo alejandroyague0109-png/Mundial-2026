@@ -9,7 +9,7 @@ from pathlib import Path
 from app.database import get_db
 from app.models import User, PuntoSeguro
 from app.data_album import ALBUM_STRUCTURE
-from app.locations import ARGENTINA
+from app.locations import LOCATIONS_BY_COUNTRY
 
 router = APIRouter(tags=["Safe Spots"])
 
@@ -38,29 +38,34 @@ async def view_safe_spots(
 
     # 2. Lógica de asignación de zona con las 3 prioridades
     
-    # Prioridad 1: Viene por la URL (desde WhatsApp)
+    # 2. Lógica de asignación de zona con las 3 prioridades
+    
+    # Prioridad 1: Viene por la URL (desde WhatsApp u otro link)
     if provincia and zona:
+        default_country = "AR" # Fallback temporal si viene de un link viejo
         default_province = provincia
         default_zone = zona
     
     # Prioridad 2: Está logueado y tiene su zona
     elif user and user.province and user.zone:
+        default_country = user.country_code
         default_province = user.province
         default_zone = user.zone
         
-    # Prioridad 3: Curioso sin login. Dejamos que el HTML ponga Mendoza por defecto
+    # Prioridad 3: Curioso sin login. Dejamos Argentina por defecto
     else:
+        default_country = "AR"
         default_province = ""
         default_zone = ""
 
     return templates.TemplateResponse("safe_spots.html", {
         "request": request,
-        "user": user,  # Puede ser None, el HTML está preparado
+        "user": user,  
         "active_tab": "safe_spots",
         "album_structure": ALBUM_STRUCTURE,
-        "locations": ARGENTINA,
-        "locations_json": json.dumps(ARGENTINA),
+        "locations_json": json.dumps(LOCATIONS_BY_COUNTRY), # <-- Pasamos todo LATAM
         "categorias": categorias,
+        "default_country": default_country, # <-- NUEVO
         "default_prov": default_province,
         "default_zone": default_zone
     })

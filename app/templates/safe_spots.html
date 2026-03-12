@@ -2,7 +2,7 @@
 
 {% block content %}
 <div class="p-4 md:p-8 max-w-6xl mx-auto animate-fade-in"
-     x-data="safeSpotsManager('{{ default_prov }}', '{{ default_zone }}')">
+     x-data="safeSpotsManager('{{ default_country }}', '{{ default_prov }}', '{{ default_zone }}')">
     
     <div class="mb-6 border-b border-slate-700 pb-4">
         <h1 class="text-3xl font-black text-white flex items-center gap-3">
@@ -20,12 +20,21 @@
         </p>
     </div>
 
-    <div class="bg-slate-800 p-4 rounded-xl border border-slate-700 mb-6 grid grid-cols-1 md:grid-cols-3 gap-4 shadow-lg">
+    <div class="bg-slate-800 p-4 rounded-xl border border-slate-700 mb-6 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 shadow-lg">
         
         <div>
+            <label class="block text-[10px] font-bold text-gray-400 uppercase mb-1">País</label>
+            <select x-model="filters.pais" @change="updateProvincias(); fetchSpots()" class="w-full bg-slate-900 border border-slate-600 rounded-lg px-3 py-2 text-sm text-white focus:border-emerald-500 outline-none transition">
+                <template x-for="pais in Object.keys(locationsDb)" :key="pais">
+                    <option :value="pais" x-text="pais === 'AR' ? '🇦🇷 Argentina' : (pais === 'UY' ? '🇺🇾 Uruguay' : (pais === 'CL' ? '🇨🇱 Chile' : pais))" :selected="pais === filters.pais"></option>
+                </template>
+            </select>
+        </div>
+
+        <div>
             <label class="block text-[10px] font-bold text-gray-400 uppercase mb-1">Provincia</label>
-            <select x-model="filters.provincia" @change="updateLocalidades(); fetchSpots()" class="w-full bg-slate-900 border border-slate-600 rounded-lg px-3 py-2 text-sm text-white focus:border-emerald-500 outline-none transition">
-                <template x-for="prov in Object.keys(locationsDb)" :key="prov">
+            <select x-model="filters.provincia" @change="updateLocalidades(); fetchSpots()" class="w-full bg-slate-900 border border-slate-600 rounded-lg px-3 py-2 text-sm text-white focus:border-emerald-500 outline-none transition disabled:opacity-50" :disabled="provinciasDisponibles.length === 0">
+                <template x-for="prov in provinciasDisponibles" :key="prov">
                     <option :value="prov" x-text="prov" :selected="prov === filters.provincia"></option>
                 </template>
             </select>
@@ -99,49 +108,67 @@
 
 <script>
     document.addEventListener('alpine:init', () => {
-        Alpine.data('safeSpotsManager', (rawProv, rawLoc) => {
+        Alpine.data('safeSpotsManager', (rawCountry, rawProv, rawLoc) => {
             
             // Limpieza de datos iniciales
+            let userCountry = (rawCountry === 'None' || !rawCountry) ? 'AR' : rawCountry.trim();
             let userProv = (rawProv === 'None' || !rawProv) ? '' : rawProv.trim();
             let userLoc = (rawLoc === 'None' || !rawLoc) ? '' : rawLoc.trim();
 
             return {
                 locationsDb: window.LOCATIONS_DB || {},
                 filters: {
+                    pais: '',
                     provincia: '',
                     localidad: '',
                     categoria: ''
                 },
+                provinciasDisponibles: [],
                 localidadesDisponibles: [],
                 spots: [],
                 loading: false,
 
                 init() {
-                    const provs = Object.keys(this.locationsDb);
+                    const paises = Object.keys(this.locationsDb);
                     
-                    // 1. Asignar provincia validando que exista
-                    if (!userProv || !provs.includes(userProv)) {
-                        userProv = provs.includes('Mendoza') ? 'Mendoza' : (provs[0] || '');
+                    // 1. Asignar país validando que exista
+                    if (!paises.includes(userCountry)) {
+                        userCountry = paises.includes('AR') ? 'AR' : (paises[0] || '');
+                    }
+                    this.filters.pais = userCountry;
+
+                    // 2. Cargar provincias de ese país
+                    this.provinciasDisponibles = Object.keys(this.locationsDb[this.filters.pais] || {});
+
+                    // 3. Asignar provincia validando que pertenezca al país
+                    if (!userProv || !this.provinciasDisponibles.includes(userProv)) {
+                        userProv = this.provinciasDisponibles.includes('Mendoza') ? 'Mendoza' : (this.provinciasDisponibles[0] || '');
                     }
                     this.filters.provincia = userProv;
                     
-                    // 2. Cargar localidades de esa provincia
-                    this.localidadesDisponibles = this.locationsDb[this.filters.provincia] || [];
+                    // 4. Cargar localidades de esa provincia
+                    this.localidadesDisponibles = (this.locationsDb[this.filters.pais] || {})[this.filters.provincia] || [];
                     
-                    // 3. Asignar localidad validando que pertenezca a la provincia
+                    // 5. Asignar localidad validando que pertenezca
                     if (!userLoc || !this.localidadesDisponibles.includes(userLoc)) {
                         userLoc = this.localidadesDisponibles[0] || '';
                     }
                     this.filters.localidad = userLoc;
 
-                    // 4. Retrasamos la búsqueda para que el HTML se sincronice con estos valores
+                    // 6. Retrasamos la búsqueda para que el HTML se sincronice
                     this.$nextTick(() => {
                         this.fetchSpots();
                     });
                 },
 
+                updateProvincias() {
+                    this.provinciasDisponibles = Object.keys(this.locationsDb[this.filters.pais] || {});
+                    this.filters.provincia = this.provinciasDisponibles[0] || '';
+                    this.updateLocalidades();
+                },
+
                 updateLocalidades() {
-                    this.localidadesDisponibles = this.locationsDb[this.filters.provincia] || [];
+                    this.localidadesDisponibles = (this.locationsDb[this.filters.pais] || {})[this.filters.provincia] || [];
                     this.filters.localidad = this.localidadesDisponibles[0] || '';
                 },
 
@@ -158,13 +185,9 @@
                         const data = await response.json();
                         
                         if (response.ok && data.spots) {
-                            // ORDENAMIENTO: Primero por categoría, luego por nombre
                             this.spots = data.spots.sort((a, b) => {
-                                // Compara categoría
                                 const catCompare = (a.categoria || '').localeCompare(b.categoria || '');
                                 if (catCompare !== 0) return catCompare;
-                                
-                                // Si son la misma categoría, compara por nombre
                                 return (a.nombre || '').localeCompare(b.nombre || '');
                             });
                         } else {
