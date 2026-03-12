@@ -363,7 +363,7 @@
     <form hx-post="/update_profile" hx-target="#profile-response" class="space-y-4">
         <div>
             <label class="text-xs text-gray-400 font-bold uppercase">País</label>
-            <select name="country_code" class="w-full bg-slate-900 border border-slate-700 rounded px-2 py-2 text-sm text-white focus:border-yellow-500 outline-none"
+            <select id="profile-country" name="country_code" class="w-full bg-slate-900 border border-slate-700 rounded px-2 py-2 text-sm text-white focus:border-yellow-500 outline-none"
                 hx-get="/locations/provinces" hx-target="#province-select" hx-trigger="change">
                 <option value="{{ user.country_code }}" selected>{{ user.country_code }}</option>
                 <option disabled>──────────</option>
@@ -376,7 +376,7 @@
         <div>
             <label class="text-xs text-gray-400 font-bold uppercase">Provincia / Región</label>
             <select id="province-select" name="province" class="w-full bg-slate-900 border border-slate-700 rounded px-2 py-2 text-sm text-white focus:border-yellow-500 outline-none"
-                hx-get="/locations/zones" hx-include="[name='country_code']" hx-target="#zone-select" hx-trigger="change">
+                hx-get="/locations/zones" hx-include="#profile-country" hx-target="#zone-select" hx-trigger="change">
                 <option value="{{ user.province }}" selected>{{ user.province }}</option>
                 </select>
         </div>
