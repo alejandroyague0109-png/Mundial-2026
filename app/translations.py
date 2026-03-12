@@ -37,7 +37,7 @@ TRANSLATIONS = {
         "CO": "repetidas",
         "ES": "repes",
         "default": "repetidas"
-    }
+    },
     # app/translations.py
 
 # ... (mantén lo que ya tenías) ...
