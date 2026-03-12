@@ -425,6 +425,16 @@ TRANSLATIONS = {
         "CL": "¿Te animas? Avísame y coordinamos los 3. 📐⚽",
         "CO": "¿Te animas? Avísame y coordinamos los 3. 📐⚽",
         "default": "¿Te animas? Avísame y coordinamos los 3. 📐⚽"
+    },
+    # app/translations.py
+
+# ... (mantén lo que ya tenías) ...
+
+    # --- NUEVAS TRADUCCIONES PARA NOTIFICACIONES DE TELEGRAM ---
+    "telegram_alerta_corre": {
+        "AR": "🏃‍♂️ Corré al Mercado para contactarlo antes que te ganen.",
+        "UY": "🏃‍♂️ Corré al Mercado para contactarlo antes que te ganen.",
+        "default": "🏃‍♂️ Corre al Mercado para contactarlo antes de que te la ganen."
     }
 }
 

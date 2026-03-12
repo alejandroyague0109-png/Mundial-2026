@@ -5,12 +5,14 @@ from sqlalchemy.future import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from app.models import User, Inventory
 
+# --- NUEVO IMPORT ---
+from app.translations import t
+# --------------------
+
 # --- Leemos la variable de entorno ---
 TELEGRAM_BOT_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN")
 # -------------------------------------
 
-# CORRECCIÓN AQUÍ: Cambiamos el orden de los parámetros para coincidir con album.py
-# Orden recibido: (db, sticker_num, sticker_name, owner)
 async def notify_wishlist_match(db: AsyncSession, sticker_num: int, sticker_name: str, owner: User):
     """
     Busca usuarios Premium que tengan esta figurita en su Wishlist,
@@ -30,6 +32,7 @@ async def notify_wishlist_match(db: AsyncSession, sticker_num: int, sticker_name
             User.id != owner.id,  # No avisarse a uno mismo
             
             # --- FILTROS GEOGRÁFICOS ---
+            User.country_code == owner.country_code, # <--- ¡FILTRO DE PAÍS AGREGADO!
             User.province == owner.province,
             User.zone == owner.zone
         )
@@ -53,12 +56,16 @@ async def notify_wishlist_match(db: AsyncSession, sticker_num: int, sticker_name
             
             deep_link = f"https://canjealtoque26.com/market?sticker={safe_sticker}&nick={safe_nick}&zone={safe_zone}"
 
-            # B. Construcción del Mensaje
+            # --- B. Construcción del Mensaje Localizado ---
+            # Obtenemos el país del usuario receptor (por defecto AR si fallara)
+            pais_receptor = user.country_code if user.country_code else 'AR'
+            texto_corre = t('telegram_alerta_corre', pais_receptor)
+
             msg = (
                 f"🚨 *¡APARECIÓ UNA DIFÍCIL EN TU ZONA!*\n\n"
                 f"👤 *{owner.nick}* ({owner.zone}) acaba de publicar:\n"
                 f"🏆 *{sticker_name}*\n\n"
-                f"🏃‍♂️ Corré al Mercado para contactarlo antes que te ganen.\n\n"
+                f"{texto_corre}\n\n"
                 f"📲 *Ver oferta:* {deep_link}"
             )
             
