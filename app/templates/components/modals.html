@@ -482,13 +482,12 @@
 <div class="mt-4 text-center">
     <p class="text-[10px] text-gray-500 mb-2">
         <span class="inline-block w-2 h-2 bg-green-500 rounded-full mr-1 animate-pulse"></span>
-        Procesado de forma segura por Mercado Pago
+        Procesado de forma segura por {% if user.country_code == 'AR' %}Mercado Pago{% else %}PayPal{% endif %}
     </p>
     <button onclick="document.getElementById('premiumModal').close()" class="text-xs text-gray-500 hover:text-white underline">
         Tal vez más tarde, cerrar.
     </button>
 </div>
-</dialog>
 
 <dialog id="telegramModal" class="fixed inset-0 m-auto z-[100] bg-slate-800 text-white p-6 rounded-xl border border-slate-600 backdrop:bg-slate-900/80 w-full max-w-md shadow-2xl">
     <div class="flex justify-between items-start mb-4">
