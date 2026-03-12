@@ -194,6 +194,7 @@ async def create_preference(
                         "return_url": f"{base_url}/paypal_capture", # <-- LIMPIO, SIN USER ID
                         "cancel_url": f"{base_url}/?payment_error=true",
                         "brand_name": "Canje AlToque 26",
+                        "landing_page": "BILLING",
                         "user_action": "PAY_NOW"
                     }
                 }
