@@ -3,8 +3,19 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    
     <title>Mapa en Vivo: Coleccionistas del Álbum Mundial 2026 | Canje AlToque</title>
-    <meta name="description" content="Descubrí en tiempo real cuántos coleccionistas están intercambiando figuritas en toda Latinoamérica.">
+    <meta name="description" content="Descubre en tiempo real cuántos coleccionistas están intercambiando figuritas, estampas y láminas del Álbum del Mundial 2026 en Argentina, México, Colombia, Perú y toda Latinoamérica.">
+    <meta name="keywords" content="álbum mundial 2026, cambiar figuritas, estampas repetidas, mundial 2026 panini, coleccionistas latam, intercambio de láminas, radar panini">
+    <meta name="robots" content="index, follow">
+    <link rel="canonical" href="https://canjealtoque26.com/heatmap">
+
+    <meta property="og:title" content="Radar en tiempo real: Álbum Mundial 2026 ⚽🗺️">
+    <meta property="og:description" content="Mira en vivo la cantidad de coleccionistas y figuritas, láminas, estampas o cromos disponibles para canjear en tu país. ¡Sumate a la comunidad!">
+    <meta property="og:type" content="website">
+    <meta property="og:url" content="https://canjealtoque26.com/heatmap">
+    <meta property="og:image" content="https://canjealtoque26.com/static/heatmap-preview.jpg">
+
     <script src="https://cdn.tailwindcss.com"></script>
     <script type="text/javascript" src="https://www.gstatic.com/charts/loader.js"></script>
     <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
@@ -52,36 +63,53 @@
         </div>
     </header>
 
-    <main class="flex-grow w-full max-w-7xl mx-auto p-4 flex flex-col lg:flex-row gap-6 mt-4 mb-10">
+    <main class="flex-grow w-full max-w-7xl mx-auto p-4 flex flex-col gap-6 mt-4 mb-10">
         
-        <aside class="w-full lg:w-1/4 bg-slate-900/80 rounded-2xl border border-slate-800 p-6 shadow-2xl flex flex-col justify-start h-fit">
-            <div class="flex items-center gap-3 mb-4">
-                <span class="text-2xl" x-text="getLegendEmoji()"></span>
-                <h3 class="text-lg font-black text-white leading-tight" x-text="getLegendTitle()"></h3>
-            </div>
+        <section class="text-center max-w-3xl mx-auto mb-2">
+            <p class="text-slate-300 text-sm leading-relaxed">
+                El mapa interactivo de <strong>Canje AlToque 26</strong> te muestra en tiempo real dónde está la mayor concentración de fanáticos buscando cambiar sus <strong>figuritas, estampas, cromos o láminas</strong> del Álbum del Mundial 2026. Seleccioná tu país para ver los datos en vivo.
+            </p>
+        </section>
+
+        <div class="flex flex-col lg:flex-row gap-6 w-full">
             
-            <p class="text-sm text-slate-400 mb-8" x-text="getLegendDesc()"></p>
-            
-            <div class="space-y-2 mb-8">
-                <div class="text-[10px] uppercase tracking-widest text-slate-500 font-bold mb-1">Intensidad en Mapa</div>
-                <div class="h-4 w-full rounded-full" :class="getGradientClass()"></div>
-                <div class="flex justify-between text-xs font-bold uppercase tracking-widest text-slate-400 mt-1">
-                    <span x-text="getLegendMin()"></span>
-                    <span x-text="getLegendMax()"></span>
+            <aside class="w-full lg:w-1/4 bg-slate-900/80 rounded-2xl border border-slate-800 p-6 shadow-2xl flex flex-col justify-start h-fit z-10 relative">
+                <div class="flex items-center gap-3 mb-4">
+                    <span class="text-2xl" x-text="getLegendEmoji()"></span>
+                    <h3 class="text-lg font-black text-white leading-tight" x-text="getLegendTitle()"></h3>
                 </div>
-            </div>
+                
+                <p class="text-sm text-slate-400 mb-8" x-text="getLegendDesc()"></p>
+                
+                <div class="space-y-2 mb-8">
+                    <div class="text-[10px] uppercase tracking-widest text-slate-500 font-bold mb-1">Intensidad en Mapa</div>
+                    <div class="h-4 w-full rounded-full" :class="getGradientClass()"></div>
+                    <div class="flex justify-between text-xs font-bold uppercase tracking-widest text-slate-400 mt-1">
+                        <span x-text="getLegendMin()"></span>
+                        <span x-text="getLegendMax()"></span>
+                    </div>
+                </div>
 
-            <div class="pt-6 border-t border-slate-800">
-                <div class="text-xs text-slate-500 uppercase tracking-widest font-bold mb-1">Total Latinoamérica</div>
-                <div class="text-4xl font-black text-transparent bg-clip-text" :class="getTextGradientClass()" x-text="getTotalValue().toLocaleString('es-AR')"></div>
-            </div>
-        </aside>
+                <div class="pt-6 border-t border-slate-800">
+                    <div class="text-xs text-slate-500 uppercase tracking-widest font-bold mb-1">Total Latinoamérica</div>
+                    <div class="text-4xl font-black text-transparent bg-clip-text" :class="getTextGradientClass()" x-text="getTotalValue().toLocaleString('es-AR')"></div>
+                </div>
+            </aside>
 
-        <section class="w-full lg:w-3/4 bg-slate-900/50 rounded-2xl border border-slate-800 shadow-2xl relative overflow-hidden h-[60vh] sm:h-[70vh]">
-            <div x-show="loading" class="absolute inset-0 flex items-center justify-center bg-slate-900/80 z-20 backdrop-blur-sm">
-                <div class="animate-spin text-4xl">⚽</div>
-            </div>
-            <div id="regions_div" class="w-full h-full"></div>
+            <section class="w-full lg:w-3/4 bg-slate-900/50 rounded-2xl border border-slate-800 shadow-2xl relative overflow-hidden h-[60vh] sm:h-[70vh]">
+                <div x-show="loading" class="absolute inset-0 flex items-center justify-center bg-slate-900/80 z-20 backdrop-blur-sm">
+                    <div class="animate-spin text-4xl">⚽</div>
+                </div>
+                <div id="regions_div" class="absolute w-[115%] h-[145%] top-[-70%] left-[-8%] z-0"></div>
+            </section>
+        </div>
+
+        <section class="w-full bg-gradient-to-r from-indigo-900/40 to-slate-900 border border-indigo-500/30 rounded-2xl p-6 md:p-8 text-center shadow-lg mt-4">
+            <h3 class="text-2xl font-bold text-white mb-2">¿Te faltan figuritas para llenar el álbum?</h3>
+            <p class="text-slate-400 mb-6 max-w-xl mx-auto">Únete a miles de coleccionistas en toda Latinoamérica. Crea tu cuenta gratis, sube tus repetidas y encuentra intercambios en tu zona.</p>
+            <a href="/login" class="inline-block bg-indigo-600 hover:bg-indigo-500 text-white font-bold py-3 px-8 rounded-full shadow-lg shadow-indigo-900/50 transition transform hover:scale-105 active:scale-95">
+                Empezar a Canjear Ahora 🚀
+            </a>
         </section>
 
     </main>
