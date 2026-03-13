@@ -3,11 +3,10 @@ from fastapi import APIRouter, Depends, Request
 from fastapi.responses import HTMLResponse
 from fastapi.templating import Jinja2Templates
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select, func
+from sqlalchemy import text
 from pathlib import Path
 
 from app.database import get_db
-from app.models import User, Inventory, ContactLog
 
 router = APIRouter(tags=["Heatmap"])
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -16,42 +15,44 @@ templates = Jinja2Templates(directory=str(BASE_DIR / "templates"))
 @router.get("/heatmap", response_class=HTMLResponse)
 async def view_heatmap(request: Request, db: AsyncSession = Depends(get_db)):
     
-    # 1. Usuarios
-    res_users = await db.execute(
-        select(User.country_code, func.count(User.id)).group_by(User.country_code)
-    )
+    # 1. Usuarios (Con SQL PURO)
+    res_users = await db.execute(text("SELECT country_code, COUNT(id) FROM users GROUP BY country_code"))
     users_by_country = {str(row[0]).strip().upper(): int(row[1]) for row in res_users.all() if row[0]}
 
-    # 2. Figuritas
-    res_inv = await db.execute(
-        select(User.country_code, func.count(Inventory.id))
-        .join(User, User.id == Inventory.user_id)
-        .group_by(User.country_code)
-    )
+    # 2. Figuritas (Con SQL PURO)
+    res_inv = await db.execute(text("""
+        SELECT u.country_code, COUNT(i.id) 
+        FROM inventory i 
+        JOIN users u ON i.user_id = u.id 
+        GROUP BY u.country_code
+    """))
     inv_by_country = {str(row[0]).strip().upper(): int(row[1]) for row in res_inv.all() if row[0]}
 
-    # 3. Intercambios (Traemos todo crudo agrupado)
-    res_trades = await db.execute(
-        select(ContactLog.country_code, ContactLog.status, func.count(ContactLog.id))
-        .group_by(ContactLog.country_code, ContactLog.status)
-    )
+    # 3. Intercambios (Con SQL PURO para saltar cualquier problema de SQLAlchemy)
+    res_trades = await db.execute(text("SELECT country_code, status, COUNT(id) FROM contact_logs GROUP BY country_code, status"))
     all_trades = res_trades.all()
     
     trades_by_country = {}
-    debug_mensajes = [] # Guardaremos acá lo que ve la DB para mandarlo a la pantalla
+    debug_mensajes = []
     
-    for code, status, count in all_trades:
-        c = str(code).strip().upper() if code else 'AR'
-        s = str(status).strip().lower() if status else 'null'
-        cantidad = int(count)
+    for row in all_trades:
+        # row[0] es country_code, row[1] es status, row[2] es el count
+        c = str(row[0]).strip().upper() if row[0] else 'AR'
+        s = str(row[1]).strip().lower() if row[1] else 'null'
+        cantidad = int(row[2])
         
-        debug_mensajes.append(f"[{c} - {s}: {cantidad}]")
+        # Guardamos lo que leyó la DB para mostrarlo en pantalla
+        debug_mensajes.append(f"[{c} | {s} | Cant: {cantidad}]")
         
+        # Filtramos
         if s in ['completed', 'pending']:
             trades_by_country[c] = trades_by_country.get(c, 0) + cantidad
 
-    # Construimos el texto de depuración
-    texto_debug = " | ".join(debug_mensajes) if debug_mensajes else "🚨 LA TABLA CONTACT_LOGS ESTÁ VACÍA EN ESTA BASE DE DATOS 🚨"
+    # Si la lista quedó vacía, mostramos alerta máxima
+    if not debug_mensajes:
+        texto_debug = "🚨 0 FILAS. LA TABLA ESTÁ COMPLETAMENTE VACÍA EN LA DB DE RAILWAY 🚨"
+    else:
+        texto_debug = " | ".join(debug_mensajes)
 
     # Diccionario final
     map_data = {}
@@ -68,5 +69,5 @@ async def view_heatmap(request: Request, db: AsyncSession = Depends(get_db)):
     return templates.TemplateResponse("heatmap.html", {
         "request": request,
         "map_data": map_data,
-        "debug_info": texto_debug  # <--- Enviamos el scanner a la pantalla
+        "debug_info": texto_debug
     })
