@@ -217,7 +217,6 @@ async def create_preference(
                 return {"error": "Error conectando con PayPal"}
 
 # --- NUEVA RUTA: CAPTURA DE PAYPAL (El usuario vuelve de PayPal) ---
-# --- NUEVA RUTA: CAPTURA DE PAYPAL (El usuario vuelve de PayPal) ---
 @router.get("/paypal_capture")
 async def paypal_capture(request: Request, token: str, db: AsyncSession = Depends(get_db)):
     
@@ -265,6 +264,65 @@ async def paypal_capture(request: Request, token: str, db: AsyncSession = Depend
             print(f"Error procesando captura de PayPal: {e}")
             return RedirectResponse(url="/?payment_error=true", status_code=303)
 
+
+# --- NUEVA RUTA B2B: CAPTURA DE PAYPAL (Los locales vuelven de pagar su plan) ---
+@router.get("/paypal_capture_b2b")
+async def paypal_capture_b2b(request: Request, token: str, db: AsyncSession = Depends(get_db)):
+    
+    client_id = os.getenv("PAYPAL_CLIENT_ID")
+    secret = os.getenv("PAYPAL_SECRET")
+    mode = os.getenv("PAYPAL_MODE", "sandbox")
+    api_base = "https://api-m.paypal.com" if mode == "live" else "https://api-m.sandbox.paypal.com"
+
+    async with httpx.AsyncClient() as client:
+        try:
+            # 1. Autenticación con PayPal
+            auth_res = await client.post(
+                f"{api_base}/v1/oauth2/token",
+                auth=(client_id, secret),
+                data={"grant_type": "client_credentials"}
+            )
+            access_token = auth_res.json().get("access_token")
+
+            if not access_token:
+                print("❌ Error de Auth con PayPal B2B")
+                return RedirectResponse(url="https://canjealtoque26.com?payment_error=true", status_code=303)
+
+            # 2. Capturar Fondos (Confirma la transacción)
+            capture_res = await client.post(
+                f"{api_base}/v2/checkout/orders/{token}/capture",
+                headers={"Authorization": f"Bearer {access_token}", "Content-Type": "application/json"}
+            )
+            capture_data = capture_res.json()
+
+            # 3. Validar y dar de alta el local
+            if capture_data.get("status") == "COMPLETED":
+                # Extraemos el UUID del local que inyectaste desde Node.js en reference_id
+                purchase_units = capture_data.get("purchase_units", [])
+                if purchase_units:
+                    local_uuid = purchase_units[0].get("reference_id")
+                    
+                    if local_uuid:
+                        # Actualizamos Supabase forzando el casteo a UUID
+                        query = text("""
+                            UPDATE puntos_seguros 
+                            SET verificado = true 
+                            WHERE id = :local_id::uuid
+                        """)
+                        await db.execute(query, {"local_id": local_uuid})
+                        await db.commit()
+                        
+                        print(f"✅ PayPal Success B2B: Local {local_uuid} ahora está Verificado.")
+                        
+                        # Redirigimos al local a la web oficial mostrando éxito
+                        return RedirectResponse(url="https://canjealtoque26.com?payment_success=true", status_code=303)
+            
+            print(f"❌ PayPal Falla/Pendiente B2B: {capture_data}")
+            return RedirectResponse(url="https://canjealtoque26.com?payment_error=true", status_code=303)
+                
+        except Exception as e:
+            print(f"Error procesando captura de PayPal B2B: {e}")
+            return RedirectResponse(url="https://canjealtoque26.com?payment_error=true", status_code=303)
 
 # --- 5. WEBHOOK (Notificación Invisible) ---
 @router.post("/webhook")
@@ -415,11 +473,11 @@ async def receive_webhook_b2b(request: Request, db: AsyncSession = Depends(get_d
             external_ref = payment.get("external_reference") # Este será el UUID del comercio
 
             if status == "approved" and external_ref:
-                # Usamos SQL puro para actualizar Supabase sin necesidad de modelos de SQLAlchemy
+                # Usamos SQL puro forzando el casteo a UUID
                 query = text("""
                     UPDATE puntos_seguros 
                     SET verificado = true 
-                    WHERE id = :local_id
+                    WHERE id = :local_id::uuid
                 """)
                 await db.execute(query, {"local_id": external_ref})
                 await db.commit()
