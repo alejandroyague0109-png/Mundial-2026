@@ -18,6 +18,7 @@
             color: #f8fafc !important;
             padding: 10px !important;
             pointer-events: none;
+            z-index: 9999 !important;
         }
         .google-visualization-tooltip-item span { color: #f8fafc !important; font-family: monospace; }
     </style>
@@ -47,16 +48,11 @@
                         :class="currentFilter === 'activity' ? 'bg-green-600 text-white shadow' : 'text-slate-400 hover:text-white'">
                     🔥 Figuritas Disponibles
                 </button>
-                <button @click="setFilter('trades')" 
-                        class="px-4 py-2 text-xs font-bold rounded-md transition-all"
-                        :class="currentFilter === 'trades' ? 'bg-orange-600 text-white shadow' : 'text-slate-400 hover:text-white'">
-                    🔄 Intercambios Realizados
-                </button>
             </div>
         </div>
     </header>
 
-    <main class="flex-grow w-full max-w-7xl mx-auto p-4 flex flex-col lg:flex-row gap-6 mt-4">
+    <main class="flex-grow w-full max-w-7xl mx-auto p-4 flex flex-col lg:flex-row gap-6 mt-4 mb-10">
         
         <aside class="w-full lg:w-1/4 bg-slate-900/80 rounded-2xl border border-slate-800 p-6 shadow-2xl flex flex-col justify-start h-fit">
             <div class="flex items-center gap-3 mb-4">
@@ -81,21 +77,14 @@
             </div>
         </aside>
 
-        <section class="w-full lg:w-3/4 bg-slate-900/50 rounded-2xl border border-slate-800 shadow-2xl relative overflow-hidden h-[60vh] sm:h-[70vh] flex items-center justify-center">
+        <section class="w-full lg:w-3/4 bg-slate-900/50 rounded-2xl border border-slate-800 shadow-2xl relative overflow-hidden h-[60vh] sm:h-[70vh]">
             <div x-show="loading" class="absolute inset-0 flex items-center justify-center bg-slate-900/80 z-20 backdrop-blur-sm">
                 <div class="animate-spin text-4xl">⚽</div>
             </div>
-            <div id="regions_div" class="w-full h-full z-0" style="transform: scale(1.4) translateY(-10%); transform-origin: center;"></div>
+            <div id="regions_div" class="w-full h-full"></div>
         </section>
 
     </main>
-
-    <div class="w-full max-w-7xl mx-auto p-4 mb-10">
-        <div class="bg-black/50 border border-red-500/30 rounded-lg p-4 font-mono text-[10px] text-gray-400 break-words">
-            <strong class="text-red-400">Scanner Base de Datos (ContactLogs):</strong> 
-            {{ debug_info }}
-        </div>
-    </div>
 
     <script>
         const backendData = {{ map_data | tojson | safe }};
@@ -125,41 +114,33 @@
 
                 getLegendTitle() {
                     if (this.currentFilter === 'users') return 'Coleccionistas';
-                    if (this.currentFilter === 'activity') return 'Figuritas Subidas';
-                    return 'Canjes Exitosos';
+                    return 'Figuritas Subidas';
                 },
                 getLegendEmoji() {
                     if (this.currentFilter === 'users') return '👥';
-                    if (this.currentFilter === 'activity') return '🔥';
-                    return '🔄';
+                    return '🔥';
                 },
                 getLegendDesc() {
                     if (this.currentFilter === 'users') return 'Cantidad de usuarios registrados oficialmente buscando intercambios.';
-                    if (this.currentFilter === 'activity') return 'Volumen total de repetidas y faltantes cargadas en las Wishlists.';
-                    return 'Estimación en vivo de los intercambios concretados gracias a la plataforma.';
+                    return 'Volumen total de repetidas y faltantes cargadas en las Wishlists.';
                 },
                 getGradientClass() {
                     if (this.currentFilter === 'users') return 'bg-gradient-to-r from-slate-700 via-indigo-500 to-indigo-400';
-                    if (this.currentFilter === 'activity') return 'bg-gradient-to-r from-slate-700 via-emerald-600 to-emerald-400';
-                    return 'bg-gradient-to-r from-slate-700 via-orange-600 to-orange-400';
+                    return 'bg-gradient-to-r from-slate-700 via-emerald-600 to-emerald-400';
                 },
                 getTextGradientClass() {
                     if (this.currentFilter === 'users') return 'bg-gradient-to-r from-indigo-400 to-indigo-200';
-                    if (this.currentFilter === 'activity') return 'bg-gradient-to-r from-emerald-400 to-emerald-200';
-                    return 'bg-gradient-to-r from-orange-400 to-orange-200';
+                    return 'bg-gradient-to-r from-emerald-400 to-emerald-200';
                 },
                 getLegendMin() {
                     if (this.currentFilter === 'users') return 'Pocos';
-                    if (this.currentFilter === 'activity') return 'Baja';
-                    return 'Escasos';
+                    return 'Baja';
                 },
                 getLegendMax() {
                     if (this.currentFilter === 'users') return 'Muchos';
-                    if (this.currentFilter === 'activity') return 'Alta';
-                    return 'Masivos';
+                    return 'Alta';
                 },
                 getTotalValue() {
-                    // BLINDAJE 100% CONTRA NaN
                     let total = 0;
                     for (const stats of Object.values(backendData)) {
                         let val = stats[this.currentFilter];
@@ -175,15 +156,12 @@
                     
                     if(this.currentFilter === 'users') {
                         dataArray.push(['País', 'Usuarios']);
-                    } else if (this.currentFilter === 'activity') {
-                        dataArray.push(['País', 'Figuritas']);
                     } else {
-                        dataArray.push(['País', 'Intercambios']);
+                        dataArray.push(['País', 'Figuritas']);
                     }
 
                     for (const [countryCode, stats] of Object.entries(backendData)) {
                         let val = stats[this.currentFilter];
-                        // Blindaje de seguridad adicional
                         if (typeof val !== 'number') val = 0;
                         dataArray.push([countryCode, val]);
                     }
@@ -192,14 +170,9 @@
 
                     const data = google.visualization.arrayToDataTable(dataArray);
 
-                    let colorAxis;
-                    if (this.currentFilter === 'users') {
-                        colorAxis = {colors: ['#1e1b4b', '#4f46e5', '#818cf8']};
-                    } else if (this.currentFilter === 'activity') {
-                        colorAxis = {colors: ['#064e3b', '#16a34a', '#4ade80']};
-                    } else {
-                        colorAxis = {colors: ['#7c2d12', '#ea580c', '#fdba74']};
-                    }
+                    let colorAxis = this.currentFilter === 'users' 
+                        ? {colors: ['#1e1b4b', '#4f46e5', '#818cf8']}
+                        : {colors: ['#064e3b', '#16a34a', '#4ade80']};
 
                     const options = {
                         region: '019',
