@@ -1,4 +1,5 @@
 # app/routers/heatmap.py
+import sys
 from fastapi import APIRouter, Depends, Request
 from fastapi.responses import HTMLResponse
 from fastapi.templating import Jinja2Templates
@@ -15,7 +16,7 @@ templates = Jinja2Templates(directory=str(BASE_DIR / "templates"))
 
 @router.get("/heatmap", response_class=HTMLResponse)
 async def view_heatmap(request: Request, db: AsyncSession = Depends(get_db)):
-    print("=== INICIANDO CARGA DE DATOS PARA EL MAPA ===")
+    print("=== INICIANDO CARGA DE DATOS PARA EL MAPA ===", flush=True)
     
     # 1. Usuarios por país
     res_users = await db.execute(
@@ -23,7 +24,7 @@ async def view_heatmap(request: Request, db: AsyncSession = Depends(get_db)):
     )
     users_by_country = {row[0]: int(row[1]) for row in res_users.all() if row[0]}
 
-    # 2. Figuritas en el sistema
+    # 2. Figuritas
     res_inv = await db.execute(
         select(User.country_code, func.count(Inventory.id))
         .join(User, User.id == Inventory.user_id)
@@ -31,57 +32,41 @@ async def view_heatmap(request: Request, db: AsyncSession = Depends(get_db)):
     )
     inv_by_country = {row[0]: int(row[1]) for row in res_inv.all() if row[0]}
 
-    # =========================================================
-    # DEBUG: INVESTIGACIÓN DE LA TABLA CONTACT_LOGS
-    # =========================================================
-    # A. Ver qué estados hay realmente guardados y cuántos son
-    debug_status = await db.execute(select(ContactLog.status, func.count(ContactLog.id)).group_by(ContactLog.status))
-    print(f"🔍 DEBUG 1 (Estados en DB): {debug_status.all()}")
-
-    # B. Ver los países guardados en los ContactLogs
-    debug_countries = await db.execute(select(ContactLog.country_code, func.count(ContactLog.id)).group_by(ContactLog.country_code))
-    print(f"🔍 DEBUG 2 (Países en Trades): {debug_countries.all()}")
-    # =========================================================
-
-    # 3. Intercambios realizados
-    res_trades = await db.execute(
-        select(ContactLog.country_code, func.count(ContactLog.id))
-        # Agregamos func.trim() por si los estados se guardaron con espacios por error (ej: "pending ")
-        .where(func.trim(ContactLog.status).in_(['completed', 'pending'])) 
-        .group_by(ContactLog.country_code)
+    # 3. Intercambios (Traemos TODO y filtramos en Python para evitar bugs de SQL)
+    res_trades_all = await db.execute(
+        select(ContactLog.country_code, ContactLog.status, func.count(ContactLog.id))
+        .group_by(ContactLog.country_code, ContactLog.status)
     )
+    all_trades = res_trades_all.all()
     
-    trades_result = res_trades.all()
-    print(f"🔄 DEBUG 3 (Resultado Query Trades filtrados): {trades_result}")
-
-    # Cuidado: Si country_code es None, en lugar de ignorarlo, lo vamos a mandar a "AR" por defecto para no perderlo.
+    print(f"🔍 DEBUG CONTACT_LOGS (DB Cruda): {all_trades}", flush=True)
+    
     trades_by_country = {}
-    for row in trades_result:
+    for row in all_trades:
         pais = row[0] if row[0] else 'AR'
-        cantidad = int(row[1])
-        if pais in trades_by_country:
-            trades_by_country[pais] += cantidad
-        else:
-            trades_by_country[pais] = cantidad
+        # Limpiamos espacios y pasamos a minúscula por las dudas
+        estado = str(row[1]).strip().lower() if row[1] else ''
+        cantidad = int(row[2])
+        
+        # Filtramos manualmente los exitosos/pendientes
+        if estado in ['completed', 'pending']:
+            trades_by_country[pais] = trades_by_country.get(pais, 0) + cantidad
             
-    print(f"📊 DEBUG 4 (Diccionario de Transacciones): {trades_by_country}")
+    print(f"📊 DEBUG DICCIONARIO TRADES: {trades_by_country}", flush=True)
 
-    # Construimos el diccionario final para el frontend
+    # Construimos el diccionario final
     map_data = {}
     all_countries = set(list(users_by_country.keys()) + list(inv_by_country.keys()) + list(trades_by_country.keys()))
     
     for c in all_countries:
-        # Aseguramos que la clave no sea vacía
-        if not c: continue
-        
+        if not c: continue # Salto de seguridad
         map_data[c] = {
             "users": users_by_country.get(c, 0),
             "activity": inv_by_country.get(c, 0),
             "trades": trades_by_country.get(c, 0)
         }
 
-    print(f"🚀 DATA FINAL ENVIADA AL FRONTEND: {map_data}")
-    print("=============================================")
+    print(f"🚀 DATA FINAL: {map_data}", flush=True)
 
     return templates.TemplateResponse("heatmap.html", {
         "request": request,
