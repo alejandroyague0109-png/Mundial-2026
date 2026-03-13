@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Mapa en Vivo: Coleccionistas del Álbum Mundial 2026 | Canje AlToque</title>
-    <meta name="description" content="Descubre en tiempo real cuántos coleccionistas están intercambiando figuritas, estampas, láminas o cromos del Álbum del Mundial 2026 en toda Latinoamérica.">
+    <meta name="description" content="Descubrí en tiempo real cuántos coleccionistas están intercambiando figuritas en toda Latinoamérica.">
     <script src="https://cdn.tailwindcss.com"></script>
     <script type="text/javascript" src="https://www.gstatic.com/charts/loader.js"></script>
     <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
@@ -56,7 +56,7 @@
         </div>
     </header>
 
-    <main class="flex-grow w-full max-w-7xl mx-auto p-4 flex flex-col lg:flex-row gap-6 mt-4 mb-10">
+    <main class="flex-grow w-full max-w-7xl mx-auto p-4 flex flex-col lg:flex-row gap-6 mt-4">
         
         <aside class="w-full lg:w-1/4 bg-slate-900/80 rounded-2xl border border-slate-800 p-6 shadow-2xl flex flex-col justify-start h-fit">
             <div class="flex items-center gap-3 mb-4">
@@ -81,17 +81,21 @@
             </div>
         </aside>
 
-        <section class="w-full lg:w-3/4 bg-slate-900/50 rounded-2xl border border-slate-800 shadow-2xl relative overflow-hidden h-[60vh] sm:h-[75vh]">
-            
+        <section class="w-full lg:w-3/4 bg-slate-900/50 rounded-2xl border border-slate-800 shadow-2xl relative overflow-hidden h-[60vh] sm:h-[70vh] flex items-center justify-center">
             <div x-show="loading" class="absolute inset-0 flex items-center justify-center bg-slate-900/80 z-20 backdrop-blur-sm">
                 <div class="animate-spin text-4xl">⚽</div>
             </div>
-
-            <div id="regions_div" class="absolute w-[115%] h-[200%] top-[-100%] left-[-8%] z-0"></div>
-            
+            <div id="regions_div" class="w-full h-full z-0" style="transform: scale(1.4) translateY(-10%); transform-origin: center;"></div>
         </section>
 
     </main>
+
+    <div class="w-full max-w-7xl mx-auto p-4 mb-10">
+        <div class="bg-black/50 border border-red-500/30 rounded-lg p-4 font-mono text-[10px] text-gray-400 break-words">
+            <strong class="text-red-400">Scanner Base de Datos (ContactLogs):</strong> 
+            {{ debug_info }}
+        </div>
+    </div>
 
     <script>
         const backendData = {{ map_data | tojson | safe }};
@@ -119,7 +123,6 @@
                     this.drawMap();
                 },
 
-                // --- MÉTODOS DINÁMICOS PARA LA LEYENDA (PANEL IZQUIERDO) ---
                 getLegendTitle() {
                     if (this.currentFilter === 'users') return 'Coleccionistas';
                     if (this.currentFilter === 'activity') return 'Figuritas Subidas';
@@ -132,21 +135,9 @@
                 },
                 getLegendDesc() {
                     if (this.currentFilter === 'users') return 'Cantidad de usuarios registrados oficialmente buscando intercambios.';
-                    if (this.currentFilter === 'activity') return 'Volumen total de repetidas y faltantes cargadas en la app.';
-                    return 'Intercambios concretados gracias a la plataforma.';
+                    if (this.currentFilter === 'activity') return 'Volumen total de repetidas y faltantes cargadas en las Wishlists.';
+                    return 'Estimación en vivo de los intercambios concretados gracias a la plataforma.';
                 },
-                // --- NUEVAS FUNCIONES PARA PALABRAS EN LA LEYENDA ---
-                getLegendMin() {
-                    if (this.currentFilter === 'users') return 'Pocos';
-                    if (this.currentFilter === 'activity') return 'Baja';
-                    return 'Escasos';
-                },
-                getLegendMax() {
-                    if (this.currentFilter === 'users') return 'Muchos';
-                    if (this.currentFilter === 'activity') return 'Alta';
-                    return 'Masivos';
-                },
-                // ----------------------------------------------------
                 getGradientClass() {
                     if (this.currentFilter === 'users') return 'bg-gradient-to-r from-slate-700 via-indigo-500 to-indigo-400';
                     if (this.currentFilter === 'activity') return 'bg-gradient-to-r from-slate-700 via-emerald-600 to-emerald-400';
@@ -157,16 +148,28 @@
                     if (this.currentFilter === 'activity') return 'bg-gradient-to-r from-emerald-400 to-emerald-200';
                     return 'bg-gradient-to-r from-orange-400 to-orange-200';
                 },
+                getLegendMin() {
+                    if (this.currentFilter === 'users') return 'Pocos';
+                    if (this.currentFilter === 'activity') return 'Baja';
+                    return 'Escasos';
+                },
+                getLegendMax() {
+                    if (this.currentFilter === 'users') return 'Muchos';
+                    if (this.currentFilter === 'activity') return 'Alta';
+                    return 'Masivos';
+                },
                 getTotalValue() {
-                    // Suma el total de la región blindado contra NaN
+                    // BLINDAJE 100% CONTRA NaN
                     let total = 0;
                     for (const stats of Object.values(backendData)) {
-                        total += parseInt(stats[this.currentFilter] || 0);
+                        let val = stats[this.currentFilter];
+                        if (typeof val === 'number') {
+                            total += val;
+                        }
                     }
                     return total;
                 },
 
-                // --- RENDERIZADO DEL MAPA ---
                 drawMap() {
                     const dataArray = [];
                     
@@ -179,32 +182,32 @@
                     }
 
                     for (const [countryCode, stats] of Object.entries(backendData)) {
-                        const val = parseInt(stats[this.currentFilter] || 0); // <--- Blindaje anti NaN
+                        let val = stats[this.currentFilter];
+                        // Blindaje de seguridad adicional
+                        if (typeof val !== 'number') val = 0;
                         dataArray.push([countryCode, val]);
                     }
-                    // ... resto de la función drawMap queda igual ...
 
-                    // Prevenir error si la DB está 100% vacía
                     if(dataArray.length === 1) dataArray.push(['AR', 0]);
 
                     const data = google.visualization.arrayToDataTable(dataArray);
 
                     let colorAxis;
                     if (this.currentFilter === 'users') {
-                        colorAxis = {colors: ['#1e1b4b', '#4f46e5', '#818cf8']}; // Azules
+                        colorAxis = {colors: ['#1e1b4b', '#4f46e5', '#818cf8']};
                     } else if (this.currentFilter === 'activity') {
-                        colorAxis = {colors: ['#064e3b', '#16a34a', '#4ade80']}; // Verdes
+                        colorAxis = {colors: ['#064e3b', '#16a34a', '#4ade80']};
                     } else {
-                        colorAxis = {colors: ['#7c2d12', '#ea580c', '#fdba74']}; // Naranjas
+                        colorAxis = {colors: ['#7c2d12', '#ea580c', '#fdba74']};
                     }
 
                     const options = {
-                        region: '019', // '019' = Américas. Es la mejor vista para LatAm.
+                        region: '019',
                         backgroundColor: 'transparent',
-                        datalessRegionColor: '#1e293b', // Color de países sin data
+                        datalessRegionColor: '#1e293b',
                         defaultColor: '#334155',
                         colorAxis: colorAxis,
-                        legend: 'none', // La ocultamos de google, usamos la nuestra a la izquierda
+                        legend: 'none',
                         tooltip: {isHtml: true}
                     };
 

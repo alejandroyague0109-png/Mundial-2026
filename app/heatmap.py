@@ -16,7 +16,7 @@ templates = Jinja2Templates(directory=str(BASE_DIR / "templates"))
 @router.get("/heatmap", response_class=HTMLResponse)
 async def view_heatmap(request: Request, db: AsyncSession = Depends(get_db)):
     
-    # 1. Usuarios por país
+    # 1. Usuarios
     res_users = await db.execute(
         select(User.country_code, func.count(User.id)).group_by(User.country_code)
     )
@@ -30,36 +30,43 @@ async def view_heatmap(request: Request, db: AsyncSession = Depends(get_db)):
     )
     inv_by_country = {str(row[0]).strip().upper(): int(row[1]) for row in res_inv.all() if row[0]}
 
-    # 3. Intercambios (Conteo 100% blindado en Python para evitar fallos de SQL)
-    # Traemos todos los estados y países de la tabla
-    res_trades = await db.execute(select(ContactLog.country_code, ContactLog.status))
+    # 3. Intercambios (Traemos todo crudo agrupado)
+    res_trades = await db.execute(
+        select(ContactLog.country_code, ContactLog.status, func.count(ContactLog.id))
+        .group_by(ContactLog.country_code, ContactLog.status)
+    )
+    all_trades = res_trades.all()
     
     trades_by_country = {}
-    for row in res_trades.all():
-        pais = str(row[0]).strip().upper() if row[0] else 'AR'
-        # Convertimos todo a minúscula y sacamos espacios fantasma
-        estado = str(row[1]).strip().lower() if row[1] else ''
+    debug_mensajes = [] # Guardaremos acá lo que ve la DB para mandarlo a la pantalla
+    
+    for code, status, count in all_trades:
+        c = str(code).strip().upper() if code else 'AR'
+        s = str(status).strip().lower() if status else 'null'
+        cantidad = int(count)
         
-        # Filtramos manualmente
-        if estado in ['completed', 'pending']:
-            trades_by_country[pais] = trades_by_country.get(pais, 0) + 1
+        debug_mensajes.append(f"[{c} - {s}: {cantidad}]")
+        
+        if s in ['completed', 'pending']:
+            trades_by_country[c] = trades_by_country.get(c, 0) + cantidad
 
-    # Construimos el diccionario final
+    # Construimos el texto de depuración
+    texto_debug = " | ".join(debug_mensajes) if debug_mensajes else "🚨 LA TABLA CONTACT_LOGS ESTÁ VACÍA EN ESTA BASE DE DATOS 🚨"
+
+    # Diccionario final
     map_data = {}
     all_countries = set(list(users_by_country.keys()) + list(inv_by_country.keys()) + list(trades_by_country.keys()))
     
     for c in all_countries:
-        if not c: continue 
+        if not c: continue
         map_data[c] = {
             "users": users_by_country.get(c, 0),
             "activity": inv_by_country.get(c, 0),
             "trades": trades_by_country.get(c, 0)
         }
 
-    # Imprimimos en Railway de forma forzada para auditoría
-    print(f"DATOS ENVIADOS -> Usr: {users_by_country} | Fig: {inv_by_country} | Canjes: {trades_by_country}", flush=True)
-
     return templates.TemplateResponse("heatmap.html", {
         "request": request,
-        "map_data": map_data
+        "map_data": map_data,
+        "debug_info": texto_debug  # <--- Enviamos el scanner a la pantalla
     })
