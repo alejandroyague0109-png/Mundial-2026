@@ -81,13 +81,13 @@
             </div>
         </aside>
 
-        <section class="w-full lg:w-3/4 bg-slate-900/50 rounded-2xl border border-slate-800 shadow-2xl relative overflow-hidden h-[60vh] sm:h-[70vh]">
+        <section class="w-full lg:w-3/4 bg-slate-900/50 rounded-2xl border border-slate-800 shadow-2xl relative overflow-hidden h-[60vh] sm:h-[75vh]">
             
             <div x-show="loading" class="absolute inset-0 flex items-center justify-center bg-slate-900/80 z-20 backdrop-blur-sm">
                 <div class="animate-spin text-4xl">⚽</div>
             </div>
 
-            <div id="regions_div" class="absolute w-[110%] h-[145%] top-[-30%] left-[-5%] z-0"></div>
+            <div id="regions_div" class="absolute w-[130%] h-[175%] top-[-45%] left-[-15%] z-0"></div>
             
         </section>
 
@@ -158,10 +158,10 @@
                     return 'bg-gradient-to-r from-orange-400 to-orange-200';
                 },
                 getTotalValue() {
-                    // Suma el total de la región
+                    // Suma el total de la región blindado contra NaN
                     let total = 0;
                     for (const stats of Object.values(backendData)) {
-                        total += stats[this.currentFilter];
+                        total += parseInt(stats[this.currentFilter] || 0);
                     }
                     return total;
                 },
@@ -179,9 +179,10 @@
                     }
 
                     for (const [countryCode, stats] of Object.entries(backendData)) {
-                        const val = stats[this.currentFilter];
+                        const val = parseInt(stats[this.currentFilter] || 0); // <--- Blindaje anti NaN
                         dataArray.push([countryCode, val]);
                     }
+                    // ... resto de la función drawMap queda igual ...
 
                     // Prevenir error si la DB está 100% vacía
                     if(dataArray.length === 1) dataArray.push(['AR', 0]);

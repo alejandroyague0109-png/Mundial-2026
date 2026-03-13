@@ -7,7 +7,6 @@ from sqlalchemy import select, func
 from pathlib import Path
 
 from app.database import get_db
-# CORRECCIÓN: Importamos la clase correcta "ContactLog"
 from app.models import User, Inventory, ContactLog
 
 router = APIRouter(tags=["Heatmap"])
@@ -22,7 +21,7 @@ async def view_heatmap(request: Request, db: AsyncSession = Depends(get_db)):
         select(User.country_code, func.count(User.id))
         .group_by(User.country_code)
     )
-    users_by_country = {row[0]: row[1] for row in res_users.all() if row[0]}
+    users_by_country = {row[0]: int(row[1]) for row in res_users.all() if row[0]}
 
     # 2. Obtenemos cantidad de figuritas en el sistema (actividad) por país
     res_inv = await db.execute(
@@ -30,17 +29,16 @@ async def view_heatmap(request: Request, db: AsyncSession = Depends(get_db)):
         .join(User, User.id == Inventory.user_id)
         .group_by(User.country_code)
     )
-    inv_by_country = {row[0]: row[1] for row in res_inv.all() if row[0]}
+    inv_by_country = {row[0]: int(row[1]) for row in res_inv.all() if row[0]}
 
-    # 3. Intercambios realizados (AHORA CON DATOS REALES)
-    # CORRECCIÓN: Usamos ContactLog
+    # 3. Intercambios realizados (CONSULTA OPTIMIZADA)
+    # Usamos directamente el country_code de ContactLog sin hacer JOIN
     res_trades = await db.execute(
-        select(User.country_code, func.count(ContactLog.id))
-        .join(User, User.id == ContactLog.user_id) 
+        select(ContactLog.country_code, func.count(ContactLog.id))
         .where(ContactLog.status.in_(['completed', 'pending'])) 
-        .group_by(User.country_code)
+        .group_by(ContactLog.country_code)
     )
-    trades_by_country = {row[0]: row[1] for row in res_trades.all() if row[0]}
+    trades_by_country = {row[0]: int(row[1]) for row in res_trades.all() if row[0]}
 
     # Construimos el diccionario final para el frontend
     map_data = {}
