@@ -193,7 +193,15 @@ async def toggle_sticker(
     background_tasks: BackgroundTasks, 
     db: AsyncSession = Depends(get_db)
 ):
-    user_id = int(request.cookies.get("user_id"))
+    # 1. Extraemos la cookie de forma segura
+    user_id_cookie = request.cookies.get("user_id")
+    
+    # 2. Si no hay cookie, pateamos al usuario (error 401) para que no rompa el servidor
+    if not user_id_cookie:
+        return Response(status_code=401)
+        
+    # 3. Si todo está bien, recién ahí convertimos a número
+    user_id = int(user_id_cookie)
     
     # 1. Recuperamos al Usuario Dueño (Necesario para el nombre en la notificación)
     user_res = await db.execute(select(User).where(User.id == user_id))
@@ -289,7 +297,15 @@ async def toggle_sticker(
 @router.post("/country/{country_code}/{action}")
 async def batch_country_action(request: Request, country_code: str, action: str, db: AsyncSession = Depends(get_db)):
     # ... (TU CÓDIGO ORIGINAL SIN CAMBIOS) ...
-    user_id = int(request.cookies.get("user_id"))
+    # 1. Extraemos la cookie
+    user_id_cookie = request.cookies.get("user_id")
+    
+    # 2. Si no hay cookie, devolvemos error 401
+    if not user_id_cookie:
+        return Response(status_code=401)
+        
+    # 3. Recién ahí convertimos
+    user_id = int(user_id_cookie)
     country_data = ALBUM_STRUCTURE.get(country_code)
     start = country_data["start"]
     end = start + country_data["count"] - 1
@@ -327,7 +343,13 @@ async def update_item_details(
     db: AsyncSession = Depends(get_db)
 ):
     # ... (TU CÓDIGO ORIGINAL SIN CAMBIOS) ...
-    user_id = int(request.cookies.get("user_id"))
+    # 1. Extraemos la cookie segura
+    user_id_cookie = request.cookies.get("user_id")
+    if not user_id_cookie:
+        return Response(status_code=401)
+        
+    # 2. Recién ahí convertimos a int
+    user_id = int(user_id_cookie)
     result = await db.execute(select(Inventory).where(Inventory.user_id == user_id, Inventory.sticker_num == sticker_num))
     item = result.scalars().first()
     
