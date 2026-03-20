@@ -54,9 +54,9 @@ TRANSLATIONS = {
         "default": "Compartir Figuritas"
     },
     "hora_de_canjear": {
-        "AR": "¡Hora de Canjear!", "UY": "¡Hora de Canjear!", "PE": "¡Hora de Canjear!",
-        "MX": "¡Hora de Intercambiar!", "CL": "¡Hora de Cambiar!", "CO": "¡Hora de Cambiar!",
-        "default": "¡Hora de Intercambiar!"
+        "AR": "¡Contacto diario renovado! ¡Hora de Canjear!", "UY": "¡Contacto diario renovado! ¡Hora de Canjear!", "PE": "¡Contacto diario renovado! ¡Hora de Canjear!",
+        "MX": "¡Contacto diario renovado! ¡Hora de Intercambiar!", "CL": "¡Contacto diario renovado! ¡Hora de Cambiar!", "CO": "¡Contacto diario renovado! ¡Hora de Cambiar!",
+        "default": "¡Contacto diario renovado! ¡Hora de Intercambiar!"
     },
     "mensaje_hora_canjear": {
         "AR": "La mejor forma de conseguir figuritas rápido es avisarle a tus amigos qué te falta y qué tenés repetido. ¿Compartimos tu lista en WhatsApp?",
