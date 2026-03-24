@@ -227,6 +227,14 @@ MEXICO = {
     "Zacatecas": ["Zacatecas", "Guadalupe", "Fresnillo", "Jerez", "Interior"]
 }
 
+ESPANA = {
+    "Madrid": ["Madrid Capital", "Alcalá de Henares", "Móstoles", "Fuenlabrada", "Leganés", "Getafe", "Resto de Madrid"],
+    "Cataluña": ["Barcelona Capital", "L'Hospitalet", "Badalona", "Tarrasa", "Sabadell", "Girona", "Resto de Cataluña"],
+    "Andalucía": ["Sevilla", "Málaga", "Córdoba", "Granada", "Jerez de la Frontera", "Resto de Andalucía"],
+    "Comunidad Valenciana": ["Valencia Capital", "Alicante", "Elche", "Castellón", "Resto de C. Valenciana"],
+    "Otras Comunidades": ["Galicia", "País Vasco", "Canarias", "Castilla y León", "Región de Murcia", "Aragón", "Baleares", "Resto del país"]
+}
+
 COLOMBIA = {
     "Bogotá D.C.": ["Usaquén", "Chapinero", "Santa Fe", "San Cristóbal", "Usme", "Tunjuelito", "Bosa", "Kennedy", "Fontibón", "Engativá", "Suba", "Barrios Unidos", "Teusaquillo", "Los Mártires", "Antonio Nariño", "Puente Aranda"],
     "Antioquia": ["Medellín", "Bello", "Itagüí", "Envigado", "Rionegro", "Sabaneta", "Apartadó", "Interior"],
@@ -305,6 +313,7 @@ LOCATIONS_BY_COUNTRY = {
     "UY": URUGUAY,
     "CL": CHILE,
     "MX": MEXICO,
+    "ES": ESPANA,
     "CO": COLOMBIA,
     "PE": PERU,
     "VE": VENEZUELA,
@@ -325,6 +334,7 @@ LOCATIONS_BY_COUNTRY = {
 AVAILABLE_COUNTRIES = [
     {"code": "AR", "name": "Argentina", "flag": "🇦🇷", "prefix": "+54"},
     {"code": "MX", "name": "México", "flag": "🇲🇽", "prefix": "+52"},
+    {"code": "ES", "name": "España", "flag": "🇪🇸", "prefix": "+34"},
     {"code": "CO", "name": "Colombia", "flag": "🇨🇴", "prefix": "+57"},
     {"code": "PE", "name": "Perú", "flag": "🇵🇪", "prefix": "+51"},
     {"code": "CL", "name": "Chile", "flag": "🇨🇱", "prefix": "+56"},
