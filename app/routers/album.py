@@ -220,7 +220,8 @@ async def toggle_sticker(
                 item = None
         else:
             if not item:
-                item = Inventory(user_id=user_id, sticker_num=sticker_num, status=target_status)
+                # CORRECCIÓN: Nace con quantity=0 para evitar que sea None
+                item = Inventory(user_id=user_id, sticker_num=sticker_num, status=target_status, quantity=0)
                 db.add(item)
             
             # 🔥 Detectamos si ACABA de pasar a repetida para no spamear notificaciones
@@ -233,7 +234,9 @@ async def toggle_sticker(
             if target_status == "tengo":
                 item.quantity = 1
             elif target_status == "repetida":
-                if item.quantity < 2: item.quantity = 2
+                # CORRECCIÓN: Blindamos la comprobación por si item.quantity sigue siendo None en registros viejos
+                if item.quantity is None or item.quantity < 2: 
+                    item.quantity = 2
             elif target_status == "wishlist":
                 item.quantity = 0
                 item.price = 0
