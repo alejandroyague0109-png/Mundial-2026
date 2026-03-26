@@ -4,25 +4,25 @@
 TRANSLATIONS = {
     # --- TÉRMINOS BÁSICOS ---
     "figuritas": {
-        "AR": "figuritas", "UY": "figuritas",
-        "MX": "estampas", "CL": "láminas", "CO": "láminas",
+        "AR": "figuritas", "UY": "figuritas", "PE": "figuritas",
+        "MX": "estampas", "CL": "láminas", "CO": "monas",
         "ES": "cromos",
         "default": "figuritas"
     },
     "figurita": {
-        "AR": "figurita", "UY": "figurita",
-        "MX": "estampa", "CL": "lámina", "CO": "lámina",
+        "AR": "figurita", "UY": "figurita", "PE": "figurita",
+        "MX": "estampa", "CL": "lámina", "CO": "mona",
         "ES": "cromo",
         "default": "figurita"
     },
     "mis_figus": {
-        "AR": "Mis Figus", "UY": "Mis Figus",
-        "MX": "Mis Estampas", "CL": "Mis Láminas", "CO": "Mis Láminas",
+        "AR": "Mis Figus", "UY": "Mis Figus", "PE": "Mis Figuritas",
+        "MX": "Mis Estampas", "CL": "Mis Láminas", "CO": "Mis Monas",
         "ES": "Mis Cromos",
         "default": "Mi Álbum"
     },
     "repes": {
-        "AR": "repes", "UY": "repes",
+        "AR": "repes", "UY": "repes", "PE": "repetidas",
         "MX": "repetidas", "CL": "repetidas", "CO": "repetidas",
         "ES": "repes",
         "default": "repetidas"
@@ -37,12 +37,12 @@ TRANSLATIONS = {
     },
     "compartir_figuritas": {
         "AR": "Compartir Figuritas", "UY": "Compartir Figuritas", "PE": "Compartir Figuritas",
-        "MX": "Compartir Estampas", "CL": "Compartir Láminas", "CO": "Compartir Láminas",
+        "MX": "Compartir Estampas", "CL": "Compartir Láminas", "CO": "Compartir Monas",
         "ES": "Compartir Cromos",
         "default": "Compartir Figuritas"
     },
     "hora_de_canjear": {
-        "AR": "¡Contacto diario renovado! ¡Hora de Canjear!", "UY": "¡Contacto diario renovado! ¡Hora de Canjear!", "PE": "¡Contacto diario renovado! ¡Hora de Canjear!",
+        "AR": "¡Contacto diario renovado! ¡Hora de Canjear!", "UY": "¡Contacto diario renovado! ¡Hora de Canjear!", "PE": "¡Contacto diario renovado! ¡Hora de Intercambiar!",
         "MX": "¡Contacto diario renovado! ¡Hora de Intercambiar!", "CL": "¡Contacto diario renovado! ¡Hora de Cambiar!", "CO": "¡Contacto diario renovado! ¡Hora de Cambiar!",
         "ES": "¡Contacto diario renovado! ¡Hora de Cambiar!",
         "default": "¡Contacto diario renovado! ¡Hora de Intercambiar!"
@@ -50,10 +50,10 @@ TRANSLATIONS = {
     "mensaje_hora_canjear": {
         "AR": "La mejor forma de conseguir figuritas rápido es avisarle a tus amigos qué te falta y qué tenés repetido. ¿Compartimos tu lista en WhatsApp?",
         "UY": "La mejor forma de conseguir figuritas rápido es avisarle a tus amigos qué te falta y qué tenés repetido. ¿Compartimos tu lista en WhatsApp?",
-        "PE": "La mejor forma de conseguir figuritas rápido es avisarle a tus amigos qué te falta y qué tenés repetido. ¿Compartimos tu lista en WhatsApp?",
+        "PE": "La mejor forma de conseguir figuritas rápido es avisarle a tus amigos qué te falta y qué tienes repetido. ¿Compartimos tu lista en WhatsApp?",
         "MX": "La mejor forma de conseguir estampas rápido es avisarle a tus amigos qué te falta y qué tienes repetido. ¿Compartimos tu lista en WhatsApp?",
         "CL": "La mejor forma de conseguir láminas rápido es avisarle a tus amigos qué te falta y qué tienes repetido. ¿Compartimos tu lista en WhatsApp?",
-        "CO": "La mejor forma de conseguir láminas rápido es avisarle a tus amigos qué te falta y qué tienes repetido. ¿Compartimos tu lista en WhatsApp?",
+        "CO": "La mejor forma de conseguir monas rápido es avisarle a tus amigos qué te falta y qué tienes repetido. ¿Compartimos tu lista en WhatsApp?",
         "ES": "La mejor forma de conseguir cromos rápido es avisarle a tus amigos qué te falta y qué tienes repe. ¿Compartimos tu lista en WhatsApp?",
         "default": "La mejor forma de conseguir figuritas rápido es avisarle a tus amigos qué te falta y qué tienes repetido. ¿Compartimos tu lista en WhatsApp?"
     },
@@ -69,7 +69,7 @@ TRANSLATIONS = {
         "PE": "! Únete a Canje AlToque 26 para cambiar figuritas: https://canjealtoque26.com",
         "MX": "! Únete a Canje AlToque 26 para intercambiar estampas: https://canjealtoque26.com",
         "CL": "! Súmate a Canje AlToque 26 para cambiar láminas: https://canjealtoque26.com",
-        "CO": "! Únete a Canje AlToque 26 para cambiar láminas: https://canjealtoque26.com",
+        "CO": "! Únete a Canje AlToque 26 para cambiar monas: https://canjealtoque26.com",
         "ES": "! Únete a Canje AlToque 26 para cambiar cromos: https://canjealtoque26.com",
         "default": "! Únete a Canje AlToque 26 para intercambiar: https://canjealtoque26.com"
     },
@@ -94,7 +94,7 @@ TRANSLATIONS = {
         "PE": "¡Felicitaciones! Tienes todas las figuritas de",
         "MX": "¡Felicidades! Tienes todas las estampas de",
         "CL": "¡Felicitaciones! Tienes todas las láminas de",
-        "CO": "¡Felicitaciones! Tienes todas las láminas de",
+        "CO": "¡Felicitaciones! Tienes todas las monas de",
         "ES": "¡Enhorabuena! Tienes todos los cromos de",
         "default": "¡Felicidades! Tienes todas las figuritas de"
     },
@@ -106,11 +106,11 @@ TRANSLATIONS = {
         "ES": "Mercado",
         "default": "Mercado"
     },
-    "nav_jugador": {
-        "AR": "Jugador", "UY": "Jugador", "PE": "Jugador",
-        "MX": "Coleccionista", "CL": "Jugador", "CO": "Jugador",
-        "ES": "Jugador",
-        "default": "Usuario"
+    "nav_jugador": { # Cambiado a Coleccionista para evitar confusión con jugadores de fútbol
+        "AR": "Coleccionista", "UY": "Coleccionista", "PE": "Coleccionista",
+        "MX": "Coleccionista", "CL": "Coleccionista", "CO": "Coleccionista",
+        "ES": "Coleccionista",
+        "default": "Coleccionista"
     },
     "nav_ingresar": {
         "AR": "Ingresar", "UY": "Ingresar", "PE": "Ingresar",
@@ -137,13 +137,13 @@ TRANSLATIONS = {
     # --- MARKET.HTML ---
     "buscar_figuritas_placeholder": {
         "AR": "Buscando figuritas en tu zona...", "UY": "Buscando figuritas en tu zona...", "PE": "Buscando figuritas en tu zona...",
-        "MX": "Buscando estampas en tu zona...", "CL": "Buscando láminas en tu zona...", "CO": "Buscando láminas en tu zona...",
+        "MX": "Buscando estampas en tu zona...", "CL": "Buscando láminas en tu zona...", "CO": "Buscando monas en tu zona...",
         "ES": "Buscando cromos en tu zona...",
         "default": "Buscando en tu zona..."
     },
     "numero_figurita": {
         "AR": "N° Figurita", "UY": "N° Figurita", "PE": "N° Figurita",
-        "MX": "N° Estampa", "CL": "N° Lámina", "CO": "N° Lámina",
+        "MX": "N° Estampa", "CL": "N° Lámina", "CO": "N° Mona",
         "ES": "N° Cromo",
         "default": "N° Figurita"
     },
@@ -177,7 +177,7 @@ TRANSLATIONS = {
     },
     "buscas_figurita_dificil": {
         "AR": "¿Buscás una figurita difícil?", "UY": "¿Buscás una figurita difícil?", "PE": "¿Buscas una figurita difícil?",
-        "MX": "¿Buscas una estampa difícil?", "CL": "¿Buscas una lámina difícil?", "CO": "¿Buscas una lámina difícil?",
+        "MX": "¿Buscas una estampa difícil?", "CL": "¿Buscas una lámina difícil?", "CO": "¿Buscas una mona difícil?",
         "ES": "¿Buscas un cromo difícil?",
         "default": "¿Buscas una difícil?"
     },
@@ -199,7 +199,7 @@ TRANSLATIONS = {
     # --- MODALS.HTML ---
     "como_marcar_figuritas": {
         "AR": "👆 ¿Cómo marcar figuritas?", "UY": "👆 ¿Cómo marcar figuritas?", "PE": "👆 ¿Cómo marcar figuritas?",
-        "MX": "👆 ¿Cómo marcar estampas?", "CL": "👆 ¿Cómo marcar láminas?", "CO": "👆 ¿Cómo marcar láminas?",
+        "MX": "👆 ¿Cómo marcar estampas?", "CL": "👆 ¿Cómo marcar láminas?", "CO": "👆 ¿Cómo marcar monas?",
         "ES": "👆 ¿Cómo marcar cromos?",
         "default": "👆 ¿Cómo marcar figuritas?"
     },
@@ -209,13 +209,13 @@ TRANSLATIONS = {
         "PE": "El sistema funciona por ciclos al hacer clic sobre una figurita:",
         "MX": "El sistema funciona por ciclos al hacer clic sobre una estampa:",
         "CL": "El sistema funciona por ciclos al hacer clic sobre una lámina:",
-        "CO": "El sistema funciona por ciclos al hacer clic sobre una lámina:",
+        "CO": "El sistema funciona por ciclos al hacer clic sobre una mona:",
         "ES": "El sistema funciona por ciclos al hacer clic sobre un cromo:",
         "default": "El sistema funciona por ciclos al hacer clic sobre una figurita:"
     },
     "cuando_marcas_figurita": {
         "AR": "Cuando marcás una figurita como", "UY": "Cuando marcás una figurita como", "PE": "Cuando marcas una figurita como",
-        "MX": "Cuando marcas una estampa como", "CL": "Cuando marcas una lámina como", "CO": "Cuando marcas una lámina como",
+        "MX": "Cuando marcas una estampa como", "CL": "Cuando marcas una lámina como", "CO": "Cuando marcas una mona como",
         "ES": "Cuando marcas un cromo como",
         "default": "Cuando marcas una figurita como"
     },
@@ -231,19 +231,19 @@ TRANSLATIONS = {
         "PE": "Asegúrate de haber activado las notificaciones de Telegram en tu celular para que te avise cuando llegue una figurita nueva.",
         "MX": "Asegúrate de haber activado las notificaciones de Telegram en tu celular para que te avise cuando llegue una estampa nueva.",
         "CL": "Asegúrate de haber activado las notificaciones de Telegram en tu celular para que te avise cuando llegue una lámina nueva.",
-        "CO": "Asegúrate de haber activado las notificaciones de Telegram en tu celular para que te avise cuando llegue una lámina nueva.",
+        "CO": "Asegúrate de haber activado las notificaciones de Telegram en tu celular para que te avise cuando llegue una mona nueva.",
         "ES": "Asegúrate de tener las notificaciones de Telegram activadas para que te avise cuando llegue un cromo nuevo.",
         "default": "Asegúrate de haber activado las notificaciones de Telegram para que te avise cuando haya una novedad."
     },
     "como_cargar_volando": {
         "AR": "🚀 Cómo cargar tus figus volando", "UY": "🚀 Cómo cargar tus figus volando", "PE": "🚀 Cómo cargar tus figuritas volando",
-        "MX": "🚀 Cómo cargar tus estampas volando", "CL": "🚀 Cómo cargar tus láminas volando", "CO": "🚀 Cómo cargar tus láminas volando",
+        "MX": "🚀 Cómo cargar tus estampas volando", "CL": "🚀 Cómo cargar tus láminas volando", "CO": "🚀 Cómo cargar tus monas volando",
         "ES": "🚀 Cómo cargar tus cromos súper rápido",
         "default": "🚀 Cómo cargar todo rápido"
     },
     "dueño_te_da_figurita": {
         "AR": "¡El Dueño te da a vos la figurita que buscás! 🎯", "UY": "¡El Dueño te da a vos la figurita que buscás! 🎯", "PE": "¡El Dueño te da a ti la figurita que buscas! 🎯",
-        "MX": "¡El Dueño te da a ti la estampa que buscas! 🎯", "CL": "¡El Dueño te da a ti la lámina que buscas! 🎯", "CO": "¡El Dueño te da a ti la lámina que buscas! 🎯",
+        "MX": "¡El Dueño te da a ti la estampa que buscas! 🎯", "CL": "¡El Dueño te da a ti la lámina que buscas! 🎯", "CO": "¡El Dueño te da a ti la mona que buscas! 🎯",
         "ES": "¡El Dueño te da a ti el cromo que buscas! 🎯",
         "default": "¡El Dueño te da a ti lo que buscas! 🎯"
     },
@@ -251,19 +251,19 @@ TRANSLATIONS = {
     # --- MARKET_LIST.HTML ---
     "busca_figuritas": {
         "AR": "¡Buscá figuritas!", "UY": "¡Buscá figuritas!", "PE": "¡Busca figuritas!",
-        "MX": "¡Busca estampas!", "CL": "¡Busca láminas!", "CO": "¡Busca láminas!",
+        "MX": "¡Busca estampas!", "CL": "¡Busca láminas!", "CO": "¡Busca monas!",
         "ES": "¡Busca cromos!",
         "default": "¡Busca figuritas!"
     },
     "wsp_compra_figurita": {
         "AR": "COMPRA DE FIGURITA", "UY": "COMPRA DE FIGURITA", "PE": "COMPRA DE FIGURITA",
-        "MX": "COMPRA DE ESTAMPA", "CL": "COMPRA DE LÁMINA", "CO": "COMPRA DE LÁMINA",
+        "MX": "COMPRA DE ESTAMPA", "CL": "COMPRA DE LÁMINA", "CO": "COMPRA DE MONA",
         "ES": "COMPRA DE CROMO",
         "default": "COMPRA DE FIGURITA"
     },
     "se_sumara_figurita": {
         "AR": "Se sumará la figurita a tu álbum.", "UY": "Se sumará la figurita a tu álbum.", "PE": "Se sumará la figurita a tu álbum.",
-        "MX": "Se sumará la estampa a tu álbum.", "CL": "Se sumará la lámina a tu álbum.", "CO": "Se sumará la lámina a tu álbum.",
+        "MX": "Se sumará la estampa a tu álbum.", "CL": "Se sumará la lámina a tu álbum.", "CO": "Se sumará la mona a tu álbum.",
         "ES": "El cromo se añadirá a tu álbum.",
         "default": "Se sumará al álbum."
     },
@@ -276,7 +276,7 @@ TRANSLATIONS = {
 
     # --- MARKET_MODALS.HTML ---
     "repe_al_puente": {
-        "AR": "Le das una repe al Puente.", "UY": "Le das una repe al Puente.", "PE": "Le das una repe al Puente.",
+        "AR": "Le das una repe al Puente.", "UY": "Le das una repe al Puente.", "PE": "Le das una repetida al Puente.",
         "MX": "Le das una repetida al Puente.", "CL": "Le das una repetida al Puente.", "CO": "Le das una repetida al Puente.",
         "ES": "Le das una repe al Puente.",
         "default": "Le das una repetida al Puente."
@@ -287,13 +287,13 @@ TRANSLATIONS = {
         "PE": "Para que la logística sea fácil, el sistema solo busca figuritas marcadas como",
         "MX": "Para que la logística sea fácil, el sistema solo busca estampas marcadas como",
         "CL": "Para que la logística sea fácil, el sistema solo busca láminas marcadas como",
-        "CO": "Para que la logística sea fácil, el sistema solo busca láminas marcadas como",
+        "CO": "Para que la logística sea fácil, el sistema solo busca monas marcadas como",
         "ES": "Para que la logística sea fácil, el sistema solo busca cromos marcados como",
         "default": "Para que la logística sea fácil, el sistema solo busca marcadas como"
     },
     "figurita_objetivo": {
         "AR": "Figurita Objetivo", "UY": "Figurita Objetivo", "PE": "Figurita Objetivo",
-        "MX": "Estampa Objetivo", "CL": "Lámina Objetivo", "CO": "Lámina Objetivo",
+        "MX": "Estampa Objetivo", "CL": "Lámina Objetivo", "CO": "Mona Objetivo",
         "ES": "Cromo Objetivo",
         "default": "Objetivo"
     },
@@ -303,19 +303,19 @@ TRANSLATIONS = {
         "PE": "Para participar en una triangulación, la figurita debe estar marcada previamente como",
         "MX": "Para participar en una triangulación, la estampa debe estar marcada previamente como",
         "CL": "Para participar en una triangulación, la lámina debe estar marcada previamente como",
-        "CO": "Para participar en una triangulación, la lámina debe estar marcada previamente como",
+        "CO": "Para participar en una triangulación, la mona debe estar marcada previamente como",
         "ES": "Para participar en una triangulación, el cromo debe estar marcado previamente como",
         "default": "Para participar en una triangulación, debe estar marcada previamente como"
     },
     "elegi_una_figurita": {
         "AR": "-- Elegí una figurita --", "UY": "-- Elegí una figurita --", "PE": "-- Elige una figurita --",
-        "MX": "-- Elige una estampa --", "CL": "-- Elige una lámina --", "CO": "-- Elige una lámina --",
+        "MX": "-- Elige una estampa --", "CL": "-- Elige una lámina --", "CO": "-- Elige una mona --",
         "ES": "-- Elige un cromo --",
         "default": "-- Elige una opción --"
     },
     "ver_figurita_en_app": {
         "AR": "Ver figurita en la App:", "UY": "Ver figurita en la App:", "PE": "Ver figurita en la App:",
-        "MX": "Ver estampa en la App:", "CL": "Ver lámina en la App:", "CO": "Ver lámina en la App:",
+        "MX": "Ver estampa en la App:", "CL": "Ver lámina en la App:", "CO": "Ver mona en la App:",
         "ES": "Ver cromo en la App:",
         "default": "Ver en la App:"
     },
@@ -325,7 +325,7 @@ TRANSLATIONS = {
         "PE": "❌ No se encontraron triangulaciones posibles en tu zona para esta figurita hoy.",
         "MX": "❌ No se encontraron triangulaciones posibles en tu zona para esta estampa hoy.",
         "CL": "❌ No se encontraron triangulaciones posibles en tu zona para esta lámina hoy.",
-        "CO": "❌ No se encontraron triangulaciones posibles en tu zona para esta lámina hoy.",
+        "CO": "❌ No se encontraron triangulaciones posibles en tu zona para esta mona hoy.",
         "ES": "❌ No se encontraron triangulaciones posibles en tu zona para este cromo hoy.",
         "default": "❌ No se encontraron triangulaciones posibles en tu zona hoy."
     },
@@ -349,15 +349,15 @@ TRANSLATIONS = {
     # --- TRIANGULATION_MODAL.HTML ---
     "tengo_la_figurita": {
         "AR": "Tengo la figurita", "UY": "Tengo la figurita", "PE": "Tengo la figurita",
-        "MX": "Tengo la estampa", "CL": "Tengo la lámina", "CO": "Tengo la lámina",
+        "MX": "Tengo la estampa", "CL": "Tengo la lámina", "CO": "Tengo la mona",
         "ES": "Tengo el cromo",
         "default": "Tengo la figurita"
     },
     "que_buscas_en_app": {
-        "AR": "que buscás en Figus26.", "UY": "que buscás en Figus26.", "PE": "que buscas en Figus26.",
-        "MX": "que buscas en Figus26.", "CL": "que buscas en Figus26.", "CO": "que buscas en Figus26.",
-        "ES": "que buscas en Figus26.",
-        "default": "que buscas en Figus26."
+        "AR": "que buscás en Canje AlToque 26.", "UY": "que buscás en Canje AlToque 26.", "PE": "que buscas en Canje AlToque 26.",
+        "MX": "que buscas en Canje AlToque 26.", "CL": "que buscas en Canje AlToque 26.", "CO": "que buscas en Canje AlToque 26.",
+        "ES": "que buscas en Canje AlToque 26.",
+        "default": "que buscas en Canje AlToque 26."
     },
     "te_copa_avisame": {
         "AR": "¿Te copa? Avisame y coordinamos los 3. 📐⚽",
@@ -385,12 +385,11 @@ def t(key: str, country_code: str = "AR") -> str:
     Si el país no está configurado para esa palabra, usa el 'default' (Español Neutral).
     Si la palabra no existe en el diccionario, devuelve la misma key por seguridad.
     """
-    # Si por alguna razón no llega el país (ej: usuario no logueado), usamos AR
     if not country_code:
         country_code = "AR"
         
     item = TRANSLATIONS.get(key)
     if not item:
-        return key # Fallback: si te olvidás de agregarla, muestra el texto crudo y no rompe la app
+        return key
     
     return item.get(country_code, item.get("default", key))
