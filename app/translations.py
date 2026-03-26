@@ -106,7 +106,7 @@ TRANSLATIONS = {
         "ES": "Mercado",
         "default": "Mercado"
     },
-    "nav_jugador": { # Cambiado a Coleccionista para evitar confusión con jugadores de fútbol
+    "nav_jugador": {
         "AR": "Coleccionista", "UY": "Coleccionista", "PE": "Coleccionista",
         "MX": "Coleccionista", "CL": "Coleccionista", "CO": "Coleccionista",
         "ES": "Coleccionista",
@@ -354,10 +354,10 @@ TRANSLATIONS = {
         "default": "Tengo la figurita"
     },
     "que_buscas_en_app": {
-        "AR": "que buscás en Canje AlToque 26.", "UY": "que buscás en Canje AlToque 26.", "PE": "que buscas en Canje AlToque 26.",
-        "MX": "que buscas en Canje AlToque 26.", "CL": "que buscas en Canje AlToque 26.", "CO": "que buscas en Canje AlToque 26.",
-        "ES": "que buscas en Canje AlToque 26.",
-        "default": "que buscas en Canje AlToque 26."
+        "AR": "que buscás en Canje AlToque.", "UY": "que buscás en Canje AlToque.", "PE": "que buscas en Canje AlToque.",
+        "MX": "que buscas en Canje AlToque.", "CL": "que buscas en Canje AlToque.", "CO": "que buscas en Canje AlToque.",
+        "ES": "que buscas en Canje AlToque.",
+        "default": "que buscas en Canje AlToque."
     },
     "te_copa_avisame": {
         "AR": "¿Te copa? Avisame y coordinamos los 3. 📐⚽",
@@ -385,11 +385,12 @@ def t(key: str, country_code: str = "AR") -> str:
     Si el país no está configurado para esa palabra, usa el 'default' (Español Neutral).
     Si la palabra no existe en el diccionario, devuelve la misma key por seguridad.
     """
+    # Si por alguna razón no llega el país (ej: usuario no logueado), usamos AR
     if not country_code:
         country_code = "AR"
         
     item = TRANSLATIONS.get(key)
     if not item:
-        return key
+        return key # Fallback: si te olvidás de agregarla, muestra el texto crudo y no rompe la app
     
     return item.get(country_code, item.get("default", key))
