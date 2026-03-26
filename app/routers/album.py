@@ -184,66 +184,81 @@ async def process_quick_load(
     response.headers["HX-Trigger"] = "closeModal"
     return response
 
-# --- 4. LÓGICA DE CLICKS (MODIFICADA CON NOTIFICACIÓN) ---
+# --- 4. LÓGICA DE CLICKS (MODIFICADA PARA UI OPTIMISTA Y DEBOUNCE) ---
 @router.post("/sticker/{sticker_num}")
 async def toggle_sticker(
     request: Request, 
     sticker_num: int, 
-    # BackgroundTasks: Permite enviar el mensaje sin congelar la pantalla del usuario
     background_tasks: BackgroundTasks, 
+    target_status: str = Form(None), # <--- ¡NUEVO! RECIBIMOS LA ORDEN EXACTA DEL HTML
     db: AsyncSession = Depends(get_db)
 ):
     # 1. Extraemos la cookie de forma segura
     user_id_cookie = request.cookies.get("user_id")
     
-    # 2. Si no hay cookie, pateamos al usuario (error 401) para que no rompa el servidor
+    # 2. Si no hay cookie, pateamos al usuario (error 401)
     if not user_id_cookie:
         return Response(status_code=401)
         
-    # 3. Si todo está bien, recién ahí convertimos a número
     user_id = int(user_id_cookie)
     
-    # 1. Recuperamos al Usuario Dueño (Necesario para el nombre en la notificación)
+    # 3. Recuperamos al Usuario Dueño
     user_res = await db.execute(select(User).where(User.id == user_id))
     current_user = user_res.scalars().first()
 
-    # A. Actualizar DB
+    # A. Buscamos el ítem en la Base de Datos
     result = await db.execute(select(Inventory).where(Inventory.user_id == user_id, Inventory.sticker_num == sticker_num))
     item = result.scalars().first()
 
-    should_notify = False # Bandera para saber si disparamos la alerta
+    should_notify = False
 
-    if not item:
-        item = Inventory(user_id=user_id, sticker_num=sticker_num, status="tengo", quantity=1)
-        db.add(item)
-    else:
-        # Ciclo de estados: Tengo -> Repetida -> Wishlist -> Nada (Borrar)
-        if item.status == "tengo":
-            item.status = "repetida"
-            item.quantity = 2
-            # 🔥 AQUÍ ES EL MOMENTO MÁGICO 🔥
-            # El usuario acaba de marcar que tiene una REPETIDA. ¡Avisemos!
-            should_notify = True
+    # --- NUEVA LÓGICA DIRECTA (IGNORA EL CICLO PASO A PASO) ---
+    if target_status:
+        if target_status == "falta":
+            if item:
+                await db.delete(item)
+                item = None
+        else:
+            if not item:
+                item = Inventory(user_id=user_id, sticker_num=sticker_num, status=target_status)
+                db.add(item)
             
-        elif item.status == "repetida":
-            item.status = "wishlist"; item.quantity = 0; item.price = 0
-        elif item.status == "wishlist":
-            await db.delete(item); item = None
-    
+            # 🔥 Detectamos si ACABA de pasar a repetida para no spamear notificaciones
+            if target_status == "repetida" and item.status != "repetida":
+                should_notify = True
+                
+            item.status = target_status
+            
+            # Ajustamos cantidades según el estado final
+            if target_status == "tengo":
+                item.quantity = 1
+            elif target_status == "repetida":
+                if item.quantity < 2: item.quantity = 2
+            elif target_status == "wishlist":
+                item.quantity = 0
+                item.price = 0
+    else:
+        # Fallback de seguridad (por si algún navegador viejo no manda el target_status)
+        if not item:
+            item = Inventory(user_id=user_id, sticker_num=sticker_num, status="tengo", quantity=1)
+            db.add(item)
+        else:
+            if item.status == "tengo":
+                item.status = "repetida"; item.quantity = 2; should_notify = True
+            elif item.status == "repetida":
+                item.status = "wishlist"; item.quantity = 0; item.price = 0
+            elif item.status == "wishlist":
+                await db.delete(item); item = None
+
     await db.commit()
     if item: await db.refresh(item)
 
     # DISPARAR NOTIFICACIÓN EN SEGUNDO PLANO
     if should_notify and current_user:
         sticker_name = format_sticker(sticker_num)
-        # Usamos background_tasks para que la UI responda instantáneo
-        # y Telegram se envíe por detrás.
         background_tasks.add_task(
             notify_wishlist_match, 
-            db, 
-            sticker_num, 
-            sticker_name, 
-            current_user
+            db, sticker_num, sticker_name, current_user
         )
 
     # B. Calcular datos del país
@@ -257,7 +272,7 @@ async def toggle_sticker(
     
     local_num = sticker_num - country_start + 1 if country_start > 0 else sticker_num
 
-    # C. Renderizar CARTA
+    # C. Renderizar CARTA (Con hx-swap="none" esto se ignora en pantalla, pero lo generamos igual por estructura)
     card_html = templates.TemplateResponse("partials/sticker_card.html", {
         "request": request, "num": sticker_num, 
         "local_num": local_num,
@@ -265,7 +280,7 @@ async def toggle_sticker(
         "item": item
     }).body.decode("utf-8")
 
-    # D. Renderizar TABLA DE REPETIDAS
+    # D. Renderizar TABLA DE REPETIDAS (Esto SÍ se actualiza visualmente gracias a hx-swap-oob="true")
     table_html = ""
     if info:
         result_repes = await db.execute(
@@ -278,17 +293,16 @@ async def toggle_sticker(
         )
         table_html = templates.TemplateResponse("partials/repeated_table.html", {
             "request": request,
-            "user": current_user, # <--- FALTABA ESTA LÍNEA ACÁ
+            "user": current_user, 
             "repeated_items": result_repes.scalars().all(),
             "oob": True
         }).body.decode("utf-8")
 
-    # E. Renderizar STATS BAR
-    # ... al final de toggle_sticker ...
+    # E. Renderizar STATS BAR (También se actualiza mágicamente por OOB)
     stats = await calculate_user_stats(user_id, db)
     stats_html = templates.TemplateResponse(
         "partials/stats_bar.html", 
-        {"request": request, "user": current_user, "stats": stats, "oob": True} # <--- Cambiado a 'current_user'
+        {"request": request, "user": current_user, "stats": stats, "oob": True} 
     ).body.decode("utf-8")
 
     return HTMLResponse(content=card_html + table_html + stats_html)

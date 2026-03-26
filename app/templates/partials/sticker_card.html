@@ -1,11 +1,17 @@
 <div id="sticker-{{ num }}"
      {% if force_oob %}hx-swap-oob="true"{% endif %}
+     
+     hx-post="/sticker/{{ num }}"
+     hx-trigger="click delay:400ms" 
+     hx-include="#status-{{ num }}"
+     hx-swap="none"
+     
      x-data="{ 
         localStatus: '{{ status if status else 'falta' }}',
         qty: '{{ item.qty if item and item.qty else '2' }}',
         
         nextState() {
-            // Ciclo lógico
+            // Ciclo visual instantáneo
             if (this.localStatus === 'falta') this.localStatus = 'tengo';
             else if (this.localStatus === 'tengo') {
                 this.localStatus = 'repetida';
@@ -14,13 +20,7 @@
             else if (this.localStatus === 'repetida') this.localStatus = 'wishlist';
             else this.localStatus = 'falta';
 
-            // Disparamos manualmente la petición HTMX sin recargar el componente (swap:none)
-            htmx.ajax('POST', '/sticker/{{ num }}', {
-                target: '#null', 
-                swap: 'none' 
-            });
-
-            // PRO-TIP: Chequeamos si completó la página al instante
+            // Chequeo visual de página completa
             if (typeof window.checkPageCompletion === 'function') {
                 setTimeout(() => window.checkPageCompletion(), 50);
             }
@@ -37,6 +37,8 @@
         'bg-slate-700 border-red-500/50 shadow-[0_0_10px_rgba(239,68,68,0.2)]': localStatus === 'wishlist',
         'bg-slate-900 border-slate-700 opacity-60 hover:opacity-100 hover:border-slate-500': localStatus === 'falta'
      }">
+    
+    <input type="hidden" id="status-{{ num }}" name="target_status" x-model="localStatus">
     
     <span class="text-xl font-bold font-mono"
           :class="localStatus === 'falta' ? 'text-slate-600' : 'text-white drop-shadow-md'">
