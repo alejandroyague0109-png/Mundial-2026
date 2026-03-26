@@ -1,23 +1,25 @@
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
-from fastapi.responses import RedirectResponse, FileResponse, HTMLResponse
+from fastapi.responses import RedirectResponse, FileResponse, HTMLResponse, Response
 from contextlib import asynccontextmanager
 from pathlib import Path
 from dotenv import load_dotenv
-import os # Asegurate de tener este import
-import sentry_sdk # Nuevo import
+import os
+import sentry_sdk
+import qrcode
+import io
 
 # Imports internos
 from app.database import engine, Base
 from app.routers import auth, album, user, market, triangulation, safe_spots, heatmap
 from app import models 
-from app.data_album import ALBUM_STRUCTURE # Necesario para el helper
+from app.data_album import ALBUM_STRUCTURE 
 
 # Cargar variables de entorno
 load_dotenv()
 
-# Definís la versión mínima requerida al principio de tu archivo o en tus variables
+# Definís la versión mínima requerida
 APP_MIN_VERSION = 1
 
 # --- CONFIGURACIÓN DE INICIO (LIFESPAN) ---
@@ -32,21 +34,72 @@ async def lifespan(app: FastAPI):
         print(f"⚠️ Error DB: {e}")
     yield
 
-# --- INICIO DE SENTRY (Pegar antes de app = FastAPI) ---
-# Solo iniciamos Sentry si existe la variable de entorno, para no molestar en local
+# --- INICIO DE SENTRY ---
 if os.getenv("SENTRY_DSN"):
     sentry_sdk.init(
         dsn=os.getenv("SENTRY_DSN"),
-        # Captura el 100% de los errores para análisis
         traces_sample_rate=1.0,
         _experiments={
             "profiles_sample_rate": 1.0,
         },
     )
 
-# Instanciamos FastAPI
+# ==========================================================
+# 🚀 INSTANCIAMOS FASTAPI (Esto debe ir ANTES de cualquier @app)
+# ==========================================================
 app = FastAPI(title="Figus 26", version="2.0.0", lifespan=lifespan)
 
+# --- 1. EL ENLACE INTELIGENTE (SMART LINK) ---
+@app.get("/app")
+async def smart_download_link(request: Request):
+    """
+    Redirige a la Play Store si es Android, o a la Web si es iOS/PC.
+    """
+    user_agent = request.headers.get("user-agent", "").lower()
+    
+    if "android" in user_agent:
+        return RedirectResponse(
+            url="https://play.google.com/store/apps/details?id=com.canjealtoque.app", 
+            status_code=303
+        )
+    else:
+        return RedirectResponse(
+            url="https://canjealtoque26.com/?ref=poster", 
+            status_code=303
+        )
+
+# --- 2. GENERADOR DE QR PARA PÓSTERS ---
+@app.get("/qr-poster")
+async def generate_poster_qr():
+    """
+    Genera una imagen PNG del QR apuntando al Smart Link.
+    Ideal para descargar e imprimir en los Puntos Seguros.
+    """
+    # El link maestro al que apuntará el QR
+    target_url = "https://canjealtoque26.com/app"
+    
+    # Configuramos el QR con alta corrección de errores (Ideal para papel impreso)
+    qr = qrcode.QRCode(
+        version=1,
+        error_correction=qrcode.constants.ERROR_CORRECT_H, 
+        box_size=15, # Tamaño grande para que no pierda calidad al imprimir
+        border=4,
+    )
+    qr.add_data(target_url)
+    qr.make(fit=True)
+
+    # Colores: Slate-900 (Casi negro) sobre fondo blanco
+    img = qr.make_image(fill_color="#0f172a", back_color="white")
+    
+    # Guardamos la imagen en un buffer de memoria
+    buf = io.BytesIO()
+    img.save(buf, format="PNG")
+    byte_im = buf.getvalue()
+
+    # Devolvemos la imagen pura al navegador
+    return Response(content=byte_im, media_type="image/png")
+
+# --- RESTO DE LAS RUTAS GENERALES ---
 @app.get("/delete-data-info", response_class=HTMLResponse)
 async def delete_data_info_page():
     html_content = """
@@ -80,7 +133,6 @@ async def delete_data_info_page():
     """
     return HTMLResponse(content=html_content)
 
-
 # --- CONEXIÓN DE ROUTERS ---
 app.include_router(auth.router)
 app.include_router(album.router)
@@ -90,7 +142,7 @@ app.include_router(triangulation.router)
 app.include_router(safe_spots.router)
 app.include_router(heatmap.router)
 
-# --- CONFIGURACIÓN DE RUTAS ---
+# --- CONFIGURACIÓN DE RUTAS FÍSICAS ---
 BASE_DIR = Path(__file__).resolve().parent
 
 # 1. Archivos Estáticos
@@ -99,10 +151,9 @@ app.mount("/static", StaticFiles(directory=str(BASE_DIR / "static")), name="stat
 # 2. Plantillas Jinja2 y Helpers
 templates = Jinja2Templates(directory=str(BASE_DIR / "templates"))
 
-# --- NUEVO: Inyectamos el traductor globalmente al HTML ---
+# Inyectamos el traductor globalmente al HTML
 from app.translations import t
 templates.env.globals["t"] = t
-# ----------------------------------------------------------
 
 # --- HELPER: Formatear nombre de figurita (Ej: 19 -> ARG 1) ---
 def format_sticker(sticker_num):
@@ -115,11 +166,9 @@ def format_sticker(sticker_num):
 # Registramos la función para usarla en TODOS los HTML
 templates.env.globals['format_sticker'] = format_sticker
 
-# --- RUTAS GENERALES ---
-
+# --- RUTAS FINALES ---
 @app.get("/.well-known/assetlinks.json")
 async def asset_links():
-    # La ruta física será: app/static/.well-known/assetlinks.json
     file_path = BASE_DIR / "static" / ".well-known" / "assetlinks.json"
     return FileResponse(file_path, media_type="application/json")
 
@@ -131,7 +180,6 @@ async def health_check():
 async def root():
     return RedirectResponse(url="/login")
 
-# Agregás la ruta para que el frontend pregunte
 @app.get("/api/version", include_in_schema=False)
 async def check_version():
     return {"min_version": APP_MIN_VERSION}
