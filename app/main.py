@@ -99,6 +99,26 @@ async def generate_poster_qr():
     # Devolvemos la imagen pura al navegador
     return Response(content=byte_im, media_type="image/png")
 
+# --- 3. DESCARGA DIRECTA DEL APK ---
+@app.get("/download-apk")
+async def download_apk():
+    """
+    Fuerza la descarga del archivo .apk con los headers correctos 
+    para que los navegadores no lo conviertan en .zip
+    """
+    apk_path = BASE_DIR / "static" / "CanjeAlToque26.apk"
+    
+    # Verificamos que el archivo exista para que no explote si te olvidás de subirlo
+    if not apk_path.exists():
+        return HTMLResponse(content="<h1>Error: Archivo APK no encontrado en el servidor.</h1>", status_code=404)
+        
+    return FileResponse(
+        path=apk_path,
+        media_type="application/vnd.android.package-archive", # <--- LA MAGIA ESTÁ ACÁ
+        filename="CanjeAlToque26.apk", # Fuerza el nombre al guardar
+        headers={"Content-Disposition": "attachment; filename=CanjeAlToque26.apk"}
+    )
+
 # --- RESTO DE LAS RUTAS GENERALES ---
 @app.get("/delete-data-info", response_class=HTMLResponse)
 async def delete_data_info_page():
