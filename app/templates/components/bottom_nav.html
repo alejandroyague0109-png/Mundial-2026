@@ -2,14 +2,22 @@
      class="fixed bottom-0 left-0 right-0 z-50 bg-slate-950/90 backdrop-blur-md border-t border-slate-800 h-16 shadow-[0_-4px_20px_rgba(0,0,0,0.4)] transition-none will-change-transform"
      x-data="{
         getFlag(code) {
+            // Mapeo exhaustivo de TODOS los códigos de tu álbum a códigos ISO 3166-1 alpha-2 (para flagcdn)
             const map = {
-                'ARG': 'ar', 'BRA': 'br', 'URU': 'uy', 'ECU': 'ec', 'PAR': 'py', 'CHI': 'cl', 'BOL': 'bo', 'PER': 'pe', 'COL': 'co', 'VEN': 've',
-                'USA': 'us', 'MEX': 'mx', 'CAN': 'ca', 'CRC': 'cr', 'PAN': 'pa',
-                'FRA': 'fr', 'GER': 'de', 'ESP': 'es', 'ENG': 'gb-eng', 'POR': 'pt', 'NED': 'nl', 'BEL': 'be', 'CRO': 'hr', 'ITA': 'it', 'SUI': 'ch',
-                'MAR': 'ma', 'SEN': 'sn', 'CMR': 'cm', 'GHA': 'gh', 'TUN': 'tn',
-                'JPN': 'jp', 'KOR': 'kr', 'AUS': 'au', 'IRN': 'ir', 'KSA': 'sa', 'QAT': 'qa', 'SUD': 'za', 'HAI': 'ht', 'ESC': 'gb-sct', 'CUR': 'cw', 'COT': 'ci',
-                'CAB': 'cv', 'ALG': 'dz', 'AUT': 'at', 'COCA': 'U+1F964', "RCZ": 'cz', "BYH": 'ba',"TUR": 'tr', "SUE": 'se', "IRK": 'iq', "RDC": 'cd',
+                'ARG': 'ar', 'BRA': 'br', 'URU': 'uy', 'ECU': 'ec', 'PAR': 'py', 'COL': 'co', 'VEN': 've',
+                'USA': 'us', 'MEX': 'mx', 'CAN': 'ca', 'PAN': 'pa',
+                'FRA': 'fr', 'GER': 'de', 'ESP': 'es', 'ENG': 'gb-eng', 'POR': 'pt', 'NED': 'nl', 'BEL': 'be', 'CRO': 'hr', 'SUI': 'ch', 'RCZ': 'cz', 'BYH': 'ba', 'TUR': 'tr', 'SUE': 'se', 'NOR': 'no', 'AUT': 'at',
+                'MAR': 'ma', 'SEN': 'sn', 'GHA': 'gh', 'TUN': 'tn', 'SUD': 'za', 'COT': 'ci', 'CAB': 'cv', 'ALG': 'dz', 'RDC': 'cd', 'EGI': 'eg',
+                'JPN': 'jp', 'KOR': 'kr', 'AUS': 'au', 'IRN': 'ir', 'KSA': 'sa', 'QAT': 'qa', 'IRK': 'iq', 'JOR': 'jo', 'UZB': 'uz', 'NZE': 'nz',
+                'HAI': 'ht', 'ESC': 'gb-sct', 'CUR': 'cw'
             };
+            
+            // Excepción para Coca-Cola (no es una bandera, devolvemos una imagen transparente o un ícono genérico)
+            if (code === 'COCA') {
+                return 'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7'; // Pixel transparente
+            }
+
+            // Si está en el mapa lo usamos, sino usamos el fallback de las 2 primeras letras
             const iso = map[code] || code.substring(0, 2).toLowerCase();
             return `https://flagcdn.com/w40/${iso}.png`;
         }
