@@ -13,10 +13,10 @@ ALBUM_STRUCTURE = {
     "MEX": {"name": "México 🇲🇽", "start": 19, "count": 20},
     "SUD": {"name": "Sudafrica 🇿🇦", "start": 39, "count": 20},
     "KOR": {"name": "Corea del Sur 🇰🇷", "start": 59, "count": 20},
-    "RE1": {"name": "Repechaje 1 🏴", "start": 79, "count": 20},
+    "RCZ": {"name": "Rep Checa 🇨🇿", "start": 79, "count": 20},
 
     "CAN": {"name": "Canadá 🇨🇦", "start": 99, "count": 20},    
-    "RE2": {"name": "Repechaje 2 🏴", "start": 119, "count": 20},
+    "BYH": {"name": "Bosnia 🇧🇦", "start": 119, "count": 20},
     "QAT": {"name": "Catar 🇶🇦", "start": 139, "count": 20},
     "SUI": {"name": "Suiza 🇨🇭", "start": 159, "count": 20},
 
@@ -28,7 +28,7 @@ ALBUM_STRUCTURE = {
     "USA": {"name": "USA 🇺🇸", "start": 259, "count": 20},
     "PAR": {"name": "Paraguay 🇵🇾", "start": 279, "count": 20},
     "AUS": {"name": "Australia 🇦🇺", "start": 299, "count": 20},
-    "RE3": {"name": "Repechaje 3 🏴", "start": 319, "count": 20},   
+    "TUR": {"name": "Turquía 🇹🇷", "start": 319, "count": 20},   
 
     "GER": {"name": "Alemania 🇩🇪", "start": 339, "count": 20},
     "CUR": {"name": "Curazao 🇨🇼", "start": 359, "count": 20},
@@ -37,7 +37,7 @@ ALBUM_STRUCTURE = {
 
     "NED": {"name": "Países Bajos 🇳🇱", "start": 419, "count": 20},
     "JPN": {"name": "Japón 🇯🇵", "start": 439, "count": 20},
-    "RE4": {"name": "Repechaje 4 🏴", "start": 459, "count": 20},
+    "SUE": {"name": "Suecia 🇸🇪", "start": 459, "count": 20},
     "TUN": {"name": "Túnez 🇹🇳", "start": 479, "count": 20},
 
     "BEL": {"name": "Bélgica 🇧🇪", "start": 499, "count": 20},
@@ -52,7 +52,7 @@ ALBUM_STRUCTURE = {
 
     "FRA": {"name": "Francia 🇫🇷", "start": 659, "count": 20},
     "SEN": {"name": "Senegal 🇸🇳", "start": 679, "count": 20},
-    "RE5": {"name": "Repechaje 5 🏴", "start": 699, "count": 20},        
+    "IRK": {"name": "Irak 🇮🇶", "start": 699, "count": 20},        
     "NOR": {"name": "Noruega 🇳🇴", "start": 719, "count": 20},
 
     "ARG": {"name": "Argentina 🇦🇷", "start": 739, "count": 20},
@@ -61,7 +61,7 @@ ALBUM_STRUCTURE = {
     "JOR": {"name": "Jordania 🇯🇴", "start": 799, "count": 20},
     
     "POR": {"name": "Portugal 🇵🇹", "start": 819, "count": 20},
-    "RE6": {"name": "Repechaje 6 🏴", "start": 839, "count": 20},        
+    "RDC": {"name": "Rep Dem Congo 🇨🇩", "start": 839, "count": 20},        
     "UZB": {"name": "Uzbekistán 🇺🇿", "start": 859, "count": 20},
     "COL": {"name": "Colombia 🇨🇴", "start": 879, "count": 20},    
 
