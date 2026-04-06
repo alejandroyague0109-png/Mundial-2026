@@ -163,12 +163,28 @@
         </template>
         
         <template x-if="paginatedCards.length === 0">
-             <div class="col-span-1 md:col-span-3 flex flex-col items-center justify-center p-12 bg-slate-800/50 rounded-xl border border-slate-700 border-dashed">
-                <div class="text-4xl mb-2 grayscale opacity-50">💨</div>
-                <p class="text-gray-400">No hay nada por aquí.</p>
-                <template x-if="tab === 'pendientes'">
-                    <p class="text-xs text-gray-500 mt-2">No tenés negociaciones activas. {{ t('busca_figuritas', user.country_code) }}</p>
+             <div class="col-span-1 md:col-span-3 flex flex-col items-center justify-center p-8 bg-slate-800/50 rounded-xl border border-slate-700 border-dashed text-center">
+                
+                <template x-if="tab !== 'pendientes'">
+                    <div class="flex flex-col items-center animate-fade-in">
+                        <div class="text-5xl mb-4 animate-bounce">🏗️</div>
+                        <h3 class="text-xl font-black text-yellow-400 mb-2" x-text="'{{ t('mercado_vacio_titulo', user.country_code) }}'"></h3>
+                        <p class="text-sm text-gray-300 max-w-md leading-relaxed mb-6" x-text="'{{ t('mercado_vacio_texto', user.country_code) }}'"></p>
+                        
+                        <a href="/album" class="bg-indigo-600 hover:bg-indigo-500 text-white font-bold py-3 px-8 rounded-full transition shadow-[0_0_15px_rgba(79,70,229,0.4)] border border-indigo-400 flex items-center gap-2 transform hover:scale-105 active:scale-95">
+                            <span>📖</span> Ir a cargar mi Álbum
+                        </a>
+                    </div>
                 </template>
+
+                <template x-if="tab === 'pendientes'">
+                    <div class="flex flex-col items-center">
+                        <div class="text-4xl mb-4 grayscale opacity-50">💨</div>
+                        <p class="text-gray-300 font-bold">No tenés negociaciones activas.</p>
+                        <p class="text-xs text-gray-500 mt-2">{{ t('busca_figuritas', user.country_code) }} en las otras pestañas para iniciar un contacto.</p>
+                    </div>
+                </template>
+
             </div>
         </template>
     </div>
