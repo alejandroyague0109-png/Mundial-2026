@@ -377,6 +377,25 @@ TRANSLATIONS = {
         "ES": "🏃‍♂️ Corre al Mercado para contactarlo antes de que te la ganen.",
         "default": "🏃‍♂️ Corre al Mercado para contactarlo antes de que te la ganen."
     }
+
+    # --- MENSAJES DE MERCADO VACÍO ---
+    "mercado_vacio_titulo": {
+        "AR": "¡El mercado se está armando! 🏗️", "UY": "¡El mercado se está armando! 🏗️", "PE": "¡El mercado se está armando! 🏗️",
+        "MX": "¡El mercado se está armando! 🏗️", "CL": "¡El mercado se está armando! 🏗️", "CO": "¡El mercado se está armando! 🏗️",
+        "ES": "¡El mercado se está armando! 🏗️",
+        "default": "¡El mercado se está armando! 🏗️"
+    },
+    "mercado_vacio_texto": {
+        "AR": "Aún hay poca circulación de figuritas en la calle. Cargá tu álbum virtual con las que ya tenés, tus repes y las que buscás. ¡Próximamente vas a ver esta sección llena de posibles canjes!",
+        "UY": "Aún hay poca circulación de figuritas en la calle. Cargá tu álbum virtual con las que ya tenés, tus repes y las que buscás. ¡Próximamente vas a ver esta sección llena de posibles canjes!",
+        "PE": "Aún hay poca circulación de figuritas en la calle. Carga tu álbum virtual con las que ya tienes, tus repetidas y las que buscas. ¡Próximamente verás esta sección llena de posibles intercambios!",
+        "MX": "Aún hay poca circulación de estampas en la calle. Carga tu álbum virtual con las que ya tienes, tus repetidas y las que buscas. ¡Próximamente verás esta sección llena de posibles intercambios!",
+        "CL": "Aún hay poca circulación de láminas en la calle. Carga tu álbum virtual con las que ya tienes, tus repetidas y las que buscas. ¡Próximamente verás esta sección llena de posibles cambios!",
+        "CO": "Aún hay poca circulación de monas en la calle. Carga tu álbum virtual con las que ya tienes, tus repetidas y las que buscas. ¡Próximamente verás esta sección llena de posibles cambios!",
+        "ES": "Aún hay poca circulación de cromos en la calle. Carga tu álbum virtual con los que ya tienes, tus repes y los que buscas. ¡Próximamente verás esta sección llena de posibles cambios!",
+        "default": "Aún hay poca circulación de figuritas en la calle. Carga tu álbum virtual con las que ya tienes, tus repetidas y las que buscas. ¡Próximamente verás esta sección llena de posibles intercambios!"
+    }
+   
 }
 
 def t(key: str, country_code: str = "AR") -> str:
