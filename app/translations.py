@@ -376,7 +376,7 @@ TRANSLATIONS = {
         "UY": "🏃‍♂️ Corré al Mercado para contactarlo antes que te ganen.",
         "ES": "🏃‍♂️ Corre al Mercado para contactarlo antes de que te la ganen.",
         "default": "🏃‍♂️ Corre al Mercado para contactarlo antes de que te la ganen."
-    }
+    },
 
     # --- MENSAJES DE MERCADO VACÍO ---
     "mercado_vacio_titulo": {
