@@ -380,10 +380,10 @@ TRANSLATIONS = {
 
     # --- MENSAJES DE MERCADO VACÍO ---
     "mercado_vacio_titulo": {
-        "AR": "¡El mercado se está armando! 🏗️", "UY": "¡El mercado se está armando! 🏗️", "PE": "¡El mercado se está armando! 🏗️",
-        "MX": "¡El mercado se está armando! 🏗️", "CL": "¡El mercado se está armando! 🏗️", "CO": "¡El mercado se está armando! 🏗️",
-        "ES": "¡El mercado se está armando! 🏗️",
-        "default": "¡El mercado se está armando! 🏗️"
+        "AR": "¡El mercado se está armando!", "UY": "¡El mercado se está armando!", "PE": "¡El mercado se está armando!",
+        "MX": "¡El mercado se está armando!", "CL": "¡El mercado se está armando!", "CO": "¡El mercado se está armando!",
+        "ES": "¡El mercado se está armando!",
+        "default": "¡El mercado se está armando!"
     },
     "mercado_vacio_texto": {
         "AR": "Aún hay poca circulación de figuritas en la calle. Cargá tu álbum virtual con las que ya tenés, tus repes y las que buscás. ¡Próximamente vas a ver esta sección llena de posibles canjes!",
