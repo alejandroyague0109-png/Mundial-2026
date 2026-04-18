@@ -59,7 +59,7 @@ async def smart_download_link(request: Request):
     
     if "android" in user_agent:
         return RedirectResponse(
-            url="https://canjealtoque26.com/?ref=poster", 
+            url="https://play.google.com/store/apps/details?id=com.canjealtoque.app&pcampaignid=web_share", 
             status_code=303
         )
     else:
