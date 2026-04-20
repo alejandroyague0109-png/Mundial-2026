@@ -385,6 +385,7 @@ async def search_market(
             "sticker_name": format_sticker(item.sticker_num),
             "price": item.price,
             "is_sale": item.price > 0,
+            "is_special": item.is_special,
             "is_pending": True,
             "rating_given": log.rating is not None, 
             "owner": {
@@ -514,6 +515,7 @@ async def search_market(
                 "sticker_name": format_sticker(item.sticker_num),
                 "price": item.price,
                 "is_sale": item.price > 0,
+                "is_special": item.is_special,
                 "is_wishlist": item.sticker_num in my_wishlist_ids,
                 "is_pending": False,
                 "owner": {

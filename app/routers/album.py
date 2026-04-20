@@ -357,9 +357,9 @@ async def batch_country_action(request: Request, country_code: str, action: str,
 async def update_item_details(
     request: Request, sticker_num: int, 
     price: int = Form(None), quantity: int = Form(None), 
+    is_special: str = Form(None), # <--- 1. AGREGAMOS EL RECEPTOR
     db: AsyncSession = Depends(get_db)
 ):
-    # ... (TU CÓDIGO ORIGINAL SIN CAMBIOS) ...
     # 1. Extraemos la cookie segura
     user_id_cookie = request.cookies.get("user_id")
     if not user_id_cookie:
@@ -373,6 +373,14 @@ async def update_item_details(
     if item:
         if price is not None: item.price = price
         if quantity is not None: item.quantity = quantity
+        
+        # --- 2. NUEVA LÓGICA PARA FIGURITAS ESPECIALES ---
+        # Usamos String ("true"/"false") para evitar el clásico error de los 
+        # checkboxes de HTML que envían valores nulos cuando se desmarcan.
+        if is_special is not None:
+            item.is_special = (is_special.lower() == "true")
+        # -------------------------------------------------
+            
         await db.commit()
         await db.refresh(item)
 

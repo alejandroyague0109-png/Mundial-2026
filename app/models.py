@@ -74,6 +74,8 @@ class Inventory(Base):
 
     # Relación: Un item pertenece a un usuario
     owner = relationship("User", back_populates="inventory_items")
+    # --- LA NUEVA COLUMNA ---
+    is_special = Column(Boolean, nullable=False, default=False)
 
 # --- CLASE PARA GESTIONAR TRANSACCIONES/PENDIENTES ---
 class ContactLog(Base):
