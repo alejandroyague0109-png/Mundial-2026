@@ -192,7 +192,7 @@
         loadingText.classList.remove('hidden');
 
         if (scope === 'page') {
-            // LÓGICA 1: SOLO LA PÁGINA ACTUAL (Lee el HTML rápido)
+            // LÓGICA 1: SOLO LA PÁGINA ACTUAL
             const container = document.getElementById('dynamic-content');
             if (!container) return;
 
@@ -207,7 +207,6 @@
             stickers.forEach(el => {
                 const numSpan = el.querySelector('span.font-mono'); 
                 if (!numSpan) return;
-                // Como es solo la página, guardamos el número raw (ej: 1, 2, 3...)
                 const numero = numSpan.innerText.trim(); 
                 
                 const currentStatus = el.getAttribute('data-status') || 'falta';
@@ -222,7 +221,7 @@
             });
 
         } else {
-            // LÓGICA 2: TODO EL ÁLBUM (Llama a la API que creamos en album.py)
+            // LÓGICA 2: TODO EL ÁLBUM
             try {
                 const response = await fetch('/api/user_full_inventory');
                 const data = await response.json();
@@ -232,7 +231,7 @@
                     return;
                 }
 
-                repetidas = data.repetidas; // Ya vienen formateadas (Ej: ARG 1)
+                repetidas = data.repetidas; 
                 
                 if (searchType === 'wishlist') {
                     wishlist = data.wishlist;
@@ -248,25 +247,63 @@
             }
         }
 
-        // Armamos el texto final
-        buildAndShareMessage(prefix, wishlist, repetidas);
+        // Armamos el texto final, pasándole el "scope" para saber cómo agrupar
+        buildAndShareMessage(scope, prefix, wishlist, repetidas);
         
         loadingText.classList.add('hidden');
         document.getElementById('shareOptionsModal').close();
     }
 
-    async function buildAndShareMessage(prefix, wList, rList) {
+    // --- NUEVA FUNCIÓN AGRUPADORA ---
+    function formatStickersGrouped(list, scope, prefix) {
+        if (list.length === 0) return "";
+
+        // Si es solo una página, ya sabemos el país (Ej: sacamos la palabra PÁGINA de "PÁGINA ARGENTINA")
+        if (scope === 'page') {
+            let cleanPrefix = prefix.replace('PÁGINA ', '').trim();
+            return `*${cleanPrefix}:* ${list.join(', ')}\n`;
+        }
+
+        // Si es todo el álbum, la API nos devuelve "ARG 1", "FWC 2", etc.
+        // Agrupamos usando el código de 3 letras.
+        const groups = {};
+        list.forEach(item => {
+            const parts = item.split(' ');
+            if (parts.length >= 2) {
+                const code = parts[0]; // Agarra "ARG"
+                const num = parts.slice(1).join(' '); // Agarra "1"
+                if (!groups[code]) groups[code] = [];
+                groups[code].push(num);
+            } else {
+                // Por si hay alguna figu extraña sin espacio
+                if (!groups["EXT"]) groups["EXT"] = [];
+                groups["EXT"].push(item);
+            }
+        });
+
+        let text = "";
+        for (const code in groups) {
+            // Genera la línea ordenada, ej: ARG: 1, 5, 8
+            text += `*${code}:* ${groups[code].join(', ')}\n`;
+        }
+        return text;
+    }
+
+    async function buildAndShareMessage(scope, prefix, wList, rList) {
         let mensaje = `👋 HOLA! Estoy completando el álbum *Canje AlToque 26*.\n`; 
         
-        mensaje += `De: *${prefix}*\n`;
+        if (scope === 'page') {
+            mensaje += `De: *${prefix}*\n`;
+        }
         mensaje += `----------------------------------\n`;
 
         if (wList.length > 0) {
             mensaje += `❤️ BUSCO:\n`;
-            if(wList.length > 150) {
+            if(wList.length > 150 && scope === 'all') {
                 mensaje += `¡Me faltan muchísimas! Pasame tus repetidas y me fijo.\n\n`;
             } else {
-                mensaje += wList.join(', ') + `\n\n`;
+                // Llamamos a nuestra nueva función inteligente
+                mensaje += formatStickersGrouped(wList, scope, prefix) + `\n`;
             }
         } else {
             mensaje += `✅ BUSCO: ¡Nada en esta selección!\n\n`;
@@ -274,9 +311,10 @@
 
         if (rList.length > 0) {
             mensaje += `🔄 TENGO REPETIDAS:\n`;
-            mensaje += rList.join(', ') + `\n`;
+            // Llamamos a nuestra nueva función inteligente
+            mensaje += formatStickersGrouped(rList, scope, prefix) + `\n`;
         } else {
-            mensaje += `🚫 REPES: No tengo por ahora.\n`;
+            mensaje += `🚫 REPES: No tengo por ahora.\n\n`;
         }
 
         mensaje += `----------------------------------\n`;
@@ -285,11 +323,9 @@
         mensaje += `📍 *Puntos Seguros de canje:*\n`;
         mensaje += `https://canjealtoque26.com/safe-spots\n\n`;        
 
-        // --- ENLACE ÚNICO E INTELIGENTE ---
         mensaje += `📱 *Abrir App (Android/iOS/PC):*\n`;
         mensaje += `https://canjealtoque26.com/app`;
 
-        // LÓGICA DE COMPARTIR UNIVERSAL (Web Share API)
         if (navigator.share) {
             try {
                 await navigator.share({
@@ -297,14 +333,11 @@
                     text: mensaje
                 });
             } catch (error) {
-                // Si el usuario cancela el menú, tira un AbortError (lo ignoramos)
                 if (error.name !== 'AbortError') {
-                    console.error('Error usando el menú nativo:', error);
-                    fallbackWhatsApp(mensaje); // Plan B si falla
+                    fallbackWhatsApp(mensaje);
                 }
             }
         } else {
-            // Plan B para computadoras viejas que no tienen el menú nativo
             fallbackWhatsApp(mensaje);
         }
     }
