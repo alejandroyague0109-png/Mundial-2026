@@ -36,11 +36,12 @@
                 </template>
                 
                 <template x-if="card.is_special">
-                    <div class="absolute -top-1 -left-1 bg-gradient-to-br from-yellow-300 via-yellow-500 to-amber-600 text-slate-900 text-[10px] font-black px-3 py-1 rounded-br-xl shadow-[0_0_15px_rgba(234,179,8,0.6)] border border-yellow-200 z-20"
-                         style="box-shadow: 0 0 10px #eab308, inset 0 0 5px #fef08a;">
+                    <div class="absolute -top-1 -left-1 bg-gradient-to-br from-yellow-300 via-yellow-500 to-amber-600 text-slate-900 text-[10px] font-black px-3 py-1 rounded-br-xl border border-yellow-200 z-20"
+                         style="box-shadow: 0 0 10px rgba(234,179,8,0.6), inset 0 0 5px rgba(254,240,138,0.5);">
                         ✨ ESPECIAL
                     </div>
                 </template>
+                
                 <template x-if="card.is_pending">
                     <div class="absolute top-0 right-0 bg-indigo-600 text-[10px] font-black text-white px-3 py-1 rounded-bl-xl z-10 flex items-center gap-1 shadow-sm">
                         <span>⏳</span> EN CURSO
@@ -48,9 +49,13 @@
                 </template>
 
                 <div class="p-3 flex items-center gap-3 bg-slate-900/30 border-b border-slate-700/50"
-                     :class="card.is_special ? 'bg-gradient-to-r from-yellow-900/20 to-transparent' : ''"> ```
+                     :class="card.is_special ? 'bg-gradient-to-r from-yellow-900/20 to-transparent' : ''">
+                     
+                    <div class="w-10 h-10 rounded-full flex-shrink-0 flex items-center justify-center font-bold text-slate-900 shadow-md"
+                         :class="card.owner.is_premium ? 'bg-gradient-to-br from-yellow-400 to-yellow-600 border border-yellow-200' : 'bg-slate-600 text-gray-200'">
                         <span x-text="card.owner.initial"></span>
                     </div>
+                    
                     <div class="min-w-0 flex-1 leading-tight">
                         <div class="flex items-center gap-1">
                             <h4 class="font-bold text-sm text-white truncate" x-text="card.owner.nick"></h4>
