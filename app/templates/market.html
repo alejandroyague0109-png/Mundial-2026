@@ -169,11 +169,19 @@
 
             <div>
                 <label class="block text-[10px] font-bold text-gray-500 uppercase mb-1">{{ t('numero_figurita', user.country_code) }}</label>
-                <div class="flex gap-2">
+                <div class="flex gap-2 items-stretch">
                     <input type="text" name="sticker_num" x-model="autoSticker" placeholder="Ej: ARG 10" 
                            class="w-full bg-slate-900 border border-slate-600 rounded px-3 py-2 text-sm text-white focus:border-yellow-500 outline-none placeholder-gray-600">
                     
-                    <button type="submit" id="search-trigger-btn" class="bg-yellow-600 hover:bg-yellow-500 text-white p-2 rounded transition shadow-lg">
+                    <label class="relative flex items-center justify-center cursor-pointer group flex-shrink-0" title="Filtrar solo Especiales">
+                        <input type="checkbox" name="is_special" value="true" class="sr-only peer">
+                        
+                        <div class="h-full px-3 bg-slate-900 border border-slate-600 rounded flex items-center justify-center peer-checked:bg-gradient-to-r peer-checked:from-yellow-500 peer-checked:to-amber-600 peer-checked:border-yellow-400 transition-all shadow-inner hover:border-yellow-500/50">
+                            <span class="text-sm grayscale opacity-40 peer-checked:grayscale-0 peer-checked:opacity-100 transition-all">⭐</span>
+                        </div>
+                    </label>
+                    
+                    <button type="submit" id="search-trigger-btn" class="flex-shrink-0 bg-yellow-600 hover:bg-yellow-500 text-white px-3 rounded transition shadow-lg flex items-center justify-center">
                         🔍
                     </button>
                 </div>

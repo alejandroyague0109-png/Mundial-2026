@@ -323,6 +323,7 @@ async def search_market(
     zone: str = "",
     nick: str = "",
     sticker_num: str = "", 
+    is_special: str = "",
     db: AsyncSession = Depends(get_db)
 ):
     user_id_cookie = request.cookies.get("user_id")
@@ -442,7 +443,9 @@ async def search_market(
     if zone:
         distinct_query = distinct_query.where(User.zone == zone)
     if nick:
-        distinct_query = distinct_query.where(User.nick.ilike(f"%{nick}%"))
+        distinct_query = distinct_query.where(User.nick.ilike(f"%{nick}%"))   
+    if is_special == "true": # <--- 2. AGREGÁ ESTE FILTRO
+        distinct_query = distinct_query.where(Inventory.is_special == True)
     
     if search_intent:
         if search_intent["type"] == "single":
@@ -474,6 +477,7 @@ async def search_market(
         if province: full_query = full_query.where(User.province == province)
         if zone: full_query = full_query.where(User.zone == zone)
         if nick: full_query = full_query.where(User.nick.ilike(f"%{nick}%"))
+        if is_special == "true": full_query = full_query.where(Inventory.is_special == True)
 
         full_res = await db.execute(full_query)
         all_rows = full_res.all()
