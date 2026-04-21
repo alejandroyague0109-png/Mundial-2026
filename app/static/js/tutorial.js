@@ -269,7 +269,7 @@ window.startMarketTutorial = function() {
                 driverObj.destroy();
             },
             steps: [
-                { element: filtrosForm, popover: { title: 'Filtros de Búsqueda 🔍', description: 'Encontrá las figuritas que buscas filtrando por <b>Provincia</b>, <b>Zona</b>, <b>Usuario</b> o buscando por <b>Número</b>.', side: "bottom", align: 'center' } },
+                { element: filtrosForm, popover: { title: 'Filtros de Búsqueda 🔍', description: 'Encontrá las figuritas que buscas filtrando por <b>Provincia</b>, <b>Zona</b>, <b>Usuario</b>, <b>Número</b> o tocá la <b>⭐</b> para ver solo las <b>Especiales</b>.', side: "bottom", align: 'center' } },
                 { element: triangulacionSection, popover: { title: 'La Magia: Triangulación 📐', description: '¿Nadie tiene la que buscás? El sistema busca "puentes" entre 3 personas para que todos consigan destrabar sus canjes.', side: "bottom", align: 'center' } },
                 { element: pestanasContainer, popover: { title: 'Organización 📁', description: 'Navegá entre las figuritas disponibles para <b>Canjear</b>, las que están a la <b>Venta</b>, y revisá tus contactos <b>Pendientes</b> para cerrar operaciones.', side: "bottom", align: 'center' } },
                 { element: selectorPaso4, popover: { title: '¡A Negociar! 🤝', description: 'Acá verás los posibles intercambios. Tocá el botón de <b>Negociar</b> para contactarlos y cerrar el trato.', side: "top", align: 'center' } }
