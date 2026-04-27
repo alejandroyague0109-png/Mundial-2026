@@ -241,6 +241,31 @@
         </div>
     </div>
 
+    <dialog id="iosTutorialModal" class="bg-slate-900 text-white p-0 rounded-xl border border-blue-500/50 shadow-2xl overflow-hidden max-w-sm w-full z-[60]">
+        <div class="bg-blue-600/20 p-4 border-b border-blue-500/30 flex items-center gap-3">
+            <span class="text-2xl">🍎</span>
+            <h3 class="text-lg font-bold text-blue-400">Instala la App</h3>
+        </div>
+        <div class="p-5 space-y-4 text-sm text-gray-300">
+            <p>Para una experiencia a pantalla completa, instala Canje AlToque en tu iPhone:</p>
+            <ol class="space-y-4 ml-2 mt-4">
+                <li class="flex items-center gap-3">
+                    <span class="text-xl">1️⃣</span> 
+                    <span>Toca el botón <strong>Compartir</strong> (el cuadrado con la flecha hacia arriba) en el menú inferior.</span>
+                </li>
+                <li class="flex items-center gap-3">
+                    <span class="text-xl">2️⃣</span> 
+                    <span>Baja y selecciona <strong>"Agregar al inicio"</strong> <span class="text-lg">➕</span>.</span>
+                </li>
+            </ol>
+        </div>
+        <div class="p-4 bg-slate-950 border-t border-slate-800">
+            <button onclick="closeIosTutorial()" class="w-full bg-blue-600 hover:bg-blue-500 text-white font-bold py-3 rounded-lg transition shadow-lg">
+                Entendido
+            </button>
+        </div>
+    </dialog>
+
     <dialog id="welcomeModal" class="bg-slate-900 text-white p-0 rounded-xl border border-yellow-600/50 shadow-2xl overflow-hidden max-w-sm w-full z-50">
         <div class="bg-yellow-600/10 p-4 border-b border-yellow-600/30 flex items-center gap-3">
             <span class="text-2xl">🔞</span>
@@ -351,11 +376,48 @@
     </dialog>
 
     <script>
-        // Abrir modal +18 al cargar
+       // Lógica Inteligente de Modales (iOS -> +18)
         document.addEventListener("DOMContentLoaded", () => {
-            const modal = document.getElementById('welcomeModal');
-            if(modal) setTimeout(() => modal.showModal(), 300);
+            const welcomeModal = document.getElementById('welcomeModal');
+            const iosTutorialModal = document.getElementById('iosTutorialModal');
+
+            // Detectar si es un dispositivo Apple (iPhone/iPad)
+            const isIos = () => {
+              const userAgent = window.navigator.userAgent.toLowerCase();
+              return /iphone|ipad|ipod/.test(userAgent);
+            };
+
+            // Detectar si ya está instalada (Standalone / PWA en iOS)
+            const isStandalone = () => {
+              return ('standalone' in window.navigator) && (window.navigator.standalone);
+            };
+
+            // Leer de la memoria si ya cerró este cartel alguna vez en su vida
+            const hasSeenTutorial = localStorage.getItem('iosTutorialSeen');
+
+            if (isIos() && !isStandalone() && !hasSeenTutorial && iosTutorialModal) {
+                // Es iPhone, está en Safari y nunca vio el tutorial: Mostrar Tutorial
+                setTimeout(() => iosTutorialModal.showModal(), 300);
+            } else if (welcomeModal) {
+                // Cualquier otro caso (Android, PC, o iPhone que ya vio el tutorial): Mostrar +18 directo
+                setTimeout(() => welcomeModal.showModal(), 300);
+            }
         });
+
+        // Función para cerrar el tutorial iOS y dar paso al +18
+        function closeIosTutorial() {
+            const iosModal = document.getElementById('iosTutorialModal');
+            const welcomeModal = document.getElementById('welcomeModal');
+            
+            // Guardamos en la memoria del navegador que ya lo vio
+            localStorage.setItem('iosTutorialSeen', 'true');
+            iosModal.close();
+            
+            // Inmediatamente después, lanzamos el modal de +18
+            if (welcomeModal) {
+                setTimeout(() => welcomeModal.showModal(), 300);
+            }
+        }
 
         // Configuración de Alpine
         function authApp() {
