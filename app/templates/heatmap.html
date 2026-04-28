@@ -146,19 +146,8 @@
     </main>
 
     <script>
-        // Datos falsos para que el mapa renderice algo en este ejemplo
-        const backendData = {
-            'AR': { users: 1500, activity: 50000 },
-            'MX': { users: 1200, activity: 40000 },
-            'CO': { users: 800, activity: 25000 },
-            'PE': { users: 600, activity: 18000 },
-            'CL': { users: 500, activity: 15000 },
-            'BR': { users: 2000, activity: 70000 },
-            'VE': { users: 400, activity: 10000 },
-            'EC': { users: 350, activity: 9000 },
-            'GT': { users: 200, activity: 5000 },
-            'CU': { users: 100, activity: 2000 }
-        };
+        // Inyectamos de forma segura el diccionario que viene desde heatmap.py
+        const backendData = {{ map_data | tojson | safe }};
 
         function heatmapLogic() {
             return {
