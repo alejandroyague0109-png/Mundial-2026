@@ -137,6 +137,7 @@ async def create_preference(
                 "quantity": 1, "currency_id": "ARS", "unit_price": 4999.99
             }],
             "payer": {"email": "usuario_app@canjealtoque.com"},
+            "purpose": "wallet_purchase",
             "back_urls": {
                 "success": f"{base_url}/payment_callback",
                 "failure": f"{base_url}/payment_callback",
