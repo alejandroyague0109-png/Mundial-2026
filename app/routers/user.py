@@ -533,7 +533,7 @@ async def delete_data_info():
         <h1>Política de Eliminación de Datos y Cuenta</h1>
         
         <div class="info-box">
-            <p><strong>Aplicación:</strong> Canje AlToque 26</p>
+            <p><strong>Aplicación:</strong> CanjeAlToque2026</p>
             <p><strong>Desarrollador:</strong> Trading Devs</p>
         </div>
 
@@ -547,7 +547,7 @@ async def delete_data_info():
         <p>Si ya desinstalaste la aplicación y deseas que borremos tus datos, puedes solicitar la eliminación enviando un correo electrónico a nuestro equipo de soporte.</p>
         <ul>
             <li><strong>Correo de contacto:</strong> <em>canjealtoque@gmail.com</em></li>
-            <li><strong>Asunto:</strong> Solicitud de Eliminación de Cuenta - Canje AlToque 26</li>
+            <li><strong>Asunto:</strong> Solicitud de Eliminación de Cuenta - CanjeAlToque2026</li>
             <li><strong>Cuerpo del mensaje:</strong> Por favor, incluye el número de teléfono con el que te registraste en la aplicación para que podamos identificar y borrar tu información de nuestros servidores.</li>
         </ul>
         <p>Procesaremos tu solicitud y eliminaremos todos tus datos en un plazo máximo de 7 días hábiles.</p>
