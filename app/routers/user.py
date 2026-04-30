@@ -2,7 +2,7 @@ import os
 import mercadopago
 import httpx  # <-- AGREGAR ESTO PARA PAYPAL
 from fastapi import APIRouter, Depends, Request, Form, Response
-from fastapi.responses import RedirectResponse
+from fastapi.responses import RedirectResponse, HTMLResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import update, select, delete, text
 from dotenv import load_dotenv
@@ -512,3 +512,46 @@ async def delete_account(request: Request, db: AsyncSession = Depends(get_db)):
     response = RedirectResponse(url="/?deleted=true", status_code=303)
     response.delete_cookie("user_id") # Borramos la cookie de sesión
     return response
+
+# --- 10. POLÍTICA DE ELIMINACIÓN DE DATOS (REQUISITO GOOGLE PLAY) ---
+@router.get("/delete-data-info", response_class=HTMLResponse)
+async def delete_data_info():
+    html_content = """
+    <!DOCTYPE html>
+    <html lang="es">
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>Eliminación de Datos - Canje AlToque 26</title>
+        <style>
+            body { font-family: Arial, sans-serif; line-height: 1.6; max-width: 800px; margin: 0 auto; padding: 20px; color: #333; }
+            h1 { color: #1e40af; }
+            .info-box { background: #f3f4f6; padding: 15px; border-radius: 8px; margin-bottom: 20px; }
+        </style>
+    </head>
+    <body>
+        <h1>Política de Eliminación de Datos y Cuenta</h1>
+        
+        <div class="info-box">
+            <p><strong>Aplicación:</strong> Canje AlToque 26</p>
+            <p><strong>Desarrollador:</strong> Trading Devs</p>
+        </div>
+
+        <h2>¿Cómo eliminar tu cuenta y tus datos?</h2>
+        <p>De acuerdo con las políticas de Google Play, ofrecemos a nuestros usuarios opciones claras para eliminar su cuenta y todos los datos asociados (como tu inventario de figuritas y ubicación).</p>
+        
+        <h3>Opción 1: Desde la aplicación</h3>
+        <p>Puedes eliminar tu cuenta en cualquier momento directamente desde la app. Ve a tu Perfil, selecciona "Configuración" y presiona el botón rojo que dice "Eliminar Cuenta". Esta acción borrará inmediatamente tu usuario de nuestra base de datos.</p>
+
+        <h3>Opción 2: Solicitud vía web/correo electrónico</h3>
+        <p>Si ya desinstalaste la aplicación y deseas que borremos tus datos, puedes solicitar la eliminación enviando un correo electrónico a nuestro equipo de soporte.</p>
+        <ul>
+            <li><strong>Correo de contacto:</strong> <em>canjealtoque@gmail.com</em></li>
+            <li><strong>Asunto:</strong> Solicitud de Eliminación de Cuenta - Canje AlToque 26</li>
+            <li><strong>Cuerpo del mensaje:</strong> Por favor, incluye el número de teléfono con el que te registraste en la aplicación para que podamos identificar y borrar tu información de nuestros servidores.</li>
+        </ul>
+        <p>Procesaremos tu solicitud y eliminaremos todos tus datos en un plazo máximo de 7 días hábiles.</p>
+    </body>
+    </html>
+    """
+    return HTMLResponse(content=html_content)
