@@ -522,7 +522,7 @@ async def delete_data_info():
     <head>
         <meta charset="UTF-8">
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
-        <title>Eliminación de Datos - Canje AlToque 26</title>
+        <title>Eliminación de Datos - CanjeAlToque2026</title>
         <style>
             body { font-family: Arial, sans-serif; line-height: 1.6; max-width: 800px; margin: 0 auto; padding: 20px; color: #333; }
             h1 { color: #1e40af; }
