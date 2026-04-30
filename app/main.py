@@ -125,14 +125,14 @@ async def delete_data_info_page():
     html_content = """
     <html>
         <head>
-            <title>Eliminación de Datos - Canje AlToque 26</title>
+            <title>Eliminación de Datos - CanjeAlToque2026</title>
             <meta name="viewport" content="width=device-width, initial-scale=1.0">
             <script src="https://cdn.tailwindcss.com"></script>
         </head>
         <body class="bg-slate-900 text-white font-sans p-8">
             <div class="max-w-2xl mx-auto bg-slate-800 p-6 rounded-2xl border border-slate-700 shadow-xl">
                 <h1 class="text-2xl font-bold text-yellow-500 mb-4">Solicitud de Eliminación de Datos</h1>
-                <p class="mb-4 text-gray-300">En <strong>Canje AlToque 26</strong>, respetamos tu privacidad. Tienes dos formas de eliminar tu cuenta y todos o algunos de tus datos asociados:</p>
+                <p class="mb-4 text-gray-300">En <strong>CanjeAlToque2026</strong>, respetamos tu privacidad. Tienes dos formas de eliminar tu cuenta y todos o algunos de tus datos asociados:</p>
                 
                 <div class="space-y-6">
                     <div class="bg-slate-700 p-4 rounded-lg">
