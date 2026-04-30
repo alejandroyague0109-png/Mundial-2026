@@ -522,7 +522,7 @@ async def delete_data_info():
     <head>
         <meta charset="UTF-8">
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
-        <title>Eliminación de Datos - CanjeAlToque2026</title>
+        <title>Eliminación de Datos - CanjeAlToque2026 Álbum Mundial</title>
         <style>
             body { font-family: Arial, sans-serif; line-height: 1.6; max-width: 800px; margin: 0 auto; padding: 20px; color: #333; }
             h1 { color: #1e40af; }
@@ -533,8 +533,8 @@ async def delete_data_info():
         <h1>Política de Eliminación de Datos y Cuenta</h1>
         
         <div class="info-box">
-            <p><strong>Aplicación:</strong> CanjeAlToque2026</p>
-            <p><strong>Desarrollador:</strong> Trading Devs</p>
+            <p><strong>Aplicación: </strong>CanjeAlToque2026 Álbum Mundial</p>
+            <p><strong>Desarrollador: </strong>Trading Devs</p>
         </div>
 
         <h2>¿Cómo eliminar tu cuenta y tus datos?</h2>
