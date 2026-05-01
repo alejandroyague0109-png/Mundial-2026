@@ -68,25 +68,29 @@
 <body class="bg-slate-900 text-gray-200 min-h-screen flex flex-col pt-20 relative z-0">
 
     <header class="fixed top-0 left-0 right-0 z-50 bg-slate-950/95 backdrop-blur-sm border-b border-slate-800 h-16 shadow-lg">
-        <div class="max-w-7xl mx-auto px-4 h-full grid grid-cols-3 items-center">
+        <!-- Redujimos px-4 a px-2 en celulares para ganar espacio vital a los lados -->
+        <div class="max-w-7xl mx-auto px-2 sm:px-4 h-full grid grid-cols-3 items-center">
             
             <!-- 1. SECCIÓN IZQUIERDA: LOGOS -->
-            <div class="flex justify-start items-center gap-2 md:gap-3">
-                <!-- Logo Original con link a Instagram -->
+            <!-- Redujimos el gap en celulares (gap-1.5) para que no empuje todo al centro -->
+            <div class="flex justify-start items-center gap-1.5 sm:gap-2 md:gap-3">
+                <!-- Logo Original: Un milímetro más chico en celulares pequeños (h-7) para que entre -->
                 <a href="https://www.instagram.com/canjealtoque/" target="_blank" rel="noopener noreferrer" class="hover:scale-105 transition-transform flex-shrink-0">
-                    <!-- Tu logo mide h-8 en celu y h-10 en PC -->
-                    <img src="/static/img/logo.png" alt="Logo Canje AlToque" class="h-8 md:h-10 w-auto object-contain">
+                    <img src="/static/img/logo.png" alt="Logo Canje AlToque" class="h-7 sm:h-8 md:h-10 w-auto object-contain">
                 </a>
 
-                <!-- NUEVO LOGO GLOBAL HOME ZN con link a Instagram -->
-                <a href="https://www.instagram.com/globalhomezn/" target="_blank" rel="noopener noreferrer" class="bg-white h-8 md:h-10 w-[50px] md:w-[64px] rounded-md shadow flex items-center justify-center hover:scale-105 transition-all cursor-pointer flex-shrink-0 overflow-hidden">
-                    <img src="/static/img/logo_global.png" alt="Global Home ZN" class="h-full w-full object-contain mix-blend-multiply transform scale-[3.8] translate-y-1 md:translate-y-1.5">
+                <!-- NUEVO LOGO GLOBAL HOME ZN -->
+                <!-- FIX PARA IPHONE: Usamos "relative" en la pastilla y "absolute" en la imagen. Tamaño adaptativo (w-[46px] en celu, w-[66px] en PC) -->
+                <a href="https://www.instagram.com/globalhomezn/" target="_blank" rel="noopener noreferrer" class="bg-white h-7 w-[46px] sm:h-8 sm:w-[52px] md:h-10 md:w-[66px] rounded-md shadow relative flex items-center justify-center hover:scale-105 transition-all cursor-pointer flex-shrink-0 overflow-hidden">
+                    <!-- FIX PARA IPHONE: Zoom controlado por ancho (w-[350%]) en lugar de scale. -translate-y-[45%] lo centra y lo tira un pelín para abajo -->
+                    <img src="/static/img/logo_global.png" alt="Global Home ZN" class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-[45%] w-[350%] max-w-none object-contain mix-blend-multiply">
                 </a>
             </div>
 
             <!-- 2. SECCIÓN CENTRAL: NAVEGACIÓN -->
-            <nav class="flex justify-center items-center h-full gap-4 md:gap-8">
-                <a href="/album" class="relative h-full flex items-center px-2 md:px-4 font-bold uppercase tracking-wider transition-colors group {{ 'text-yellow-400' if active_tab == 'album' else 'text-gray-400 hover:text-gray-200' }}">
+            <!-- Redujimos un poco los espacios (gap-2 y px-1.5) en celulares para evitar superposición con el lado izquierdo -->
+            <nav class="flex justify-center items-center h-full gap-2 sm:gap-4 md:gap-8">
+                <a href="/album" class="relative h-full flex items-center px-1.5 sm:px-2 md:px-4 font-bold uppercase tracking-wider transition-colors group {{ 'text-yellow-400' if active_tab == 'album' else 'text-gray-400 hover:text-gray-200' }}">
                     <div class="flex flex-col md:flex-row items-center justify-center gap-0.5 md:gap-2 pt-1 md:pt-0">
                         <span class="text-[22px] md:text-lg transition-all duration-300 leading-none {{ 'scale-110 drop-shadow-[0_0_10px_rgba(234,179,8,0.8)]' if active_tab == 'album' else 'opacity-60 group-hover:opacity-100 group-hover:scale-105' }}">
                             📖
@@ -98,7 +102,7 @@
                     {% endif %}
                 </a>
 
-                <a href="/market" class="relative h-full flex items-center px-2 md:px-4 font-bold uppercase tracking-wider transition-colors group {{ 'text-yellow-400' if active_tab == 'market' else 'text-gray-400 hover:text-gray-200' }}">
+                <a href="/market" class="relative h-full flex items-center px-1.5 sm:px-2 md:px-4 font-bold uppercase tracking-wider transition-colors group {{ 'text-yellow-400' if active_tab == 'market' else 'text-gray-400 hover:text-gray-200' }}">
                     <div class="flex flex-col md:flex-row items-center justify-center gap-0.5 md:gap-2 pt-1 md:pt-0">
                         <span class="text-[22px] md:text-lg transition-all duration-300 leading-none {{ 'scale-110 drop-shadow-[0_0_10px_rgba(234,179,8,0.8)]' if active_tab == 'market' else 'opacity-60 group-hover:opacity-100 group-hover:scale-105' }}">
                             🤝
@@ -112,7 +116,7 @@
             </nav>
 
             <!-- 3. SECCIÓN DERECHA: USUARIO -->
-            <div class="flex justify-end items-center gap-3">
+            <div class="flex justify-end items-center gap-2 md:gap-3">
                 {% if user %}
                     <div class="text-right hidden sm:block leading-tight">
                         <span class="block text-[10px] text-gray-500 uppercase font-bold">{{ t('nav_jugador', user.country_code) }}</span>
