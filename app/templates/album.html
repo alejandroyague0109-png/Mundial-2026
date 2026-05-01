@@ -180,6 +180,26 @@
     });
 
     // --- NUEVO CEREBRO DE WHATSAPP ---
+    const BANDERAS_MUNDIAL = {
+        "FWC": "🏆", "MEX": "🇲🇽", "SUD": "🇿🇦", "KOR": "🇰🇷", "RCZ": "🇨🇿",
+        "CAN": "🇨🇦", "BYH": "🇧🇦", "QAT": "🇶🇦", "SUI": "🇨🇭", "BRA": "🇧🇷",
+        "MAR": "🇲🇦", "HAI": "🇭🇹", "ESC": "🏴󠁧󠁢󠁳󠁣󠁴󠁿", "USA": "🇺🇸", "PAR": "🇵🇾",
+        "AUS": "🇦🇺", "TUR": "🇹🇷", "GER": "🇩🇪", "CUR": "🇨🇼", "COT": "🇨🇮",
+        "ECU": "🇪🇨", "NED": "🇳🇱", "JPN": "🇯🇵", "SUE": "🇸🇪", "TUN": "🇹🇳",
+        "BEL": "🇧🇪", "EGI": "🇪🇬", "IRN": "🇮🇷", "NZE": "🇳🇿", "ESP": "🇪🇸",
+        "CAB": "🇨🇻", "KSA": "🇸🇦", "URU": "🇺🇾", "FRA": "🇫🇷", "SEN": "🇸🇳",
+        "IRK": "🇮🇶", "NOR": "🇳🇴", "ARG": "🇦🇷", "ALG": "🇩🇿", "AUT": "🇦🇹",
+        "JOR": "🇯🇴", "POR": "🇵🇹", "RDC": "🇨🇩", "UZB": "🇺🇿", "COL": "🇨🇴",
+        "ENG": "🏴󠁧󠁢󠁥󠁮󠁧󠁿", "CRO": "🇭🇷", "GHA": "🇬🇭", "PAN": "🇵🇦", "COCA": "🥤"
+    };
+
+    function agregarBanderas(texto) {
+        if (!texto) return "";
+        return texto.replace(/\b([A-Z]{3,4})\b/g, (match) => {
+            return BANDERAS_MUNDIAL[match] ? `${match} ${BANDERAS_MUNDIAL[match]}` : match;
+        });
+    }
+
     async function executeShare() {
         const scope = document.querySelector('input[name="shareScope"]:checked').value;
         const searchType = document.querySelector('input[name="shareSearch"]:checked').value;
@@ -192,7 +212,6 @@
         loadingText.classList.remove('hidden');
 
         if (scope === 'page') {
-            // LÓGICA 1: SOLO LA PÁGINA ACTUAL
             const container = document.getElementById('dynamic-content');
             if (!container) return;
 
@@ -221,7 +240,6 @@
             });
 
         } else {
-            // LÓGICA 2: TODO EL ÁLBUM
             try {
                 const response = await fetch('/api/user_full_inventory');
                 const data = await response.json();
@@ -247,7 +265,6 @@
             }
         }
 
-        // Armamos el texto final, pasándole el "scope" para saber cómo agrupar
         buildAndShareMessage(scope, prefix, wishlist, repetidas);
         
         loadingText.classList.add('hidden');
@@ -258,24 +275,20 @@
     function formatStickersGrouped(list, scope, prefix) {
         if (list.length === 0) return "";
 
-        // Si es solo una página, ya sabemos el país (Ej: sacamos la palabra PÁGINA de "PÁGINA ARGENTINA")
         if (scope === 'page') {
             let cleanPrefix = prefix.replace('PÁGINA ', '').trim();
             return `*${cleanPrefix}:* ${list.join(', ')}\n`;
         }
 
-        // Si es todo el álbum, la API nos devuelve "ARG 1", "FWC 2", etc.
-        // Agrupamos usando el código de 3 letras.
         const groups = {};
         list.forEach(item => {
             const parts = item.split(' ');
             if (parts.length >= 2) {
-                const code = parts[0]; // Agarra "ARG"
-                const num = parts.slice(1).join(' '); // Agarra "1"
+                const code = parts[0]; 
+                const num = parts.slice(1).join(' '); 
                 if (!groups[code]) groups[code] = [];
                 groups[code].push(num);
             } else {
-                // Por si hay alguna figu extraña sin espacio
                 if (!groups["EXT"]) groups["EXT"] = [];
                 groups["EXT"].push(item);
             }
@@ -283,17 +296,16 @@
 
         let text = "";
         for (const code in groups) {
-            // Genera la línea ordenada, ej: ARG: 1, 5, 8
             text += `*${code}:* ${groups[code].join(', ')}\n`;
         }
         return text;
     }
 
     async function buildAndShareMessage(scope, prefix, wList, rList) {
-        let mensaje = `👋 HOLA! Estoy completando el álbum *Canje AlToque 26*.\n`; 
+        let mensaje = `👋 Lista de figuritas de *Canje AlToque 26*.\n`; 
         
         if (scope === 'page') {
-            mensaje += `De: *${prefix}*\n`;
+            mensaje += `De: *${agregarBanderas(prefix)}*\n`;
         }
         mensaje += `----------------------------------\n`;
 
@@ -302,8 +314,8 @@
             if(wList.length > 150 && scope === 'all') {
                 mensaje += `¡Me faltan muchísimas! Pasame tus repetidas y me fijo.\n\n`;
             } else {
-                // Llamamos a nuestra nueva función inteligente
-                mensaje += formatStickersGrouped(wList, scope, prefix) + `\n`;
+                let textoBusco = formatStickersGrouped(wList, scope, prefix);
+                mensaje += agregarBanderas(textoBusco) + `\n`;
             }
         } else {
             mensaje += `✅ BUSCO: ¡Nada en esta selección!\n\n`;
@@ -311,8 +323,8 @@
 
         if (rList.length > 0) {
             mensaje += `🔄 TENGO REPETIDAS:\n`;
-            // Llamamos a nuestra nueva función inteligente
-            mensaje += formatStickersGrouped(rList, scope, prefix) + `\n`;
+            let textoTengo = formatStickersGrouped(rList, scope, prefix);
+            mensaje += agregarBanderas(textoTengo) + `\n`;
         } else {
             mensaje += `🚫 REPES: No tengo por ahora.\n\n`;
         }
@@ -320,7 +332,7 @@
         mensaje += `----------------------------------\n`;
         mensaje += `¿Cambiamos? 🙌\n\n`;
 
-        mensaje += `📍 *Puntos Seguros de canje:*\n`;
+        mensaje += `📍 *Puntos Recomendados de canje:*\n`;
         mensaje += `https://canjealtoque26.com/safe-spots\n\n`;        
 
         mensaje += `📱 *Abrir App (Android/iOS/PC):*\n`;
