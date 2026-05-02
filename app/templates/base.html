@@ -46,12 +46,6 @@
             backdrop-filter: blur(4px);
         }
         
-        /* Ajuste de zoom exclusivo para iPhone/iOS */
-        @supports (-webkit-touch-callout: none) {
-            .ios-logo-fix {
-                width: 180% !important; /* Zoom más suave solo para Apple */
-            }
-        }
     </style>
 
     <link rel="manifest" href="/static/manifest.json">
@@ -86,10 +80,9 @@
                     <img src="/static/img/logo.png" alt="Logo Canje AlToque" class="h-7 sm:h-8 md:h-10 w-auto object-contain">
                 </a>
 
-                <!-- NUEVO LOGO GLOBAL HOME ZN -->
-                <a href="https://www.instagram.com/globalhomezn/" target="_blank" rel="noopener noreferrer" class="bg-white h-7 w-[46px] sm:h-8 sm:w-[52px] md:h-10 md:w-[66px] rounded-md shadow relative flex items-center justify-center hover:scale-105 transition-all cursor-pointer flex-shrink-0 overflow-hidden">
-                    <!-- Agregamos ios-logo-fix al final -->
-                    <img src="/static/img/logo_global.png" alt="Global Home ZN" class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-[45%] w-[250%] max-w-none object-contain mix-blend-multiply ios-logo-fix">
+                <!-- NUEVO LOGO GLOBAL HOME ZN (Versión limpia sin zoom) -->
+                <a href="https://www.instagram.com/globalhomezn/" target="_blank" rel="noopener noreferrer" class="bg-white h-7 sm:h-8 md:h-10 p-1 md:p-1.5 rounded-md shadow flex items-center justify-center hover:scale-105 transition-all cursor-pointer flex-shrink-0">
+                    <img src="/static/img/logo_global.png" alt="Global Home ZN" class="h-full w-auto object-contain mix-blend-multiply">
                 </a>
             </div>
 
