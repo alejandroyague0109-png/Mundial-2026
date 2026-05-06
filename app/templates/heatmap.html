@@ -255,20 +255,27 @@
                 getLegendMax() { return this.currentFilter === 'users' ? 'Muchos' : 'Alta'; },
                 
                 // ACTUALIZADO: Suma dinámicamente según dónde estemos parados
+                // ACTUALIZADO: A prueba de fallos (Evita el error 'undefined')
                 getTotalValue() {
                     let total = 0;
                     if (this.currentRegion === '019') {
                         for (const countryData of Object.values(backendData)) {
-                            let val = this.currentFilter === 'users' ? countryData.total_users : countryData.total_activity;
+                            // Intentamos leer el formato nuevo, si falla leemos el viejo
+                            let val = this.currentFilter === 'users' 
+                                ? (countryData.total_users || countryData.users) 
+                                : (countryData.total_activity || countryData.activity);
                             total += (val || 0);
                         }
                     } else {
                         const countryData = backendData[this.currentRegion];
                         if (countryData) {
-                            total = this.currentFilter === 'users' ? countryData.total_users : countryData.total_activity;
+                            total = this.currentFilter === 'users' 
+                                ? (countryData.total_users || countryData.users) 
+                                : (countryData.total_activity || countryData.activity);
                         }
                     }
-                    return total;
+                    // La magia final: si 'total' por algún motivo es undefined, devolvemos 0
+                    return Number(total) || 0;
                 },
 
                 drawMap() {

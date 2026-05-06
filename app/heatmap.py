@@ -1,10 +1,11 @@
 # app/routers/heatmap.py
 from fastapi import APIRouter, Depends, Request
-from fastapi.responses import HTMLResponse
+from fastapi.responses import HTMLResponse, JSONResponse
 from fastapi.templating import Jinja2Templates
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import text
 from pathlib import Path
+import traceback
 
 from app.database import get_db
 
@@ -12,11 +13,10 @@ router = APIRouter(tags=["Heatmap"])
 BASE_DIR = Path(__file__).resolve().parent.parent
 templates = Jinja2Templates(directory=str(BASE_DIR / "templates"))
 
-@router.get("/heatmap", response_class=HTMLResponse)
-async def view_heatmap(request: Request, db: AsyncSession = Depends(get_db)):
-    print("\n" + "="*40)
-    print("🚀 INICIANDO DEBUG DE HEATMAP 🚀")
-    
+@router.get("/heatmap")
+async def view_heatmap(request: Request, debug: bool = False, db: AsyncSession = Depends(get_db)):
+    debug_info = {}
+
     # 1. Usuarios
     try:
         res_users = await db.execute(text("""
@@ -25,11 +25,12 @@ async def view_heatmap(request: Request, db: AsyncSession = Depends(get_db)):
             GROUP BY country_code, province
         """))
         users_rows = res_users.all()
-        print(f"[✅] QUERY USUARIOS: Trajo {len(users_rows)} filas.")
-        if users_rows:
-            print(f"    Ejemplo de fila 1: {users_rows[0]}")
+        debug_info["1_query_usuarios"] = "OK"
+        debug_info["2_usuarios_encontrados"] = len(users_rows)
+        debug_info["3_ejemplo_usuarios"] = [str(r) for r in users_rows[:3]] if users_rows else []
     except Exception as e:
-        print(f"[❌] ERROR QUERY USUARIOS: {e}")
+        debug_info["1_query_usuarios"] = "ERROR"
+        debug_info["error_detalle_usuarios"] = str(e)
         users_rows = []
 
     # 2. Figuritas
@@ -41,59 +42,58 @@ async def view_heatmap(request: Request, db: AsyncSession = Depends(get_db)):
             GROUP BY u.country_code, u.province
         """))
         inv_rows = res_inv.all()
-        print(f"[✅] QUERY FIGURITAS: Trajo {len(inv_rows)} filas.")
-        if inv_rows:
-            print(f"    Ejemplo de fila 1: {inv_rows[0]}")
+        debug_info["4_query_figuritas"] = "OK"
+        debug_info["5_figuritas_encontradas"] = len(inv_rows)
+        debug_info["6_ejemplo_figuritas"] = [str(r) for r in inv_rows[:3]] if inv_rows else []
     except Exception as e:
-        print(f"[❌] ERROR QUERY FIGURITAS: {e}")
+        debug_info["4_query_figuritas"] = "ERROR"
+        debug_info["error_detalle_figuritas"] = str(e)
         inv_rows = []
 
+    # 3. Armado del diccionario
     map_data = {}
-
-    # Procesar Usuarios
-    for row in users_rows:
-        country = str(row[0]).strip().upper() if row[0] else None
-        province = str(row[1]).strip() if row[1] else "Desconocida"
-        count = int(row[2]) if row[2] else 0
-        
-        if not country: continue
-        
-        if country not in map_data:
-            map_data[country] = {"total_users": 0, "total_activity": 0, "provinces": {}}
+    try:
+        for row in users_rows:
+            country = str(row[0]).strip().upper() if row[0] else None
+            province = str(row[1]).strip() if row[1] else "Desconocida"
+            count = int(row[2]) if row[2] else 0
             
-        map_data[country]["total_users"] += count
-        
-        if province not in map_data[country]["provinces"]:
-            map_data[country]["provinces"][province] = {"users": 0, "activity": 0}
-            
-        map_data[country]["provinces"][province]["users"] += count
+            if not country: continue
+            if country not in map_data:
+                map_data[country] = {"total_users": 0, "total_activity": 0, "provinces": {}}
+                
+            map_data[country]["total_users"] += count
+            if province not in map_data[country]["provinces"]:
+                map_data[country]["provinces"][province] = {"users": 0, "activity": 0}
+            map_data[country]["provinces"][province]["users"] += count
 
-    # Procesar Figuritas
-    for row in inv_rows:
-        country = str(row[0]).strip().upper() if row[0] else None
-        province = str(row[1]).strip() if row[1] else "Desconocida"
-        count = int(row[2]) if row[2] else 0
-        
-        if not country: continue
-        
-        if country not in map_data:
-            map_data[country] = {"total_users": 0, "total_activity": 0, "provinces": {}}
+        for row in inv_rows:
+            country = str(row[0]).strip().upper() if row[0] else None
+            province = str(row[1]).strip() if row[1] else "Desconocida"
+            count = int(row[2]) if row[2] else 0
             
-        map_data[country]["total_activity"] += count
-        
-        if province not in map_data[country]["provinces"]:
-            map_data[country]["provinces"][province] = {"users": 0, "activity": 0}
+            if not country: continue
+            if country not in map_data:
+                map_data[country] = {"total_users": 0, "total_activity": 0, "provinces": {}}
+                
+            map_data[country]["total_activity"] += count
+            if province not in map_data[country]["provinces"]:
+                map_data[country]["provinces"][province] = {"users": 0, "activity": 0}
+            map_data[country]["provinces"][province]["activity"] += count
+
+        debug_info["7_paises_procesados"] = list(map_data.keys())
+        if "AR" in map_data:
+            debug_info["8_datos_argentina"] = map_data["AR"]
             
-        map_data[country]["provinces"][province]["activity"] += count
+    except Exception as e:
+        debug_info["error_procesamiento"] = str(e)
+        debug_info["traceback"] = traceback.format_exc()
 
-    print(f"[✅] DICCIONARIO CREADO: {len(map_data.keys())} países encontrados.")
-    if "AR" in map_data:
-        print(f"    Datos de Argentina -> Usuarios: {map_data['AR']['total_users']} | Figuritas: {map_data['AR']['total_activity']}")
-        provincias_ar = list(map_data['AR']['provinces'].keys())
-        print(f"    Provincias AR encontradas: {len(provincias_ar)} {provincias_ar[:5]}...")
-    
-    print("="*40 + "\n")
+    # MODO DEBUG ACTIVO: Si entramos con ?debug=true, vemos los datos crudos
+    if debug:
+        return JSONResponse(content=debug_info)
 
+    # Si no hay debug, mostramos el mapa normal
     return templates.TemplateResponse("heatmap.html", {
         "request": request,
         "map_data": map_data
