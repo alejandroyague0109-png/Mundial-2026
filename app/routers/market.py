@@ -457,7 +457,7 @@ async def search_market(
             )
 
     distinct_query = distinct_query.order_by(Inventory.sticker_num.asc())
-    distinct_query = distinct_query.limit(30) 
+    distinct_query = distinct_query.limit(994) 
 
     distinct_res = await db.execute(distinct_query)
     found_sticker_ids = distinct_res.scalars().all()
