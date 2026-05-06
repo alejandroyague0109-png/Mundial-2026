@@ -112,7 +112,7 @@
                 </div>
 
                 <div class="pt-6 border-t border-slate-800">
-                    <div class="text-xs text-slate-500 uppercase tracking-widest font-bold mb-1">Total Latinoamérica</div>
+                    <div class="text-xs text-slate-500 uppercase tracking-widest font-bold mb-1" x-text="'Total ' + selectedRegionName"></div>
                     <div class="text-4xl font-black text-transparent bg-clip-text" :class="getTextGradientClass()" x-text="getTotalValue().toLocaleString('es-AR')"></div>
                 </div>
             </aside>
@@ -122,6 +122,13 @@
                 <div x-show="loading" class="absolute inset-0 flex items-center justify-center bg-slate-900/80 z-20 backdrop-blur-sm">
                     <div class="animate-spin text-4xl">⚽</div>
                 </div>
+
+                <!-- NUEVO BOTÓN: Solo se muestra si estamos dentro de un país -->
+                <button @click="goBackToContinent()" 
+                        x-show="currentRegion !== '019'" x-cloak
+                        class="absolute top-4 left-4 bg-indigo-600 hover:bg-indigo-500 text-white font-bold py-2 px-4 rounded-lg shadow-lg z-30 transition flex items-center gap-2">
+                    <span>⬅️</span> Volver a Latinoamérica
+                </button>
                 
                 <button @click="resetMap()" 
                         class="absolute top-4 right-4 bg-slate-800/80 p-2 rounded-lg border border-slate-700 text-white z-20 hover:bg-slate-700 transition transform active:scale-95" 
@@ -149,12 +156,22 @@
         // Inyectamos de forma segura el diccionario que viene desde heatmap.py
         const backendData = {{ map_data | tojson | safe }};
 
+        // Diccionario de nombres legibles para los países
+        const COUNTRY_NAMES = {
+            'AR': 'Argentina', 'UY': 'Uruguay', 'MX': 'México', 
+            'CO': 'Colombia', 'PE': 'Perú', 'CL': 'Chile'
+        };
+
         function heatmapLogic() {
             return {
                 currentFilter: 'activity',
                 loading: true,
                 chart: null,
-                panzoomInstance: null, // Guardar instancia de Panzoom
+                panzoomInstance: null,
+                
+                // NUEVAS VARIABLES PARA EL DRILL-DOWN
+                currentRegion: '019', // '019' = Américas. Cambiará a 'AR', 'UY', etc.
+                selectedRegionName: 'Latinoamérica', 
 
                 init() {
                     google.charts.load('current', {
@@ -163,10 +180,9 @@
                     });
                     google.charts.setOnLoadCallback(() => {
                         this.drawMap();
-                        this.initializePanzoom(); // 4. INICIALIZAR PANZOOM DESPUÉS DE DIBUJAR
+                        this.initializePanzoom();
                         this.loading = false;
                         
-                        // En resize, GeoChart redibuja el DOM, hay que re-inicializar Panzoom
                         window.addEventListener('resize', () => {
                             if (this.panzoomInstance) this.panzoomInstance.destroy();
                             this.drawMap();
@@ -175,30 +191,24 @@
                     });
                 },
 
-                // 5. NUEVA FUNCIÓN PARA INICIALIZAR LIBRERÍA
                 initializePanzoom() {
                     const elem = document.getElementById('regions_div');
                     const wrapper = document.getElementById('regions_div_wrapper');
                     
                     this.panzoomInstance = Panzoom(elem, {
-                        maxScale: 10, // Zoom máximo (10x)
-                        minScale: 1,  // Zoom mínimo (1x)
-                        contain: 'outside', // No dejar que el mapa se salga del contenedor al arrastrar
+                        maxScale: 10,
+                        minScale: 1,
+                        contain: 'outside',
                         cursor: 'grab',
-                        // Evitar que interfiera con los clicks nativos de Google Charts en los países
                         excludeClass: 'google-visualization-geochart-svg-panel' 
                     });
 
-                    // Habilitar zoom con la rueda del mouse (wheel)
                     wrapper.addEventListener('wheel', (event) => {
-                        // Solo hacer zoom si se presiona Ctrl (para evitar que haga zoom al hacer scroll en la página)
-                        // if (!event.ctrlKey) return; 
                         event.preventDefault();
                         this.panzoomInstance.zoomWithWheel(event);
                     });
                 },
 
-                // 6. FUNCIÓN PARA RESETEAR MAPA
                 resetMap() {
                     if (this.panzoomInstance) {
                         this.panzoomInstance.reset({ animate: true });
@@ -208,12 +218,19 @@
                 setFilter(filterType) {
                     if (this.currentFilter !== filterType) {
                         this.currentFilter = filterType;
-                        this.resetMap(); // Resetear zoom al cambiar filtro
+                        this.resetMap();
                         this.drawMap();
                     }
                 },
 
-                // Lógica de textos y tooltips (sin cambios)
+                // LÓGICA DE REGRESO AL CONTINENTE
+                goBackToContinent() {
+                    this.currentRegion = '019';
+                    this.selectedRegionName = 'Latinoamérica';
+                    this.resetMap();
+                    this.drawMap();
+                },
+
                 getLegendTitle() {
                     if (this.currentFilter === 'users') return 'Coleccionistas';
                     return 'Figuritas Subidas';
@@ -234,20 +251,21 @@
                     if (this.currentFilter === 'users') return 'bg-gradient-to-r from-indigo-400 to-indigo-200';
                     return 'bg-gradient-to-r from-emerald-400 to-emerald-200';
                 },
-                getLegendMin() {
-                    if (this.currentFilter === 'users') return 'Pocos';
-                    return 'Baja';
-                },
-                getLegendMax() {
-                    if (this.currentFilter === 'users') return 'Muchos';
-                    return 'Alta';
-                },
+                getLegendMin() { return this.currentFilter === 'users' ? 'Pocos' : 'Baja'; },
+                getLegendMax() { return this.currentFilter === 'users' ? 'Muchos' : 'Alta'; },
+                
+                // ACTUALIZADO: Suma dinámicamente según dónde estemos parados
                 getTotalValue() {
                     let total = 0;
-                    for (const stats of Object.values(backendData)) {
-                        let val = stats[this.currentFilter];
-                        if (typeof val === 'number') {
-                            total += val;
+                    if (this.currentRegion === '019') {
+                        for (const countryData of Object.values(backendData)) {
+                            let val = this.currentFilter === 'users' ? countryData.total_users : countryData.total_activity;
+                            total += (val || 0);
+                        }
+                    } else {
+                        const countryData = backendData[this.currentRegion];
+                        if (countryData) {
+                            total = this.currentFilter === 'users' ? countryData.total_users : countryData.total_activity;
                         }
                     }
                     return total;
@@ -256,19 +274,27 @@
                 drawMap() {
                     const dataArray = [];
                     
-                    if(this.currentFilter === 'users') {
-                        dataArray.push(['País', 'Usuarios']);
+                    if (this.currentRegion === '019') {
+                        // 🌍 MODO CONTINENTE (Países)
+                        dataArray.push(['País', this.currentFilter === 'users' ? 'Usuarios' : 'Figuritas']);
+                        for (const [countryCode, data] of Object.entries(backendData)) {
+                            let val = this.currentFilter === 'users' ? data.total_users : data.total_activity;
+                            dataArray.push([countryCode, val || 0]);
+                        }
+                        if(dataArray.length === 1) dataArray.push(['AR', 0]); // Fallback
                     } else {
-                        dataArray.push(['País', 'Figuritas']);
+                        // 🗺️ MODO PAÍS (Provincias)
+                        dataArray.push(['Provincia', this.currentFilter === 'users' ? 'Usuarios' : 'Figuritas']);
+                        const countryData = backendData[this.currentRegion];
+                        
+                        if (countryData && countryData.provinces) {
+                            for (const [provName, stats] of Object.entries(countryData.provinces)) {
+                                let val = stats[this.currentFilter];
+                                dataArray.push([provName, val || 0]);
+                            }
+                        }
+                        if(dataArray.length === 1) dataArray.push(['Mendoza', 0]); // Fallback
                     }
-
-                    for (const [countryCode, stats] of Object.entries(backendData)) {
-                        let val = stats[this.currentFilter];
-                        if (typeof val !== 'number') val = 0;
-                        dataArray.push([countryCode, val]);
-                    }
-
-                    if(dataArray.length === 1) dataArray.push(['AR', 0]);
 
                     const data = google.visualization.arrayToDataTable(dataArray);
 
@@ -277,18 +303,37 @@
                         : {colors: ['#064e3b', '#16a34a', '#4ade80']};
 
                     const options = {
-                        region: '019', // Américas
+                        region: this.currentRegion,
+                        // ESTO HACE LA MAGIA: Define si divide por países o provincias
+                        resolution: this.currentRegion === '019' ? 'countries' : 'provinces',
                         backgroundColor: 'transparent',
                         datalessRegionColor: '#1e293b',
                         defaultColor: '#334155',
                         colorAxis: colorAxis,
                         legend: 'none',
                         tooltip: {isHtml: true},
-                        keepAspectRatio: true // Importante para Panzoom
+                        keepAspectRatio: true
                     };
 
                     if (!this.chart) {
                         this.chart = new google.visualization.GeoChart(document.getElementById('regions_div'));
+                        
+                        // EL ESCUCHADOR DE EVENTOS DE CLIC EN EL MAPA
+                        google.visualization.events.addListener(this.chart, 'regionClick', (eventData) => {
+                            if (this.currentRegion === '019') {
+                                const clickedCountryCode = eventData.region;
+                                
+                                // Si el país clickeado tiene datos en nuestro diccionario, entramos.
+                                if (backendData[clickedCountryCode]) {
+                                    this.currentRegion = clickedCountryCode;
+                                    this.selectedRegionName = COUNTRY_NAMES[clickedCountryCode] || clickedCountryCode;
+                                    
+                                    
+                                    this.resetMap();
+                                    this.drawMap();
+                                }
+                            }
+                        });
                     }
                     this.chart.draw(data, options);
                 }

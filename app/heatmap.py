@@ -15,29 +15,58 @@ templates = Jinja2Templates(directory=str(BASE_DIR / "templates"))
 @router.get("/heatmap", response_class=HTMLResponse)
 async def view_heatmap(request: Request, db: AsyncSession = Depends(get_db)):
     
-    # 1. Usuarios
-    res_users = await db.execute(text("SELECT country_code, COUNT(id) FROM users GROUP BY country_code"))
-    users_by_country = {str(row[0]).strip().upper(): int(row[1]) for row in res_users.all() if row[0]}
-
-    # 2. Figuritas
+    # 1. Usuarios (Agrupados por País y Provincia)
+    res_users = await db.execute(text("""
+        SELECT country_code, province, COUNT(id) 
+        FROM users 
+        GROUP BY country_code, province
+    """))
+    
+    # 2. Figuritas (Agrupadas por País y Provincia)
     res_inv = await db.execute(text("""
-        SELECT u.country_code, COUNT(i.id) 
+        SELECT u.country_code, u.province, COUNT(i.id) 
         FROM inventory i 
         JOIN users u ON i.user_id = u.id 
-        GROUP BY u.country_code
+        GROUP BY u.country_code, u.province
     """))
-    inv_by_country = {str(row[0]).strip().upper(): int(row[1]) for row in res_inv.all() if row[0]}
 
-    # Diccionario final
     map_data = {}
-    all_countries = set(list(users_by_country.keys()) + list(inv_by_country.keys()))
-    
-    for c in all_countries:
-        if not c: continue
-        map_data[c] = {
-            "users": users_by_country.get(c, 0),
-            "activity": inv_by_country.get(c, 0)
-        }
+
+    # Procesar datos de usuarios
+    for row in res_users.all():
+        country = str(row[0]).strip().upper() if row[0] else None
+        province = str(row[1]).strip() if row[1] else "Desconocida"
+        count = int(row[2])
+        
+        if not country: continue
+        
+        if country not in map_data:
+            map_data[country] = {"total_users": 0, "total_activity": 0, "provinces": {}}
+            
+        map_data[country]["total_users"] += count
+        
+        if province not in map_data[country]["provinces"]:
+            map_data[country]["provinces"][province] = {"users": 0, "activity": 0}
+            
+        map_data[country]["provinces"][province]["users"] += count
+
+    # Procesar datos de figuritas
+    for row in res_inv.all():
+        country = str(row[0]).strip().upper() if row[0] else None
+        province = str(row[1]).strip() if row[1] else "Desconocida"
+        count = int(row[2])
+        
+        if not country: continue
+        
+        if country not in map_data:
+            map_data[country] = {"total_users": 0, "total_activity": 0, "provinces": {}}
+            
+        map_data[country]["total_activity"] += count
+        
+        if province not in map_data[country]["provinces"]:
+            map_data[country]["provinces"][province] = {"users": 0, "activity": 0}
+            
+        map_data[country]["provinces"][province]["activity"] += count
 
     return templates.TemplateResponse("heatmap.html", {
         "request": request,
