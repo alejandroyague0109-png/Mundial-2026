@@ -3,12 +3,10 @@ from fastapi import APIRouter, Depends, Request
 from fastapi.responses import HTMLResponse
 from fastapi.templating import Jinja2Templates
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select, func
+from sqlalchemy import text
 from pathlib import Path
 
 from app.database import get_db
-# Importamos los modelos nativos (Igual que en market.py)
-from app.models import User, Inventory
 
 router = APIRouter(tags=["Heatmap"])
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -16,59 +14,85 @@ templates = Jinja2Templates(directory=str(BASE_DIR / "templates"))
 
 @router.get("/heatmap", response_class=HTMLResponse)
 async def view_heatmap(request: Request, db: AsyncSession = Depends(get_db)):
+    print("\n" + "="*40)
+    print("🚀 INICIANDO DEBUG DE HEATMAP 🚀")
     
-    # 1. Usuarios (Usando ORM nativo para evitar fallos de lectura)
-    query_users = (
-        select(User.country_code, User.province, func.count(User.id))
-        .group_by(User.country_code, User.province)
-    )
-    res_users = await db.execute(query_users)
-    
-    # 2. Figuritas (Usando ORM nativo)
-    query_inv = (
-        select(User.country_code, User.province, func.count(Inventory.id))
-        .join(User, Inventory.user_id == User.id)
-        .group_by(User.country_code, User.province)
-    )
-    res_inv = await db.execute(query_inv)
+    # 1. Usuarios
+    try:
+        res_users = await db.execute(text("""
+            SELECT country_code, province, COUNT(id) 
+            FROM users 
+            GROUP BY country_code, province
+        """))
+        users_rows = res_users.all()
+        print(f"[✅] QUERY USUARIOS: Trajo {len(users_rows)} filas.")
+        if users_rows:
+            print(f"    Ejemplo de fila 1: {users_rows[0]}")
+    except Exception as e:
+        print(f"[❌] ERROR QUERY USUARIOS: {e}")
+        users_rows = []
+
+    # 2. Figuritas
+    try:
+        res_inv = await db.execute(text("""
+            SELECT u.country_code, u.province, COUNT(i.id) 
+            FROM inventory i 
+            JOIN users u ON i.user_id = u.id 
+            GROUP BY u.country_code, u.province
+        """))
+        inv_rows = res_inv.all()
+        print(f"[✅] QUERY FIGURITAS: Trajo {len(inv_rows)} filas.")
+        if inv_rows:
+            print(f"    Ejemplo de fila 1: {inv_rows[0]}")
+    except Exception as e:
+        print(f"[❌] ERROR QUERY FIGURITAS: {e}")
+        inv_rows = []
 
     map_data = {}
 
-    # Procesar datos de usuarios (Desempaquetado seguro)
-    for country_code, province_name, count in res_users.all():
-        country = str(country_code).strip().upper() if country_code else None
-        province = str(province_name).strip() if province_name else "Desconocida"
-        c = int(count) if count else 0
+    # Procesar Usuarios
+    for row in users_rows:
+        country = str(row[0]).strip().upper() if row[0] else None
+        province = str(row[1]).strip() if row[1] else "Desconocida"
+        count = int(row[2]) if row[2] else 0
         
         if not country: continue
         
         if country not in map_data:
             map_data[country] = {"total_users": 0, "total_activity": 0, "provinces": {}}
             
-        map_data[country]["total_users"] += c
+        map_data[country]["total_users"] += count
         
         if province not in map_data[country]["provinces"]:
             map_data[country]["provinces"][province] = {"users": 0, "activity": 0}
             
-        map_data[country]["provinces"][province]["users"] += c
+        map_data[country]["provinces"][province]["users"] += count
 
-    # Procesar datos de figuritas (Desempaquetado seguro)
-    for country_code, province_name, count in res_inv.all():
-        country = str(country_code).strip().upper() if country_code else None
-        province = str(province_name).strip() if province_name else "Desconocida"
-        c = int(count) if count else 0
+    # Procesar Figuritas
+    for row in inv_rows:
+        country = str(row[0]).strip().upper() if row[0] else None
+        province = str(row[1]).strip() if row[1] else "Desconocida"
+        count = int(row[2]) if row[2] else 0
         
         if not country: continue
         
         if country not in map_data:
             map_data[country] = {"total_users": 0, "total_activity": 0, "provinces": {}}
             
-        map_data[country]["total_activity"] += c
+        map_data[country]["total_activity"] += count
         
         if province not in map_data[country]["provinces"]:
             map_data[country]["provinces"][province] = {"users": 0, "activity": 0}
             
-        map_data[country]["provinces"][province]["activity"] += c
+        map_data[country]["provinces"][province]["activity"] += count
+
+    print(f"[✅] DICCIONARIO CREADO: {len(map_data.keys())} países encontrados.")
+    if "AR" in map_data:
+        print(f"    Datos de Argentina -> Usuarios: {map_data['AR']['total_users']} | Figuritas: {map_data['AR']['total_activity']}")
+        provincias_ar = list(map_data['AR']['provinces'].keys())
+        print(f"    Provincias AR encontradas: {len(provincias_ar)} {provincias_ar[:5]}...")
+    
+    print("="*40 + "\n")
 
     return templates.TemplateResponse("heatmap.html", {
         "request": request,
