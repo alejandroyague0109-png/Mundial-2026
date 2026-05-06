@@ -160,15 +160,13 @@
             'CO': 'Colombia', 'PE': 'Perú', 'CL': 'Chile'
         };
 
-        // Traductor EXACTO para las provincias de tu base de datos argentina
+        // Traductor ESTRICTO a código ISO de Google (Garantiza que la provincia se pinte)
         function getARProvinceCode(provName) {
             if (!provName) return '';
             const up = provName.toUpperCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
             
-            // Fix específico para cómo están guardadas en tu locations.py
             if (up.includes('CABA') || up.includes('CAPITAL FEDERAL')) return 'AR-C';
             if (up.includes('PROVINCIA') || up === 'BUENOS AIRES') return 'AR-B';
-            
             if (up.includes('MENDOZA')) return 'AR-M';
             if (up.includes('CORDOBA')) return 'AR-X';
             if (up.includes('SANTA FE')) return 'AR-S';
@@ -263,13 +261,14 @@
                     let total = 0;
                     if (this.currentRegion === '019') {
                         for (const stats of Object.values(backendData)) {
-                            let val = this.currentFilter === 'users' ? (stats.total_users || stats.users || 0) : (stats.total_activity || stats.activity || 0);
-                            total += val;
+                            let val = this.currentFilter === 'users' ? (stats.total_users || 0) : (stats.total_activity || 0);
+                            total += Number(val) || 0;
                         }
                     } else {
                         const stats = backendData[this.currentRegion];
                         if (stats) {
-                            total = this.currentFilter === 'users' ? (stats.total_users || stats.users || 0) : (stats.total_activity || stats.activity || 0);
+                            let val = this.currentFilter === 'users' ? (stats.total_users || 0) : (stats.total_activity || 0);
+                            total = Number(val) || 0;
                         }
                     }
                     return total;
@@ -279,15 +278,13 @@
                     const dataArray = [];
                     
                     if (this.currentRegion === '019') {
-                        // MODO CONTINENTE
                         dataArray.push(['País', this.currentFilter === 'users' ? 'Usuarios' : 'Figuritas']);
                         for (const [countryCode, stats] of Object.entries(backendData)) {
-                            let val = this.currentFilter === 'users' ? (stats.total_users || stats.users || 0) : (stats.total_activity || stats.activity || 0);
-                            dataArray.push([countryCode, val]);
+                            let val = this.currentFilter === 'users' ? (stats.total_users || 0) : (stats.total_activity || 0);
+                            dataArray.push([countryCode, Number(val) || 0]);
                         }
                         if(dataArray.length === 1) dataArray.push(['AR', 0]); 
                     } else {
-                        // MODO ARGENTINA (PROVINCIAS)
                         dataArray.push(['Provincia', this.currentFilter === 'users' ? 'Usuarios' : 'Figuritas']);
                         const countryData = backendData[this.currentRegion];
                         
@@ -295,17 +292,20 @@
                             for (const [provName, stats] of Object.entries(countryData.provinces)) {
                                 let val = this.currentFilter === 'users' ? (stats.users || 0) : (stats.activity || 0);
                                 let query = getARProvinceCode(provName);
-                                // Obligamos a Google a usar el código estricto AR-X para pintar colores
-                                dataArray.push([{v: query, f: provName}, val]);
+                                
+                                // Pasamos PURAMENTE EL STRING (ej: 'AR-C') para que Google no pueda fallar al leerlo
+                                dataArray.push([query, Number(val) || 0]);
                             }
                         }
-                        if(dataArray.length === 1) dataArray.push([{v: 'AR-M', f: 'Mendoza'}, 0]); 
+                        if(dataArray.length === 1) dataArray.push(['AR-C', 0]); 
                     }
 
                     const data = google.visualization.arrayToDataTable(dataArray);
+                    
+                    // SOLUCIÓN AL BUG DE GOOGLE CHARTS: Agregar "minValue: 0" fuerza a calcular el gradiente siempre
                     let colorAxis = this.currentFilter === 'users' 
-                        ? {colors: ['#1e1b4b', '#4f46e5', '#818cf8']}
-                        : {colors: ['#064e3b', '#16a34a', '#4ade80']};
+                        ? {minValue: 0, colors: ['#1e1b4b', '#4f46e5', '#818cf8']}
+                        : {minValue: 0, colors: ['#064e3b', '#16a34a', '#4ade80']};
 
                     const options = {
                         region: this.currentRegion,
@@ -326,7 +326,6 @@
                             if (this.currentRegion === '019') {
                                 const clickedCountryCode = eventData.region;
                                 
-                                // RESTRICCIÓN: SOLO PERMITIR ENTRAR A ARGENTINA
                                 if (clickedCountryCode === 'AR' && backendData[clickedCountryCode]) {
                                     this.currentRegion = clickedCountryCode;
                                     this.selectedRegionName = 'Argentina';
