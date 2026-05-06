@@ -153,10 +153,8 @@
     </main>
 
     <script>
-        // Inyectamos de forma segura el diccionario que viene desde heatmap.py
         const backendData = {{ map_data | tojson | safe }};
 
-        // Diccionario de nombres legibles para los países
         const COUNTRY_NAMES = {
             'AR': 'Argentina', 'UY': 'Uruguay', 'MX': 'México', 
             'CO': 'Colombia', 'PE': 'Perú', 'CL': 'Chile'
@@ -169,14 +167,12 @@
                 chart: null,
                 panzoomInstance: null,
                 
-                // NUEVAS VARIABLES PARA EL DRILL-DOWN
-                currentRegion: '019', // '019' = Américas. Cambiará a 'AR', 'UY', etc.
+                currentRegion: '019',
                 selectedRegionName: 'Latinoamérica', 
 
                 init() {
                     google.charts.load('current', {
-                        'packages':['geochart'],
-                        'mapsApiKey': '' // Tu Key si la tienes
+                        'packages':['geochart']
                     });
                     google.charts.setOnLoadCallback(() => {
                         this.drawMap();
@@ -223,7 +219,6 @@
                     }
                 },
 
-                // LÓGICA DE REGRESO AL CONTINENTE
                 goBackToContinent() {
                     this.currentRegion = '019';
                     this.selectedRegionName = 'Latinoamérica';
@@ -231,76 +226,68 @@
                     this.drawMap();
                 },
 
-                getLegendTitle() {
-                    if (this.currentFilter === 'users') return 'Coleccionistas';
-                    return 'Figuritas Subidas';
-                },
-                getLegendEmoji() {
-                    if (this.currentFilter === 'users') return '👥';
-                    return '🔥';
-                },
-                getLegendDesc() {
-                    if (this.currentFilter === 'users') return 'Cantidad de usuarios registrados oficialmente buscando intercambios.';
-                    return 'Volumen total de repetidas y faltantes cargadas en las Wishlists.';
-                },
-                getGradientClass() {
-                    if (this.currentFilter === 'users') return 'bg-gradient-to-r from-slate-700 via-indigo-500 to-indigo-400';
-                    return 'bg-gradient-to-r from-slate-700 via-emerald-600 to-emerald-400';
-                },
-                getTextGradientClass() {
-                    if (this.currentFilter === 'users') return 'bg-gradient-to-r from-indigo-400 to-indigo-200';
-                    return 'bg-gradient-to-r from-emerald-400 to-emerald-200';
-                },
+                getLegendTitle() { return this.currentFilter === 'users' ? 'Coleccionistas' : 'Figuritas Subidas'; },
+                getLegendEmoji() { return this.currentFilter === 'users' ? '👥' : '🔥'; },
+                getLegendDesc() { return this.currentFilter === 'users' ? 'Cantidad de usuarios registrados oficialmente buscando intercambios.' : 'Volumen total de repetidas y faltantes cargadas en las Wishlists.'; },
+                getGradientClass() { return this.currentFilter === 'users' ? 'bg-gradient-to-r from-slate-700 via-indigo-500 to-indigo-400' : 'bg-gradient-to-r from-slate-700 via-emerald-600 to-emerald-400'; },
+                getTextGradientClass() { return this.currentFilter === 'users' ? 'bg-gradient-to-r from-indigo-400 to-indigo-200' : 'bg-gradient-to-r from-emerald-400 to-emerald-200'; },
                 getLegendMin() { return this.currentFilter === 'users' ? 'Pocos' : 'Baja'; },
                 getLegendMax() { return this.currentFilter === 'users' ? 'Muchos' : 'Alta'; },
                 
-                // ACTUALIZADO: Suma dinámicamente según dónde estemos parados
-                // ACTUALIZADO: A prueba de fallos (Evita el error 'undefined')
                 getTotalValue() {
                     let total = 0;
                     if (this.currentRegion === '019') {
                         for (const countryData of Object.values(backendData)) {
-                            // Intentamos leer el formato nuevo, si falla leemos el viejo
-                            let val = this.currentFilter === 'users' 
-                                ? (countryData.total_users || countryData.users) 
-                                : (countryData.total_activity || countryData.activity);
+                            let val = this.currentFilter === 'users' ? countryData.total_users : countryData.total_activity;
                             total += (val || 0);
                         }
                     } else {
                         const countryData = backendData[this.currentRegion];
                         if (countryData) {
-                            total = this.currentFilter === 'users' 
-                                ? (countryData.total_users || countryData.users) 
-                                : (countryData.total_activity || countryData.activity);
+                            total = this.currentFilter === 'users' ? countryData.total_users : countryData.total_activity;
                         }
                     }
-                    // La magia final: si 'total' por algún motivo es undefined, devolvemos 0
-                    return Number(total) || 0;
+                    return total;
                 },
 
                 drawMap() {
                     const dataArray = [];
                     
                     if (this.currentRegion === '019') {
-                        // 🌍 MODO CONTINENTE (Países)
+                        // MODO LATINOAMÉRICA (Países)
                         dataArray.push(['País', this.currentFilter === 'users' ? 'Usuarios' : 'Figuritas']);
                         for (const [countryCode, data] of Object.entries(backendData)) {
                             let val = this.currentFilter === 'users' ? data.total_users : data.total_activity;
                             dataArray.push([countryCode, val || 0]);
                         }
-                        if(dataArray.length === 1) dataArray.push(['AR', 0]); // Fallback
+                        if(dataArray.length === 1) dataArray.push(['AR', 0]); 
                     } else {
-                        // 🗺️ MODO PAÍS (Provincias)
+                        // MODO PAÍS (Provincias)
                         dataArray.push(['Provincia', this.currentFilter === 'users' ? 'Usuarios' : 'Figuritas']);
                         const countryData = backendData[this.currentRegion];
                         
                         if (countryData && countryData.provinces) {
                             for (const [provName, stats] of Object.entries(countryData.provinces)) {
-                                let val = stats[this.currentFilter];
-                                dataArray.push([provName, val || 0]);
+                                let val = this.currentFilter === 'users' ? stats.users : stats.activity;
+                                
+                                // TRADUCTOR DE PROVINCIAS PARA GOOGLE CHARTS (Obligatorio para que pinte de color)
+                                let query = provName;
+                                if (this.currentRegion === 'AR') {
+                                    const up = provName.toUpperCase();
+                                    if (up === 'CABA' || up.includes('CAPITAL FEDERAL') || up.includes('BUENOS AIRES CIUDAD')) query = 'AR-C';
+                                    else if (up === 'BUENOS AIRES') query = 'AR-B';
+                                    else if (up === 'MENDOZA') query = 'AR-M';
+                                    else if (up === 'CORDOBA' || up === 'CÓRDOBA') query = 'AR-X';
+                                    else if (up === 'SANTA FE') query = 'AR-S';
+                                    else if (up === 'ENTRE RIOS' || up === 'ENTRE RÍOS') query = 'AR-E';
+                                    else if (up === 'TUCUMAN' || up === 'TUCUMÁN') query = 'AR-T';
+                                    // Si no es ninguna de arriba, mandamos el nombre limpio, Google suele ubicarlo bien.
+                                }
+
+                                dataArray.push([{v: query, f: provName}, val || 0]);
                             }
                         }
-                        if(dataArray.length === 1) dataArray.push(['Mendoza', 0]); // Fallback
+                        if(dataArray.length === 1) dataArray.push(['Mendoza', 0]); 
                     }
 
                     const data = google.visualization.arrayToDataTable(dataArray);
@@ -311,7 +298,6 @@
 
                     const options = {
                         region: this.currentRegion,
-                        // ESTO HACE LA MAGIA: Define si divide por países o provincias
                         resolution: this.currentRegion === '019' ? 'countries' : 'provinces',
                         backgroundColor: 'transparent',
                         datalessRegionColor: '#1e293b',
@@ -325,19 +311,15 @@
                     if (!this.chart) {
                         this.chart = new google.visualization.GeoChart(document.getElementById('regions_div'));
                         
-                        // EL ESCUCHADOR DE EVENTOS DE CLIC EN EL MAPA
                         google.visualization.events.addListener(this.chart, 'regionClick', (eventData) => {
                             if (this.currentRegion === '019') {
                                 const clickedCountryCode = eventData.region;
                                 
-                                // Si el país clickeado tiene datos en nuestro diccionario, entramos.
                                 if (backendData[clickedCountryCode]) {
                                     this.currentRegion = clickedCountryCode;
                                     this.selectedRegionName = COUNTRY_NAMES[clickedCountryCode] || clickedCountryCode;
                                     
-                                    
-                                    this.resetMap();
-                                    this.drawMap();
+                                    window.dispatchEvent(new CustomEvent('region-changed'));
                                 }
                             }
                         });
