@@ -517,8 +517,8 @@ async def search_market(
                 "id": item.id,
                 "sticker_num_raw": item.sticker_num,
                 "sticker_name": format_sticker(item.sticker_num),
-                "price": item.price,
-                "is_sale": item.price > 0,
+                "price": item.price if item.price else 0,
+                "is_sale": bool(item.price and float(item.price) > 0),
                 "is_special": item.is_special,
                 "is_wishlist": item.sticker_num in my_wishlist_ids,
                 "is_pending": False,
@@ -540,8 +540,19 @@ async def search_market(
         for s_id in found_sticker_ids:
             cards = grouped_cards[s_id]
             if not cards: continue
-            cards.sort(key=lambda x: (x['owner']['is_premium'], x['has_match'], x['owner']['reputation']), reverse=True)
-            market_pool.extend(cards[:3])
+            
+            # 1. Separamos las tarjetas en dos listas distintas
+            ventas = [c for c in cards if c.get('is_sale', False)]
+            canjes = [c for c in cards if not c.get('is_sale', False)]
+            
+            # 2. Ordenamos ambas listas con tu misma lógica de prioridad
+            sort_logic = lambda x: (x['owner']['is_premium'], x['has_match'], x['owner']['reputation'])
+            ventas.sort(key=sort_logic, reverse=True)
+            canjes.sort(key=sort_logic, reverse=True)
+            
+            # 3. Sumamos hasta 3 canjes y hasta 3 ventas al mercado
+            market_pool.extend(canjes[:3])
+            market_pool.extend(ventas[:3])
 
         market_pool.sort(key=lambda x: (
             x.get('has_match', False), 
