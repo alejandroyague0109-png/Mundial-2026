@@ -39,19 +39,18 @@
         }
         .google-visualization-tooltip-item span { color: #f8fafc !important; font-family: monospace; }
 
-        /* 2. ESTILOS NECESARIOS PARA EL ZOOM */
+        /* ESTILOS NECESARIOS PARA EL ZOOM */
         #regions_div_wrapper {
-            cursor: grab; /* Cursor de "mano abierta" para arrastrar */
+            cursor: grab;
         }
         #regions_div_wrapper:active {
-            cursor: grabbing; /* Cursor de "mano cerrada" al arrastrar */
+            cursor: grabbing;
         }
         
-        /* Esto es CRÍTICO para que Panzoom funcione bien con Google Charts */
         #regions_div {
             width: 100% !important;
             height: 100% !important;
-            transform-origin: 0 0; /* Punto de origen del zoom */
+            transform-origin: 0 0;
         }
     </style>
 </head>
@@ -112,7 +111,7 @@
                 </div>
 
                 <div class="pt-6 border-t border-slate-800">
-                    <div class="text-xs text-slate-500 uppercase tracking-widest font-bold mb-1" x-text="'Total ' + selectedRegionName"></div>
+                    <div class="text-xs text-slate-500 uppercase tracking-widest font-bold mb-1">Total Latinoamérica</div>
                     <div class="text-4xl font-black text-transparent bg-clip-text" :class="getTextGradientClass()" x-text="getTotalValue().toLocaleString('es-AR')"></div>
                 </div>
             </aside>
@@ -122,13 +121,6 @@
                 <div x-show="loading" class="absolute inset-0 flex items-center justify-center bg-slate-900/80 z-20 backdrop-blur-sm">
                     <div class="animate-spin text-4xl">⚽</div>
                 </div>
-
-                <!-- NUEVO BOTÓN: Solo se muestra si estamos dentro de un país -->
-                <button @click="goBackToContinent()" 
-                        x-show="currentRegion !== '019'" x-cloak
-                        class="absolute top-4 left-4 bg-indigo-600 hover:bg-indigo-500 text-white font-bold py-2 px-4 rounded-lg shadow-lg z-30 transition flex items-center gap-2">
-                    <span>⬅️</span> Volver a Latinoamérica
-                </button>
                 
                 <button @click="resetMap()" 
                         class="absolute top-4 right-4 bg-slate-800/80 p-2 rounded-lg border border-slate-700 text-white z-20 hover:bg-slate-700 transition transform active:scale-95" 
@@ -155,59 +147,21 @@
     <script>
         const backendData = {{ map_data | tojson | safe }};
 
-        const COUNTRY_NAMES = {
-            'AR': 'Argentina', 'UY': 'Uruguay', 'MX': 'México', 
-            'CO': 'Colombia', 'PE': 'Perú', 'CL': 'Chile'
-        };
-
-        // Traductor ESTRICTO a código ISO de Google (Garantiza que la provincia se pinte)
-        function getARProvinceCode(provName) {
-            if (!provName) return '';
-            const up = provName.toUpperCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
-            
-            if (up.includes('CABA') || up.includes('CAPITAL FEDERAL')) return 'AR-C';
-            if (up.includes('PROVINCIA') || up === 'BUENOS AIRES') return 'AR-B';
-            if (up.includes('MENDOZA')) return 'AR-M';
-            if (up.includes('CORDOBA')) return 'AR-X';
-            if (up.includes('SANTA FE')) return 'AR-S';
-            if (up.includes('ENTRE RIOS')) return 'AR-E';
-            if (up.includes('TUCUMAN')) return 'AR-T';
-            if (up.includes('SALTA')) return 'AR-A';
-            if (up.includes('SAN LUIS')) return 'AR-D';
-            if (up.includes('LA RIOJA')) return 'AR-F';
-            if (up.includes('SANTIAGO')) return 'AR-G';
-            if (up.includes('CHACO')) return 'AR-H';
-            if (up.includes('SAN JUAN')) return 'AR-J';
-            if (up.includes('CATAMARCA')) return 'AR-K';
-            if (up.includes('LA PAMPA')) return 'AR-L';
-            if (up.includes('MISIONES')) return 'AR-N';
-            if (up.includes('FORMOSA')) return 'AR-P';
-            if (up.includes('NEUQUEN')) return 'AR-Q';
-            if (up.includes('RIO NEGRO')) return 'AR-R';
-            if (up.includes('CHUBUT')) return 'AR-U';
-            if (up.includes('TIERRA DEL FUEGO')) return 'AR-V';
-            if (up.includes('CORRIENTES')) return 'AR-W';
-            if (up.includes('JUJUY')) return 'AR-Y';
-            if (up.includes('SANTA CRUZ')) return 'AR-Z';
-            
-            return provName; 
-        }
-
         function heatmapLogic() {
             return {
                 currentFilter: 'activity',
                 loading: true,
                 chart: null,
                 panzoomInstance: null,
-                
-                currentRegion: '019',
-                selectedRegionName: 'Latinoamérica', 
 
                 init() {
-                    google.charts.load('current', {'packages':['geochart']});
+                    google.charts.load('current', {
+                        'packages':['geochart'],
+                        'mapsApiKey': '' // Tu Key si la tienes
+                    });
                     google.charts.setOnLoadCallback(() => {
                         this.drawMap();
-                        this.initializePanzoom();
+                        this.initializePanzoom(); 
                         this.loading = false;
                         
                         window.addEventListener('resize', () => {
@@ -223,30 +177,31 @@
                     const wrapper = document.getElementById('regions_div_wrapper');
                     
                     this.panzoomInstance = Panzoom(elem, {
-                        maxScale: 10, minScale: 1, contain: 'outside', cursor: 'grab',
+                        maxScale: 10,
+                        minScale: 1,
+                        contain: 'outside',
+                        cursor: 'grab',
                         excludeClass: 'google-visualization-geochart-svg-panel' 
                     });
+
                     wrapper.addEventListener('wheel', (event) => {
                         event.preventDefault();
                         this.panzoomInstance.zoomWithWheel(event);
                     });
                 },
 
-                resetMap() { if (this.panzoomInstance) this.panzoomInstance.reset({ animate: true }); },
+                resetMap() {
+                    if (this.panzoomInstance) {
+                        this.panzoomInstance.reset({ animate: true });
+                    }
+                },
 
                 setFilter(filterType) {
                     if (this.currentFilter !== filterType) {
                         this.currentFilter = filterType;
-                        this.resetMap();
+                        this.resetMap(); 
                         this.drawMap();
                     }
-                },
-
-                goBackToContinent() {
-                    this.currentRegion = '019';
-                    this.selectedRegionName = 'Latinoamérica';
-                    this.resetMap();
-                    this.drawMap();
                 },
 
                 getLegendTitle() { return this.currentFilter === 'users' ? 'Coleccionistas' : 'Figuritas Subidas'; },
@@ -259,16 +214,10 @@
                 
                 getTotalValue() {
                     let total = 0;
-                    if (this.currentRegion === '019') {
-                        for (const stats of Object.values(backendData)) {
-                            let val = this.currentFilter === 'users' ? (stats.total_users || 0) : (stats.total_activity || 0);
-                            total += Number(val) || 0;
-                        }
-                    } else {
-                        const stats = backendData[this.currentRegion];
-                        if (stats) {
-                            let val = this.currentFilter === 'users' ? (stats.total_users || 0) : (stats.total_activity || 0);
-                            total = Number(val) || 0;
+                    for (const stats of Object.values(backendData)) {
+                        let val = stats[this.currentFilter];
+                        if (typeof val === 'number') {
+                            total += val;
                         }
                     }
                     return total;
@@ -277,64 +226,39 @@
                 drawMap() {
                     const dataArray = [];
                     
-                    if (this.currentRegion === '019') {
-                        dataArray.push(['País', this.currentFilter === 'users' ? 'Usuarios' : 'Figuritas']);
-                        for (const [countryCode, stats] of Object.entries(backendData)) {
-                            let val = this.currentFilter === 'users' ? (stats.total_users || 0) : (stats.total_activity || 0);
-                            dataArray.push([countryCode, Number(val) || 0]);
-                        }
-                        if(dataArray.length === 1) dataArray.push(['AR', 0]); 
+                    if(this.currentFilter === 'users') {
+                        dataArray.push(['País', 'Usuarios']);
                     } else {
-                        dataArray.push(['Provincia', this.currentFilter === 'users' ? 'Usuarios' : 'Figuritas']);
-                        const countryData = backendData[this.currentRegion];
-                        
-                        if (countryData && countryData.provinces) {
-                            for (const [provName, stats] of Object.entries(countryData.provinces)) {
-                                let val = this.currentFilter === 'users' ? (stats.users || 0) : (stats.activity || 0);
-                                let query = getARProvinceCode(provName);
-                                
-                                // Pasamos PURAMENTE EL STRING (ej: 'AR-C') para que Google no pueda fallar al leerlo
-                                dataArray.push([query, Number(val) || 0]);
-                            }
-                        }
-                        if(dataArray.length === 1) dataArray.push(['AR-C', 0]); 
+                        dataArray.push(['País', 'Figuritas']);
                     }
 
+                    for (const [countryCode, stats] of Object.entries(backendData)) {
+                        let val = stats[this.currentFilter];
+                        if (typeof val !== 'number') val = 0;
+                        dataArray.push([countryCode, val]);
+                    }
+
+                    if(dataArray.length === 1) dataArray.push(['AR', 0]);
+
                     const data = google.visualization.arrayToDataTable(dataArray);
-                    
-                    // SOLUCIÓN AL BUG DE GOOGLE CHARTS: Agregar "minValue: 0" fuerza a calcular el gradiente siempre
+
                     let colorAxis = this.currentFilter === 'users' 
-                        ? {minValue: 0, colors: ['#1e1b4b', '#4f46e5', '#818cf8']}
-                        : {minValue: 0, colors: ['#064e3b', '#16a34a', '#4ade80']};
+                        ? {colors: ['#1e1b4b', '#4f46e5', '#818cf8']}
+                        : {colors: ['#064e3b', '#16a34a', '#4ade80']};
 
                     const options = {
-                        region: this.currentRegion,
-                        resolution: this.currentRegion === '019' ? 'countries' : 'provinces',
+                        region: '019', // Américas
                         backgroundColor: 'transparent',
                         datalessRegionColor: '#1e293b',
                         defaultColor: '#334155',
                         colorAxis: colorAxis,
                         legend: 'none',
                         tooltip: {isHtml: true},
-                        keepAspectRatio: true
+                        keepAspectRatio: true 
                     };
 
                     if (!this.chart) {
                         this.chart = new google.visualization.GeoChart(document.getElementById('regions_div'));
-                        
-                        google.visualization.events.addListener(this.chart, 'regionClick', (eventData) => {
-                            if (this.currentRegion === '019') {
-                                const clickedCountryCode = eventData.region;
-                                
-                                if (clickedCountryCode === 'AR' && backendData[clickedCountryCode]) {
-                                    this.currentRegion = clickedCountryCode;
-                                    this.selectedRegionName = 'Argentina';
-                                    
-                                    this.resetMap();
-                                    this.drawMap();
-                                }
-                            }
-                        });
                     }
                     this.chart.draw(data, options);
                 }

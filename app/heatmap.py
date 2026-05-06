@@ -14,58 +14,30 @@ templates = Jinja2Templates(directory=str(BASE_DIR / "templates"))
 
 @router.get("/heatmap", response_class=HTMLResponse)
 async def view_heatmap(request: Request, db: AsyncSession = Depends(get_db)):
-    map_data = {}
     
-    try:
-        # 1. Usuarios con SQL Crudo (El que sabemos que funciona)
-        res_users = await db.execute(text("""
-            SELECT country_code, province, COUNT(id) 
-            FROM users 
-            GROUP BY country_code, province
-        """))
-        
-        for row in res_users.all():
-            country = str(row[0]).strip().upper() if row[0] else "AR"
-            province = str(row[1]).strip() if row[1] else "Desconocida"
-            count = int(row[2]) if row[2] else 0
-            
-            if country not in map_data:
-                map_data[country] = {"total_users": 0, "total_activity": 0, "provinces": {}}
-                
-            map_data[country]["total_users"] += count
-            
-            if province not in map_data[country]["provinces"]:
-                map_data[country]["provinces"][province] = {"users": 0, "activity": 0}
-                
-            map_data[country]["provinces"][province]["users"] += count
-    except Exception as e:
-        print("Error Usuarios:", e)
+    # 1. Usuarios
+    res_users = await db.execute(text("SELECT country_code, COUNT(id) FROM users GROUP BY country_code"))
+    users_by_country = {str(row[0]).strip().upper(): int(row[1]) for row in res_users.all() if row[0]}
 
-    try:
-        # 2. Figuritas con SQL Crudo
-        res_inv = await db.execute(text("""
-            SELECT u.country_code, u.province, COUNT(i.id) 
-            FROM inventory i 
-            JOIN users u ON i.user_id = u.id 
-            GROUP BY u.country_code, u.province
-        """))
-        
-        for row in res_inv.all():
-            country = str(row[0]).strip().upper() if row[0] else "AR"
-            province = str(row[1]).strip() if row[1] else "Desconocida"
-            count = int(row[2]) if row[2] else 0
-            
-            if country not in map_data:
-                map_data[country] = {"total_users": 0, "total_activity": 0, "provinces": {}}
-                
-            map_data[country]["total_activity"] += count
-            
-            if province not in map_data[country]["provinces"]:
-                map_data[country]["provinces"][province] = {"users": 0, "activity": 0}
-                
-            map_data[country]["provinces"][province]["activity"] += count
-    except Exception as e:
-        print("Error Figuritas:", e)
+    # 2. Figuritas
+    res_inv = await db.execute(text("""
+        SELECT u.country_code, COUNT(i.id) 
+        FROM inventory i 
+        JOIN users u ON i.user_id = u.id 
+        GROUP BY u.country_code
+    """))
+    inv_by_country = {str(row[0]).strip().upper(): int(row[1]) for row in res_inv.all() if row[0]}
+
+    # Diccionario final
+    map_data = {}
+    all_countries = set(list(users_by_country.keys()) + list(inv_by_country.keys()))
+    
+    for c in all_countries:
+        if not c: continue
+        map_data[c] = {
+            "users": users_by_country.get(c, 0),
+            "activity": inv_by_country.get(c, 0)
+        }
 
     return templates.TemplateResponse("heatmap.html", {
         "request": request,
