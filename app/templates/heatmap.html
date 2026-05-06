@@ -160,38 +160,39 @@
             'CO': 'Colombia', 'PE': 'Perú', 'CL': 'Chile'
         };
 
-        // Traductor que obliga a Google Charts a encontrar tu provincia
-        function getProvinceQuery(provName, countryCode) {
+        // Traductor EXACTO para las provincias de tu base de datos argentina
+        function getARProvinceCode(provName) {
             if (!provName) return '';
-            if (countryCode === 'AR') {
-                const up = provName.toUpperCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
-                if (up.includes('CABA') || up.includes('CAPITAL') || up.includes('CIUDAD')) return 'AR-C';
-                if (up === 'BUENOS AIRES') return 'AR-B';
-                if (up.includes('MENDOZA')) return 'AR-M';
-                if (up.includes('CORDOBA')) return 'AR-X';
-                if (up.includes('SANTA FE')) return 'AR-S';
-                if (up.includes('ENTRE RIOS')) return 'AR-E';
-                if (up.includes('TUCUMAN')) return 'AR-T';
-                if (up.includes('SALTA')) return 'AR-A';
-                if (up.includes('SAN LUIS')) return 'AR-D';
-                if (up.includes('LA RIOJA')) return 'AR-F';
-                if (up.includes('SANTIAGO')) return 'AR-G';
-                if (up.includes('CHACO')) return 'AR-H';
-                if (up.includes('SAN JUAN')) return 'AR-J';
-                if (up.includes('CATAMARCA')) return 'AR-K';
-                if (up.includes('LA PAMPA')) return 'AR-L';
-                if (up.includes('MISIONES')) return 'AR-N';
-                if (up.includes('FORMOSA')) return 'AR-P';
-                if (up.includes('NEUQUEN')) return 'AR-Q';
-                if (up.includes('RIO NEGRO')) return 'AR-R';
-                if (up.includes('CHUBUT')) return 'AR-U';
-                if (up.includes('TIERRA DEL FUEGO')) return 'AR-V';
-                if (up.includes('CORRIENTES')) return 'AR-W';
-                if (up.includes('JUJUY')) return 'AR-Y';
-                if (up.includes('SANTA CRUZ')) return 'AR-Z';
-                return provName + ', Argentina'; 
-            }
-            return provName + ', ' + (COUNTRY_NAMES[countryCode] || countryCode);
+            const up = provName.toUpperCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+            
+            // Fix específico para cómo están guardadas en tu locations.py
+            if (up.includes('CABA') || up.includes('CAPITAL FEDERAL')) return 'AR-C';
+            if (up.includes('PROVINCIA') || up === 'BUENOS AIRES') return 'AR-B';
+            
+            if (up.includes('MENDOZA')) return 'AR-M';
+            if (up.includes('CORDOBA')) return 'AR-X';
+            if (up.includes('SANTA FE')) return 'AR-S';
+            if (up.includes('ENTRE RIOS')) return 'AR-E';
+            if (up.includes('TUCUMAN')) return 'AR-T';
+            if (up.includes('SALTA')) return 'AR-A';
+            if (up.includes('SAN LUIS')) return 'AR-D';
+            if (up.includes('LA RIOJA')) return 'AR-F';
+            if (up.includes('SANTIAGO')) return 'AR-G';
+            if (up.includes('CHACO')) return 'AR-H';
+            if (up.includes('SAN JUAN')) return 'AR-J';
+            if (up.includes('CATAMARCA')) return 'AR-K';
+            if (up.includes('LA PAMPA')) return 'AR-L';
+            if (up.includes('MISIONES')) return 'AR-N';
+            if (up.includes('FORMOSA')) return 'AR-P';
+            if (up.includes('NEUQUEN')) return 'AR-Q';
+            if (up.includes('RIO NEGRO')) return 'AR-R';
+            if (up.includes('CHUBUT')) return 'AR-U';
+            if (up.includes('TIERRA DEL FUEGO')) return 'AR-V';
+            if (up.includes('CORRIENTES')) return 'AR-W';
+            if (up.includes('JUJUY')) return 'AR-Y';
+            if (up.includes('SANTA CRUZ')) return 'AR-Z';
+            
+            return provName; 
         }
 
         function heatmapLogic() {
@@ -278,6 +279,7 @@
                     const dataArray = [];
                     
                     if (this.currentRegion === '019') {
+                        // MODO CONTINENTE
                         dataArray.push(['País', this.currentFilter === 'users' ? 'Usuarios' : 'Figuritas']);
                         for (const [countryCode, stats] of Object.entries(backendData)) {
                             let val = this.currentFilter === 'users' ? (stats.total_users || stats.users || 0) : (stats.total_activity || stats.activity || 0);
@@ -285,13 +287,15 @@
                         }
                         if(dataArray.length === 1) dataArray.push(['AR', 0]); 
                     } else {
+                        // MODO ARGENTINA (PROVINCIAS)
                         dataArray.push(['Provincia', this.currentFilter === 'users' ? 'Usuarios' : 'Figuritas']);
                         const countryData = backendData[this.currentRegion];
                         
                         if (countryData && countryData.provinces) {
                             for (const [provName, stats] of Object.entries(countryData.provinces)) {
                                 let val = this.currentFilter === 'users' ? (stats.users || 0) : (stats.activity || 0);
-                                let query = getProvinceQuery(provName, this.currentRegion);
+                                let query = getARProvinceCode(provName);
+                                // Obligamos a Google a usar el código estricto AR-X para pintar colores
                                 dataArray.push([{v: query, f: provName}, val]);
                             }
                         }
@@ -317,13 +321,18 @@
 
                     if (!this.chart) {
                         this.chart = new google.visualization.GeoChart(document.getElementById('regions_div'));
+                        
                         google.visualization.events.addListener(this.chart, 'regionClick', (eventData) => {
                             if (this.currentRegion === '019') {
                                 const clickedCountryCode = eventData.region;
-                                if (backendData[clickedCountryCode]) {
+                                
+                                // RESTRICCIÓN: SOLO PERMITIR ENTRAR A ARGENTINA
+                                if (clickedCountryCode === 'AR' && backendData[clickedCountryCode]) {
                                     this.currentRegion = clickedCountryCode;
-                                    this.selectedRegionName = COUNTRY_NAMES[clickedCountryCode] || clickedCountryCode;
-                                    window.dispatchEvent(new CustomEvent('region-changed'));
+                                    this.selectedRegionName = 'Argentina';
+                                    
+                                    this.resetMap();
+                                    this.drawMap();
                                 }
                             }
                         });
